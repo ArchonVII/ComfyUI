@@ -42,9 +42,12 @@ def get_required_frontend_version():
     return get_required_packages_versions().get("comfyui-frontend-package", None)
 
 
+COMFY_PACKAGE_VERSIONS = []
 def get_comfy_package_versions():
     """List installed/required versions for every comfy* package in requirements.txt."""
-    out = []
+    if COMFY_PACKAGE_VERSIONS:
+        return COMFY_PACKAGE_VERSIONS.copy()
+    out = COMFY_PACKAGE_VERSIONS
     for name, required in (get_required_packages_versions() or {}).items():
         if not name.startswith("comfy"):
             continue
@@ -53,7 +56,7 @@ def get_comfy_package_versions():
         except Exception:
             installed = None
         out.append({"name": name, "installed": installed, "required": required})
-    return out
+    return out.copy()
 
 
 def check_comfy_packages_versions():

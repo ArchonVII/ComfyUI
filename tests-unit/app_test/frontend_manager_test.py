@@ -52,7 +52,10 @@ def mock_provider(mock_releases):
 @pytest.fixture(autouse=True)
 def clear_cache():
     import utils.install_util
+    import app.frontend_management
+
     utils.install_util.PACKAGE_VERSIONS = {}
+    app.frontend_management.COMFY_PACKAGE_VERSIONS = []
 
 
 def test_get_release(mock_provider, mock_releases):
@@ -277,7 +280,9 @@ def test_get_installed_templates_version():
 
 def test_get_installed_templates_version_not_installed():
     # Act
-    with patch("app.frontend_management.version", side_effect=Exception("Package not found")):
+    with patch(
+        "app.frontend_management.version", side_effect=Exception("Package not found")
+    ):
         version = FrontendManager.get_installed_templates_version()
 
     # Assert
