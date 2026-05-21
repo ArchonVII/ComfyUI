@@ -7,6 +7,8 @@ from unittest.mock import patch
 import pytest
 
 from app.assets.services.path_utils import (
+    compute_display_name,
+    compute_file_path,
     get_asset_category_and_relative_path,
     get_name_and_tags_from_asset_path,
     resolve_destination_from_tags,
@@ -285,3 +287,27 @@ class TestResolveDestinationFromTags:
     def test_traversal_in_subdir_rejected(self, resolve_dirs):
         with pytest.raises(ValueError, match="invalid path component"):
             resolve_destination_from_tags(["models", "checkpoints/..", "evil"])
+
+
+class TestResponsePaths:
+    def test_input_file_path_and_display_name_include_subfolder(self, fake_dirs):
+        sub = fake_dirs["input"] / "some" / "folder"
+        sub.mkdir(parents=True)
+        f = sub / "image.png"
+        f.touch()
+
+        assert compute_file_path(str(f)) == "input/some/folder/image.png"
+        assert compute_display_name(str(f)) == "some/folder/image.png"
+
+    def test_model_file_path_includes_bucket_display_name_drops_it(self, fake_dirs):
+        sub = fake_dirs["models"] / "flux"
+        sub.mkdir()
+        f = sub / "model.safetensors"
+        f.touch()
+
+        assert compute_file_path(str(f)) == "models/checkpoints/flux/model.safetensors"
+        assert compute_display_name(str(f)) == "flux/model.safetensors"
+
+    def test_unknown_path_returns_none(self, fake_dirs):
+        assert compute_file_path("/some/random/path.png") is None
+        assert compute_display_name("/some/random/path.png") is None

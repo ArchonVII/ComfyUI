@@ -39,6 +39,7 @@ from app.assets.services import (
     update_asset_metadata,
     upload_from_temp_path,
 )
+from app.assets.services.path_utils import compute_paths_for_response
 from app.assets.services.tagging import list_tag_histogram
 
 ROUTES = web.RouteTableDef()
@@ -161,9 +162,16 @@ def _build_asset_response(result: schemas.AssetDetailResult | schemas.UploadResu
     else:
         preview_url = _build_preview_url_from_view(result.tags, result.ref.user_metadata)
     asset_content_hash = result.asset.hash if result.asset else None
+    if result.ref.file_path:
+        paths = compute_paths_for_response(result.ref.file_path)
+        file_path, display_name = paths if paths else (None, None)
+    else:
+        file_path, display_name = None, None
     return schemas_out.Asset(
         id=result.ref.id,
         name=result.ref.name,
+        file_path=file_path,
+        display_name=display_name,
         hash=asset_content_hash,
         asset_hash=asset_content_hash,
         size=int(result.asset.size_bytes) if result.asset else None,
