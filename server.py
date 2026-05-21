@@ -767,17 +767,20 @@ class PromptServer():
 
         @routes.get("/node_startup_errors")
         async def get_node_startup_errors(request):
-            # Group errors by source so the frontend/Manager can render them
-            # in distinct sections. `source` is the same string as the
-            # module_parent used at load time (e.g. "custom_nodes",
-            # "comfy_extras", "comfy_api_nodes") and is left as a free-form
-            # string so the contract survives node-source layouts evolving.
-            # The response only contains source buckets that actually had a
-            # failure; consumers should not assume any particular set of keys
-            # is always present.
-            #
-            # `module_path` is stripped because the absolute on-disk path is
-            # internal detail that the frontend has no use for.
+            """Return startup errors recorded during node loading, grouped by source.
+
+            Group errors by source so the frontend/Manager can render them in
+            distinct sections. ``source`` is the same string as the
+            ``module_parent`` used at load time (e.g. ``"custom_nodes"``,
+            ``"comfy_extras"``, ``"comfy_api_nodes"``) and is left as a
+            free-form string so the contract survives node-source layouts
+            evolving. The response only contains source buckets that actually
+            had a failure; consumers should not assume any particular set of
+            keys is always present.
+
+            ``module_path`` is stripped because the absolute on-disk path is
+            internal detail that the frontend has no use for.
+            """
             grouped: dict[str, dict[str, dict]] = {}
             for entry in nodes.NODE_STARTUP_ERRORS.values():
                 source = entry.get("source", "custom_nodes")
