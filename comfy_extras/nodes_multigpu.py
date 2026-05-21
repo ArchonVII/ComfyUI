@@ -45,6 +45,16 @@ class MultiGPUCFGSplitNode(io.ComfyNode):
 class MultiGPUOptionsNode(io.ComfyNode):
     """
     Select the relative speed of GPUs in the special case they have significantly different performance from one another.
+
+    NOTE (not registered yet, see MultiGPUExtension.get_node_list below):
+    The output GPUOptionsGroup is plumbed through create_multigpu_deepclones() and stored on
+    model.model_options['multigpu_options'] via GPUOptionsGroup.register(), but the cond
+    scheduler in comfy/samplers.py (calc_cond_batch_outer_multigpu) does NOT yet consult
+    relative_speed when distributing conds across devices; it uses a uniform conds_per_device
+    round-robin via next_available_device(). Before re-enabling this node, wire its
+    relative_speed into the scheduler (e.g. via comfy.multigpu.load_balance_devices(),
+    which already implements the proportional split) so the input actually affects work
+    distribution.
     """
 
     @classmethod
