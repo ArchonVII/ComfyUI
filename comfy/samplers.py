@@ -218,6 +218,9 @@ def _calc_cond_batch_outer(model: BaseModel, conds: list[list[dict]], x_in: torc
     return executor.execute(model, conds, x_in, timestep, model_options)
 
 def _calc_cond_batch(model: BaseModel, conds: list[list[dict]], x_in: torch.Tensor, timestep: torch.Tensor, model_options: dict[str]):
+    # NOTE: keep in sync with _calc_cond_batch_multigpu below. Shared logic
+    # (hooked_to_run accumulation, memory-fit batching, per-chunk output
+    # aggregation) is duplicated there with per-device scheduling layered on top.
     if 'multigpu_clones' in model_options:
         return _calc_cond_batch_multigpu(model, conds, x_in, timestep, model_options)
     out_conds = []
@@ -353,6 +356,10 @@ def _calc_cond_batch(model: BaseModel, conds: list[list[dict]], x_in: torch.Tens
     return out_conds
 
 def _calc_cond_batch_multigpu(model: BaseModel, conds: list[list[dict]], x_in: torch.Tensor, timestep: torch.Tensor, model_options: dict[str]):
+    # NOTE: keep in sync with _calc_cond_batch above. Same conds-by-hooks
+    # accumulation, memory-fit batching, and output aggregation, but adds a
+    # per-device scheduler, per-device patcher/control lookup, tensor .to(device)
+    # placement, and MultiGPUThreadPool dispatch around the inner loop.
     out_conds = []
     out_counts = []
     # separate conds by matching hooks
