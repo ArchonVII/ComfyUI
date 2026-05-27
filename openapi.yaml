@@ -5628,6 +5628,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
           description: The API key ID.
       responses:
         "204":
