@@ -273,14 +273,21 @@ def _per_frame_alpha_means_libvpx(source) -> list:
             for frame in decoder.decode(packet):
                 rgba = frame.to_ndarray(format="rgba")
                 means.append(float(rgba[..., 3].mean()))
+        try:
+            for frame in decoder.decode(None):
+                rgba = frame.to_ndarray(format="rgba")
+                means.append(float(rgba[..., 3].mean()))
+        except EOFError:
+            pass
     return means
 
 
-def test_save_to_auto_preserves_vp9_alpha_via_stream_copy():
-    """Save Video with format=auto, codec=auto stream-copies a WebM/VP9+alpha file
-    without touching the alpha plane. This is the assumption that the consolidated
-    'Bria Remove Video Background' node relies on when background_color='Transparent'
-    (which makes Bria return a webm_vp9 url with a real alpha channel)."""
+def test_video_from_file_save_to_bytesio_stream_copies_vp9_alpha():
+    """VideoFromFile.save_to(BytesIO, format=AUTO, codec=AUTO) stream-copies the source
+    container/codec without re-encoding, so a WebM/VP9 file with an alpha plane
+    round-trips unchanged. Note: this covers ONLY the in-memory BytesIO path. Saving
+    to a .mp4 file (SaveVideo's default extension) muxes VP9 into MP4 and drops the
+    alpha plane -- intentionally not covered here; see PR notes."""
     raw = _make_webm_vp9_with_alpha()
     original_means = _per_frame_alpha_means_libvpx(io.BytesIO(raw))
     assert len(original_means) > 0, "test fixture failed to produce frames"

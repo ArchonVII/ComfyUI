@@ -519,9 +519,10 @@ class BriaTransparentVideoBackground(IO.ComfyNode):
             display_name="Bria Remove Video Background (Transparent)",
             category="partner/video/Bria",
             description="Remove the background from a video using Bria and return the cut-out frames "
-            "plus an alpha mask, ready for per-frame compositing or feeding into Save WEBM. Use this "
-            "when you need IMAGE + MASK sockets; if you only need to save a transparent video file, "
-            "use 'Bria Remove Video Background' with background_color='Transparent' instead.",
+            "plus an alpha mask, ready for per-frame compositing or feeding into Save WEBM to "
+            "persist a transparent video to disk. This is currently the only way to save the "
+            "alpha channel: Save Video on the consolidated 'Bria Remove Video Background' node's "
+            "Transparent output writes a .mp4 by default and drops the VP9 alpha plane on mux.",
             inputs=[
                 IO.Video.Input("video"),
                 IO.Int.Input(
