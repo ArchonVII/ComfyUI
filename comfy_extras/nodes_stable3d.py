@@ -65,7 +65,7 @@ class StableZero123_Conditioning_Batched(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="StableZero123_Conditioning_Batched",
-            category="model/conditioning/stable_zero123",
+            category="model/conditioning/stable zero123",
             inputs=[
                 io.ClipVision.Input("clip_vision"),
                 io.Image.Input("init_image"),

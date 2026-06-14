@@ -93,7 +93,7 @@ class StableCascade_StageB_Conditioning(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="StableCascade_StageB_Conditioning",
-            category="model/conditioning/stable_cascade",
+            category="model/conditioning/stable cascade",
             inputs=[
                 io.Conditioning.Input("conditioning"),
                 io.Latent.Input("stage_c"),

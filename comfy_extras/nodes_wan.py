@@ -1252,7 +1252,7 @@ class Wan22ImageToVideoLatent(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="Wan22ImageToVideoLatent",
-            category="model/conditioning/inpaint",
+            category="model/conditioning/wan",
             inputs=[
                 io.Vae.Input("vae"),
                 io.Int.Input("width", default=1280, min=32, max=nodes.MAX_RESOLUTION, step=32),
