@@ -729,7 +729,7 @@ class SamplerCustom(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="SamplerCustom",
-            category="model/sampling/custom_sampling",
+            category="model/sampling/custom",
             inputs=[
                 io.Model.Input("model"),
                 io.Boolean.Input("add_noise", default=True, advanced=True),
@@ -1015,7 +1015,7 @@ class SamplerCustomAdvanced(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="SamplerCustomAdvanced",
-            category="model/sampling/custom_sampling",
+            category="model/sampling/custom",
             inputs=[
                 io.Noise.Input("noise"),
                 io.Guider.Input("guider"),
