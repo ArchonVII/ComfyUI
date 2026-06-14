@@ -232,7 +232,7 @@ class ModelPatchLoader:
     FUNCTION = "load_model_patch"
     EXPERIMENTAL = True
 
-    CATEGORY = "advanced/loaders"
+    CATEGORY = "model/loaders"
 
     def load_model_patch(self, name):
         model_patch_path = folder_paths.get_full_path_or_raise("model_patches", name)
@@ -512,7 +512,7 @@ class ZImageFunControlnet(QwenImageDiffsynthControlnet):
                               },
                 "optional": {"image": ("IMAGE",), "inpaint_image": ("IMAGE",), "mask": ("MASK",)}}
 
-    CATEGORY = "advanced/loaders/zimage"
+    CATEGORY = "model/patch/z-image"
 
 class UsoStyleProjectorPatch:
     def __init__(self, model_patch, encoded_image):

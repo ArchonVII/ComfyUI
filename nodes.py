@@ -949,7 +949,7 @@ class UNETLoader:
     RETURN_TYPES = ("MODEL",)
     FUNCTION = "load_unet"
 
-    CATEGORY = "advanced/loaders"
+    CATEGORY = "model/loaders"
 
     def load_unet(self, unet_name, weight_dtype):
         model_options = {}
@@ -977,9 +977,9 @@ class CLIPLoader:
     RETURN_TYPES = ("CLIP",)
     FUNCTION = "load_clip"
 
-    CATEGORY = "advanced/loaders"
+    CATEGORY = "model/loaders"
 
-    DESCRIPTION = "[Recipes]\n\nstable_diffusion: clip-l\nstable_cascade: clip-g\nsd3: t5 xxl/ clip-g / clip-l\nstable_audio: t5 base\nmochi: t5 xxl\ncogvideox: t5 xxl (226-token padding)\ncosmos: old t5 xxl\nlumina2: gemma 2 2B\nwan: umt5 xxl\n hidream: llama-3.1 (Recommend) or t5\nomnigen2: qwen vl 2.5 3B\nlens: gpt-oss-20b\n pixeldit: gemma 2 2B elm"
+    DESCRIPTION = "Recipes:\nsd: clip-l\nstable cascade: clip-g\nsd3: t5 xxl / clip-g / clip-l\nstable audio: t5 base\nmochi: t5 xxl\ncogvideox: t5 xxl (226-token padding)\ncosmos: old t5 xxl\nlumina2: gemma 2 2B\nwan: umt5 xxl\nhidream: llama-3.1 (Recommend) or t5\nomnigen2: qwen vl 2.5 3B\nlens: gpt-oss-20b\npixeldit: gemma 2 2B elm"
 
     def load_clip(self, clip_name, type="stable_diffusion", device="default"):
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
@@ -1007,7 +1007,7 @@ class DualCLIPLoader:
 
     CATEGORY = "model/loaders"
 
-    DESCRIPTION = "[Recipes]\n\nsdxl: clip-l, clip-g\nsd3: clip-l, clip-g / clip-l, t5 / clip-g, t5\nflux: clip-l, t5\nhidream: at least one of t5 or llama, recommended t5 and llama\nhunyuan_image: qwen2.5vl 7b and byt5 small\nnewbie: gemma-3-4b-it, jina clip v2"
+    DESCRIPTION = "Recipes:\nsdxl: clip-l, clip-g\nsd3: clip-l, clip-g / clip-l, t5 / clip-g, t5\nflux: clip-l, t5\nhidream: at least one of t5 or llama, recommended t5 and llama\nhunyuan_image: qwen2.5vl 7b and byt5 small\nnewbie: gemma-3-4b-it, jina clip v2"
 
     def load_clip(self, clip_name1, clip_name2, type, device="default"):
         clip_type = getattr(comfy.sd.CLIPType, type.upper(), comfy.sd.CLIPType.STABLE_DIFFUSION)
@@ -2099,6 +2099,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoraLoader": "Load LoRA (Model and CLIP)",
     "LoraLoaderModelOnly": "Load LoRA",
     "CLIPLoader": "Load CLIP",
+    "DualCLIPLoader": "Load CLIP (Dual)",
     "ControlNetLoader": "Load ControlNet Model",
     "DiffControlNetLoader": "Load ControlNet Model (diff)",
     "StyleModelLoader": "Load Style Model",

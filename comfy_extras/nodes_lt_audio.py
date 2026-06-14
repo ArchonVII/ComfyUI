@@ -168,9 +168,9 @@ class LTXAVTextEncoderLoader(io.ComfyNode):
     def define_schema(cls) -> io.Schema:
         return io.Schema(
             node_id="LTXAVTextEncoderLoader",
-            display_name="LTXV Audio Text Encoder Loader",
-            category="advanced/loaders",
-            description="[Recipes]\n\nltxav: gemma 3 12B",
+            display_name="Load LTXV Audio Text Encoder",
+            category="model/loaders",
+            description="Recipes:\nltxav: gemma 3 12B",
             inputs=[
                 io.Combo.Input(
                     "text_encoder",

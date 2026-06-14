@@ -11,8 +11,9 @@ class QuadrupleCLIPLoader(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="QuadrupleCLIPLoader",
-            category="advanced/loaders",
-            description="[Recipes]\n\nhidream: long clip-l, long clip-g, t5xxl, llama_8b_3.1_instruct",
+            display_name="Load CLIP (Quadruple)",
+            category="model/loaders",
+            description="Recipes:\nhidream: long clip-l, long clip-g, t5xxl, llama_8b_3.1_instruct",
             inputs=[
                 io.Combo.Input("clip_name1", options=folder_paths.get_filename_list("text_encoders")),
                 io.Combo.Input("clip_name2", options=folder_paths.get_filename_list("text_encoders")),

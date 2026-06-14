@@ -13,8 +13,9 @@ class TripleCLIPLoader(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="TripleCLIPLoader",
-            category="advanced/loaders",
-            description="[Recipes]\n\nsd3: clip-l, clip-g, t5",
+            display_name="Load CLIP (Triple)",
+            category="model/loaders",
+            description="Recipes:\nsd3: clip-l, clip-g, t5",
             inputs=[
                 io.Combo.Input("clip_name1", options=folder_paths.get_filename_list("text_encoders")),
                 io.Combo.Input("clip_name2", options=folder_paths.get_filename_list("text_encoders")),
