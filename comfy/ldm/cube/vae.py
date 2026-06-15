@@ -354,10 +354,11 @@ class CubeShapeVAE(nn.Module):
 
 def grid_logits_to_mesh(grid_logit, grid_size, bbox_size, bbox_min, level=0.0):
     """Occupancy-logit grid -> mesh, using the vendored dependency-free marching cubes
-    (classic Lorensen, same family as upstream cube's default warp backend). The vertex
-    transform mirrors upstream: index coords -> bbox, with the same face winding flip."""
+    (classic Lorensen, same family as upstream cube's default warp backend). Vertices are
+    rescaled from grid-index space into the bbox, matching upstream's transform."""
     from comfy.ldm.cube.marching_cubes import marching_cubes
     vertices, faces = marching_cubes(grid_logit, level)
     vertices = vertices / np.array(grid_size) * bbox_size + bbox_min
-    faces = faces[:, [2, 1, 0]]
+    # The vendored Lorensen table already emits outward-facing winding for this
+    # occupancy convention, so (unlike the upstream skimage path) no face flip is needed.
     return vertices.astype(np.float32), np.ascontiguousarray(faces)
