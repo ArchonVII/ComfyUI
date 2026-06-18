@@ -976,6 +976,23 @@ class PromptServer():
                     status=400
                 )
 
+            # Validate that every element is a well-formed job id before doing
+            # anything else.  An unhashable element (e.g. a nested dict or list)
+            # would cause a TypeError when used as a history dict key; a
+            # non-string or non-UUID value is never a valid id.  Reject early
+            # with 400 rather than letting the classify loop raise 500.
+            invalid_ids = []
+            for jid in job_ids:
+                try:
+                    validate_job_id(jid)
+                except (ValueError, AttributeError):
+                    invalid_ids.append(jid if isinstance(jid, str) else repr(jid))
+            if invalid_ids:
+                return web.json_response(
+                    {"error": "job_ids contains invalid id(s)", "invalid_ids": invalid_ids},
+                    status=400,
+                )
+
             # Validate every id exists before cancelling anything. A snapshot of
             # the queue + history is taken once so the membership check is
             # consistent for the whole batch.

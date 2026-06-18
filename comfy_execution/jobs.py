@@ -459,11 +459,19 @@ def cancel_job(
 
     Returns the classification that was acted on (one of the CANCEL_* values),
     so callers can log or report what happened.
+
+    For pending jobs the returned value reflects the *actual* dequeue result:
+    if the job left the queue between the caller's snapshot and the dequeue
+    call (a narrow TOCTOU window), the dequeue returns False and this function
+    returns CANCEL_UNKNOWN rather than CANCEL_PENDING, so callers that map the
+    return to a ``cancelled`` boolean never report a cancel that did not happen.
     """
     classification = classify_job_for_cancel(prompt_id, running, queued, history)
     if classification == CANCEL_RUNNING:
         interrupt()
     elif classification == CANCEL_PENDING:
-        dequeue(prompt_id)
+        if not dequeue(prompt_id):
+            # Job was no longer in the queue by the time we tried to remove it.
+            return CANCEL_UNKNOWN
     # CANCEL_TERMINAL and CANCEL_UNKNOWN are intentional no-ops.
     return classification
