@@ -9,6 +9,7 @@ import logging
 from typing import Any, TypedDict
 
 from comfy.cli_args import args
+from comfy.comfy_api_env import get_frontend_config
 
 
 class FeatureFlagInfo(TypedDict):
@@ -162,4 +163,11 @@ def get_server_features() -> dict[str, Any]:
     Returns:
         Dictionary of server feature flags
     """
-    return SERVER_FEATURE_FLAGS.copy()
+    features = SERVER_FEATURE_FLAGS.copy()
+    # When --comfy-api-base targets a staging-tier comfy.org backend (the staging api host or an ephemeral testenv),
+    # surface the api + platform base so the frontend can reach it without a rebuild
+    # (it derives the Firebase project from the api base). Prod / self-hosted bases keep build-time defaults.
+    overrides = get_frontend_config()
+    if overrides:
+        features.update(overrides)
+    return features

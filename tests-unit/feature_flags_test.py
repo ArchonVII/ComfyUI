@@ -11,6 +11,10 @@ from comfy_api.feature_flags import (
     _coerce_flag_value,
     _parse_cli_feature_flags,
 )
+from comfy.comfy_api_env import (
+    frontend_config_for_base,
+    normalize_comfy_api_base,
+)
 
 
 class TestFeatureFlags:
@@ -181,3 +185,50 @@ class TestCliFeatureFlagRegistry:
             assert "type" in info, f"{key} missing 'type'"
             assert "default" in info, f"{key} missing 'default'"
             assert "description" in info, f"{key} missing 'description'"
+
+
+class TestComfyApiEnv:
+    """--comfy-api-base staging-tier detection + testenv main-host -> -registry rewrite."""
+
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            # testenv friendly main host -> comfy-api -registry sibling (slash trimmed)
+            ("https://pr-4398.testenvs.comfy.org", "https://pr-4398-registry.testenvs.comfy.org"),
+            ("https://pr-4398.testenvs.comfy.org/", "https://pr-4398-registry.testenvs.comfy.org"),
+            ("https://pr-4398-registry.testenvs.comfy.org", "https://pr-4398-registry.testenvs.comfy.org"),
+            # staging + everything else -> unchanged (no -registry split)
+            ("https://stagingapi.comfy.org", "https://stagingapi.comfy.org"),
+            ("https://api.comfy.org", "https://api.comfy.org"),
+            ("https://pr-1.testenvs.comfy.org.evil.com", "https://pr-1.testenvs.comfy.org.evil.com"),
+            ("", ""),
+        ],
+    )
+    def test_normalize_comfy_api_base(self, url, expected):
+        assert normalize_comfy_api_base(url) == expected
+
+    def test_config_for_staging_tier_else_none(self):
+        # ephemeral testenv: friendly main host -> -registry, staging platform
+        eph = frontend_config_for_base("https://pr-1234.testenvs.comfy.org/")
+        assert eph["comfy_api_base_url"] == "https://pr-1234-registry.testenvs.comfy.org"
+        assert eph["comfy_platform_base_url"] == "https://stagingplatform.comfy.org"
+        # staging api host: emitted as-is
+        stg = frontend_config_for_base("https://stagingapi.comfy.org")
+        assert stg["comfy_api_base_url"] == "https://stagingapi.comfy.org"
+        assert stg["comfy_platform_base_url"] == "https://stagingplatform.comfy.org"
+        # prod / unknown: nothing
+        assert frontend_config_for_base("https://api.comfy.org") is None
+
+    def test_server_features_merge_only_for_staging_tier(self, monkeypatch):
+        def set_base(url):
+            monkeypatch.setattr(
+                "comfy.comfy_api_env.args",
+                type("Args", (), {"comfy_api_base": url})(),
+            )
+
+        set_base("https://stagingapi.comfy.org")
+        assert "comfy_api_base_url" in get_server_features()
+        set_base("https://pr-7.testenvs.comfy.org")
+        assert "comfy_api_base_url" in get_server_features()
+        set_base("https://api.comfy.org")
+        assert "comfy_api_base_url" not in get_server_features()
