@@ -108,18 +108,20 @@ def test_prune_across_multiple_roots(
 ):
     """Prune correctly handles assets across input and output roots."""
     scope = f"multi-{uuid.uuid4().hex[:6]}"
-    input_fp = create_seed_file("input", scope, "input.bin")
-    create_seed_file("output", scope, "output.bin")
+    input_name = f"{scope}-input.bin"
+    output_name = f"{scope}-output.bin"
+    input_fp = create_seed_file("input", scope, input_name)
+    create_seed_file("output", scope, output_name)
 
     trigger_sync_seed_assets(http, api_base)
-    assert find_asset(scope, input_fp.name)
-    assert find_asset(scope, "output.bin")
+    assert find_asset(scope, input_name)
+    assert find_asset(scope, output_name)
 
     input_fp.unlink()
     trigger_sync_seed_assets(http, api_base)
 
-    assert not find_asset(scope, input_fp.name)
-    assert find_asset(scope, "output.bin")
+    assert not find_asset(scope, input_name)
+    assert find_asset(scope, output_name)
 
 
 @pytest.mark.parametrize("dirname", ["100%_done", "my_folder_name", "has spaces"])
