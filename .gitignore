@@ -5,8 +5,14 @@ __pycache__/
 !/input/example.png
 /models/
 /temp/
-/custom_nodes/
+/custom_nodes/*
 !custom_nodes/example_node.py.example
+!/custom_nodes/comfyui_civitai_ingestor/
+!/custom_nodes/comfyui_civitai_ingestor/*.py
+!/custom_nodes/comfyui_civitai_ingestor/tests/
+!/custom_nodes/comfyui_civitai_ingestor/tests/*.py
+!/custom_nodes/comfyui_civitai_ingestor/web/
+!/custom_nodes/comfyui_civitai_ingestor/web/**
 extra_model_paths.yaml
 /.vs
 .vscode/
