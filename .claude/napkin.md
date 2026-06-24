@@ -9,6 +9,8 @@
 ## Execution & Validation (Highest Priority)
 1. **[2026-06-14] Local ComfyUI checkout lives below workspace root**
    Do instead: run repo commands from `C:\tools\image\ComfyUI`, not `C:\tools\image`.
+2. **[2026-06-24] Manual worktree servers need the main runtime base**
+   Do instead: launch feature worktree servers with `C:\tools\image\ComfyUI\venv\Scripts\python.exe main.py --base-directory C:\tools\image\ComfyUI --port <free-port>` so worktree code uses the real `input`, `models`, `output`, and `user` folders.
 
 ## Shell & Command Reliability
 1. **[2026-06-14] Custom node tests import from `custom_nodes`**

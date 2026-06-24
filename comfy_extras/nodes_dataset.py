@@ -1,15 +1,20 @@
 import logging
 import os
 import json
+import random
+from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageOps, ImageSequence
 from typing_extensions import override
 
 import folder_paths
 import node_helpers
 from comfy_api.latest import ComfyExtension, io
+
+
+VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
 
 def load_and_process_images(image_files, input_dir):
@@ -40,6 +45,76 @@ def load_and_process_images(image_files, input_dir):
         output_images.append(img_tensor)
 
     return output_images
+
+
+def resolve_input_subfolder(folder):
+    input_dir = Path(folder_paths.get_input_directory()).resolve()
+    if folder in ("", "."):
+        folder_path = input_dir
+    else:
+        folder_path = (input_dir / folder).resolve()
+
+    try:
+        common_path = os.path.commonpath([str(input_dir), str(folder_path)])
+    except ValueError as exc:
+        raise ValueError(f"Folder is outside the input directory: {folder}") from exc
+
+    if common_path != str(input_dir):
+        raise ValueError(f"Folder is outside the input directory: {folder}")
+    if not folder_path.is_dir():
+        raise ValueError(f"Input folder not found: {folder}")
+    return folder_path
+
+
+def find_image_files(folder_path, include_subfolders=False):
+    folder_path = Path(folder_path)
+    candidates = folder_path.rglob("*") if include_subfolders else folder_path.iterdir()
+    image_files = [
+        path
+        for path in candidates
+        if path.is_file() and path.suffix.lower() in VALID_IMAGE_EXTENSIONS
+    ]
+    return sorted(image_files, key=lambda path: path.as_posix().casefold())
+
+
+def choose_random_image_file(image_files, seed):
+    image_files = list(image_files)
+    if not image_files:
+        raise ValueError("No valid images found in input folder")
+    return random.Random(seed).choice(image_files)
+
+
+def load_image_and_mask(image_path):
+    img = node_helpers.pillow(Image.open, image_path)
+    frame = next(ImageSequence.Iterator(img))
+    frame = node_helpers.pillow(ImageOps.exif_transpose, frame)
+
+    image = frame.convert("RGB")
+    image = np.array(image).astype(np.float32) / 255.0
+    image = torch.from_numpy(image)[None,]
+
+    if "A" in frame.getbands():
+        mask = np.array(frame.getchannel("A")).astype(np.float32) / 255.0
+        mask = 1.0 - torch.from_numpy(mask)
+    else:
+        mask = torch.zeros((64, 64), dtype=torch.float32)
+
+    return image, mask.unsqueeze(0)
+
+
+def folder_image_fingerprint(folder, include_subfolders):
+    folder_path = resolve_input_subfolder(folder)
+    fingerprint = []
+    for path in find_image_files(folder_path, include_subfolders):
+        stat = path.stat()
+        fingerprint.append(
+            (
+                path.relative_to(folder_path).as_posix(),
+                stat.st_mtime_ns,
+                stat.st_size,
+            )
+        )
+    return fingerprint
 
 
 class LoadImageDataSetFromFolderNode(io.ComfyNode):
@@ -79,6 +154,74 @@ class LoadImageDataSetFromFolderNode(io.ComfyNode):
         ]
         output_tensor = load_and_process_images(image_files, sub_input_dir)
         return io.NodeOutput(output_tensor)
+
+
+class LoadRandomImageFromFolderNode(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        folders = ["."] + folder_paths.get_input_subfolders()
+        return io.Schema(
+            node_id="LoadRandomImageFromFolder",
+            search_aliases=[
+                "load random image",
+                "load random photo",
+                "random image folder",
+                "random folder image",
+                "random dataset image",
+            ],
+            display_name="Load Random Image (from Folder)",
+            category="image",
+            description="Load one randomly selected image from a folder under the input directory. Supported formats: PNG, JPG, JPEG, WEBP.",
+            is_experimental=True,
+            inputs=[
+                io.Combo.Input(
+                    "folder",
+                    options=folders,
+                    tooltip="The input folder to choose an image from.",
+                ),
+                io.Int.Input(
+                    "seed",
+                    default=0,
+                    min=0,
+                    max=0xFFFFFFFFFFFFFFFF,
+                    control_after_generate=io.ControlAfterGenerate.randomize,
+                    tooltip="Random seed used to choose one image from the folder.",
+                ),
+                io.Boolean.Input(
+                    "include_subfolders",
+                    default=False,
+                    tooltip="Include images in nested folders.",
+                    advanced=True,
+                ),
+            ],
+            outputs=[
+                io.Image.Output(display_name="image", tooltip="The selected image."),
+                io.Mask.Output(display_name="mask", tooltip="The selected image alpha mask, if present."),
+                io.String.Output(display_name="selected_file", tooltip="Path to the selected image."),
+            ],
+        )
+
+    @classmethod
+    def validate_inputs(cls, folder, seed, include_subfolders):
+        try:
+            folder_path = resolve_input_subfolder(folder)
+            if not find_image_files(folder_path, include_subfolders):
+                return f"No supported images found in input folder: {folder}"
+        except ValueError as exc:
+            return str(exc)
+        return True
+
+    @classmethod
+    def fingerprint_inputs(cls, folder, seed, include_subfolders):
+        return folder_image_fingerprint(folder, include_subfolders)
+
+    @classmethod
+    def execute(cls, folder, seed, include_subfolders):
+        folder_path = resolve_input_subfolder(folder)
+        image_files = find_image_files(folder_path, include_subfolders)
+        image_path = choose_random_image_file(image_files, seed)
+        image, mask = load_image_and_mask(image_path)
+        return io.NodeOutput(image, mask, str(image_path))
 
 
 class LoadImageTextDataSetFromFolderNode(io.ComfyNode):
@@ -1604,6 +1747,7 @@ class DatasetExtension(ComfyExtension):
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
         return [
             # Data loading/saving nodes
+            LoadRandomImageFromFolderNode,
             LoadImageDataSetFromFolderNode,
             LoadImageTextDataSetFromFolderNode,
             SaveImageDataSetToFolderNode,
