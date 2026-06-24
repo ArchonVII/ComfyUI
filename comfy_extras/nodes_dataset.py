@@ -2,6 +2,7 @@ import logging
 import os
 import json
 import random
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,14 @@ from comfy_api.latest import ComfyExtension, io
 
 
 VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+
+
+@dataclass(frozen=True)
+class ImageMetadata:
+    prompt_json: str
+    workflow_json: str
+    parameters: str
+    raw_metadata_json: str
 
 
 def load_and_process_images(image_files, input_dir):
@@ -64,6 +73,92 @@ def resolve_input_subfolder(folder):
     if not folder_path.is_dir():
         raise ValueError(f"Input folder not found: {folder}")
     return folder_path
+
+
+def _path_is_inside(path, root):
+    try:
+        return os.path.commonpath([str(root), str(path)]) == str(root)
+    except ValueError:
+        return False
+
+
+def _runtime_image_roots():
+    return [
+        Path(folder_paths.get_input_directory()).resolve(),
+        Path(folder_paths.get_output_directory()).resolve(),
+        Path(folder_paths.get_temp_directory()).resolve(),
+    ]
+
+
+def resolve_image_metadata_path(image_path):
+    if not str(image_path).strip():
+        raise ValueError("Image path is required")
+
+    image_path = str(image_path).strip()
+    name, base_dir = folder_paths.annotated_filepath(image_path)
+    if base_dir is not None:
+        resolved_path = (Path(base_dir) / name).resolve()
+    else:
+        raw_path = Path(image_path)
+        if raw_path.is_absolute():
+            resolved_path = raw_path.resolve()
+        else:
+            resolved_path = (Path(folder_paths.get_input_directory()) / raw_path).resolve()
+
+    roots = _runtime_image_roots()
+    if not any(_path_is_inside(resolved_path, root) for root in roots):
+        raise ValueError("Image path is outside the ComfyUI input, output, or temp directories")
+    if not resolved_path.is_file():
+        raise ValueError(f"Image file not found: {image_path}")
+    return resolved_path
+
+
+def _metadata_text(metadata, key):
+    value = metadata.get(key)
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def _json_safe_metadata_value(value):
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_metadata_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _json_safe_metadata_value(item) for key, item in value.items()}
+    return str(value)
+
+
+def read_image_metadata(image_path):
+    resolved_path = resolve_image_metadata_path(str(image_path))
+    img = node_helpers.pillow(Image.open, resolved_path)
+    try:
+        metadata = {
+            str(key): _json_safe_metadata_value(value)
+            for key, value in (img.info or {}).items()
+        }
+        raw_metadata = {
+            "path": str(resolved_path),
+            "format": img.format,
+            "mode": img.mode,
+            "width": img.width,
+            "height": img.height,
+            "metadata": metadata,
+        }
+    finally:
+        img.close()
+
+    return ImageMetadata(
+        prompt_json=_metadata_text(metadata, "prompt"),
+        workflow_json=_metadata_text(metadata, "workflow"),
+        parameters=_metadata_text(metadata, "parameters"),
+        raw_metadata_json=json.dumps(raw_metadata, ensure_ascii=False, indent=2),
+    )
 
 
 def find_image_files(folder_path, include_subfolders=False):
@@ -154,6 +249,64 @@ class LoadImageDataSetFromFolderNode(io.ComfyNode):
         ]
         output_tensor = load_and_process_images(image_files, sub_input_dir)
         return io.NodeOutput(output_tensor)
+
+
+class LoadImageMetadataNode(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="LoadImageMetadata",
+            search_aliases=[
+                "image metadata",
+                "png metadata",
+                "load metadata",
+                "load workflow metadata",
+                "read image prompt",
+            ],
+            display_name="Load Image Metadata",
+            category="image/metadata",
+            description="Read embedded metadata from a local image in the ComfyUI input, output, or temp directories.",
+            is_experimental=True,
+            inputs=[
+                io.String.Input(
+                    "image_path",
+                    default="",
+                    multiline=False,
+                    placeholder="Connect selected_file, use image.png, or image.png [output]",
+                    tooltip="Image path to read metadata from. Relative paths resolve under the input directory.",
+                ),
+            ],
+            outputs=[
+                io.String.Output(display_name="prompt_json", tooltip="Embedded ComfyUI API prompt JSON, when present."),
+                io.String.Output(display_name="workflow_json", tooltip="Embedded ComfyUI workflow JSON, when present."),
+                io.String.Output(display_name="parameters", tooltip="Embedded generation parameters text, when present."),
+                io.String.Output(display_name="raw_metadata_json", tooltip="All readable image metadata as JSON."),
+            ],
+        )
+
+    @classmethod
+    def validate_inputs(cls, image_path):
+        try:
+            resolve_image_metadata_path(image_path)
+        except ValueError as exc:
+            return str(exc)
+        return True
+
+    @classmethod
+    def fingerprint_inputs(cls, image_path):
+        resolved_path = resolve_image_metadata_path(image_path)
+        stat = resolved_path.stat()
+        return (str(resolved_path), stat.st_mtime_ns, stat.st_size)
+
+    @classmethod
+    def execute(cls, image_path):
+        metadata = read_image_metadata(image_path)
+        return io.NodeOutput(
+            metadata.prompt_json,
+            metadata.workflow_json,
+            metadata.parameters,
+            metadata.raw_metadata_json,
+        )
 
 
 class LoadRandomImageFromFolderNode(io.ComfyNode):
@@ -1747,6 +1900,7 @@ class DatasetExtension(ComfyExtension):
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
         return [
             # Data loading/saving nodes
+            LoadImageMetadataNode,
             LoadRandomImageFromFolderNode,
             LoadImageDataSetFromFolderNode,
             LoadImageTextDataSetFromFolderNode,
