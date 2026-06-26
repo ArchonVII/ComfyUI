@@ -18,7 +18,7 @@ function createButton() {
     }
     const button = document.createElement("button");
     button.id = `${APP_ID}-button`;
-    button.textContent = "Civitai Ingestor";
+    button.textContent = "arch-Civitai Ingestor";
     button.style.cssText = [
         "position:fixed",
         "right:16px",
@@ -40,7 +40,7 @@ function panelHtml() {
     return `
         <div class="ci-card">
             <div class="ci-head">
-                <strong>Civitai Collection Ingestor</strong>
+                <strong>arch-Civitai Collection Ingestor</strong>
                 <button type="button" data-ci-close>Close</button>
             </div>
             <div class="ci-controls">
@@ -53,6 +53,11 @@ function panelHtml() {
                 <button type="button" data-ci-download>Download missing</button>
             </div>
             <div class="ci-status" data-ci-status>Ready</div>
+            <div class="ci-filter">
+                <input data-ci-search type="search" placeholder="Search images, prompts, models, files, status" autocomplete="off" spellcheck="false" />
+                <button type="button" data-ci-clear-search>Clear</button>
+                <span data-ci-filter-status class="ci-muted"></span>
+            </div>
             <div class="ci-summary" data-ci-summary></div>
             <div class="ci-grid">
                 <div class="ci-pane">
@@ -95,6 +100,7 @@ function ensurePanel() {
         #${APP_ID} button:disabled { opacity:.45; cursor:not-allowed; }
         #${APP_ID} input { padding:7px 8px; min-width:0; }
         #${APP_ID} .ci-status { min-height:20px; color:#cbd5e1; }
+        #${APP_ID} .ci-filter { display:grid; grid-template-columns:minmax(220px, 1fr) auto auto; align-items:center; gap:8px; }
         #${APP_ID} .ci-summary { display:flex; flex-wrap:wrap; gap:8px; color:#d1d5db; }
         #${APP_ID} .ci-chip { border:1px solid #334155; border-radius:6px; padding:4px 7px; background:#111827; }
         #${APP_ID} .ci-grid { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -108,11 +114,12 @@ function ensurePanel() {
         #${APP_ID} .ci-resource { display:grid; grid-template-columns:1fr auto; gap:8px; border:1px solid #334155; border-radius:8px; padding:7px; background:#111827; }
         #${APP_ID} .ci-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
         #${APP_ID} .ci-actions button { padding:5px 8px; font-size:12px; }
+        #${APP_ID} .ci-empty { border:1px dashed #334155; border-radius:8px; padding:14px; color:#94a3b8; background:#0b1220; }
         #${APP_ID} .ci-ok { color:#86efac; }
         #${APP_ID} .ci-warn { color:#facc15; }
         #${APP_ID} .ci-bad { color:#fca5a5; }
         @media (max-width: 840px) {
-            #${APP_ID} .ci-controls, #${APP_ID} .ci-grid { grid-template-columns:1fr; }
+            #${APP_ID} .ci-controls, #${APP_ID} .ci-filter, #${APP_ID} .ci-grid { grid-template-columns:1fr; }
         }
     `;
     document.head.appendChild(style);
@@ -128,6 +135,10 @@ function setStatus(panel, text) {
 function collectionIdFromUrl(url) {
     const match = String(url || "").match(/collections\/(\d+)/);
     return match ? Number(match[1]) : Number(url);
+}
+
+function currentCollectionId(panel) {
+    return collectionIdFromUrl(panel.querySelector("[data-ci-url]").value) || panel._civitaiIngestorCollectionId;
 }
 
 async function readJson(response) {
@@ -154,8 +165,25 @@ async function ingest(panel) {
     setStatus(panel, `Ingested ${data.summary?.images || 0} images.`);
 }
 
+async function loadCollection(panel) {
+    const collectionId = currentCollectionId(panel);
+    if (!collectionId) {
+        return;
+    }
+    panel._civitaiIngestorCollectionId = collectionId;
+    setStatus(panel, "Loading saved collection...");
+    const response = await api.fetchApi(`/civitai-ingestor/collections/${collectionId}`, { cache: "no-store" });
+    const data = await readJson(response);
+    if (!data.collection) {
+        setStatus(panel, "No saved collection found. Ingest a collection first.");
+        return;
+    }
+    render(panel, data);
+    setStatus(panel, `Loaded ${data.summary?.images || 0} images.`);
+}
+
 async function refreshLocal(panel) {
-    const collectionId = panel._civitaiIngestorCollectionId || collectionIdFromUrl(panel.querySelector("[data-ci-url]").value);
+    const collectionId = currentCollectionId(panel);
     if (!collectionId) {
         notify("No collection loaded.", "error");
         return;
@@ -172,7 +200,7 @@ async function refreshLocal(panel) {
 }
 
 async function cacheImages(panel) {
-    const collectionId = panel._civitaiIngestorCollectionId || collectionIdFromUrl(panel.querySelector("[data-ci-url]").value);
+    const collectionId = currentCollectionId(panel);
     if (!collectionId) {
         notify("No collection loaded.", "error");
         return;
@@ -270,12 +298,16 @@ function render(panel, data) {
         ["Present", summary.present_files || 0],
         ["Missing", summary.missing_files || 0],
     ].map(([label, value]) => `<span class="ci-chip">${label}: ${value}</span>`).join("");
-    renderImages(panel, data.images || []);
-    renderResources(panel, data.resources || []);
+    applyFilters(panel);
 }
 
 function renderImages(panel, images) {
-    panel.querySelector("[data-ci-images]").innerHTML = images.map((image) => {
+    const container = panel.querySelector("[data-ci-images]");
+    if (!images.length) {
+        container.innerHTML = `<div class="ci-empty">No matching images.</div>`;
+        return;
+    }
+    container.innerHTML = images.map((image) => {
         const prompt = escapeHtml(image.prompt || "No prompt metadata");
         const metaClass = image.has_meta ? "ci-ok" : "ci-warn";
         const imageSrc = image.local_image_status === "cached"
@@ -303,7 +335,12 @@ function renderImages(panel, images) {
 }
 
 function renderResources(panel, resources) {
-    panel.querySelector("[data-ci-resources]").innerHTML = resources.map((item) => {
+    const container = panel.querySelector("[data-ci-resources]");
+    if (!resources.length) {
+        container.innerHTML = `<div class="ci-empty">No matching resources.</div>`;
+        return;
+    }
+    container.innerHTML = resources.map((item) => {
         const statusClass = item.local_status === "missing" ? "ci-bad" : item.local_status === "present_elsewhere" ? "ci-warn" : "ci-ok";
         const trained = (item.trained_words || []).join(", ");
         return `
@@ -319,6 +356,80 @@ function renderResources(panel, resources) {
             </div>
         `;
     }).join("");
+}
+
+function applyFilters(panel) {
+    const data = panel._civitaiIngestorData || {};
+    const query = normalizeSearch(panel.querySelector("[data-ci-search]")?.value);
+    const allImages = data.images || [];
+    const allResources = data.resources || [];
+    const images = query
+        ? allImages.filter((image) => imageSearchText(image).includes(query))
+        : allImages;
+    const resources = query
+        ? allResources.filter((resource) => resourceSearchText(resource).includes(query))
+        : allResources;
+
+    renderImages(panel, images);
+    renderResources(panel, resources);
+    renderFilterStatus(panel, images.length, allImages.length, resources.length, allResources.length, query);
+}
+
+function renderFilterStatus(panel, imageCount, totalImages, resourceCount, totalResources, query) {
+    const node = panel.querySelector("[data-ci-filter-status]");
+    if (!node) {
+        return;
+    }
+    node.textContent = query
+        ? `Showing ${imageCount}/${totalImages} images and ${resourceCount}/${totalResources} resources`
+        : `${totalImages} images and ${totalResources} resources`;
+}
+
+function imageSearchText(image) {
+    return searchText([
+        image.image_id,
+        image.post_id,
+        image.username,
+        image.base_model,
+        image.media_type,
+        image.prompt,
+        image.negative_prompt,
+        image.seed,
+        image.steps,
+        image.sampler,
+        image.cfg_scale,
+        image.width,
+        image.height,
+        image.local_image_status,
+    ]);
+}
+
+function resourceSearchText(resource) {
+    return searchText([
+        resource.file_id,
+        resource.model_version_id,
+        resource.model_name,
+        resource.version_name,
+        resource.file_name,
+        resource.file_type,
+        resource.model_type,
+        resource.base_model,
+        resource.target_folder,
+        resource.local_status,
+        resource.local_path,
+        resource.local_folder,
+        resource.sha256,
+        resource.auto_v2,
+        resource.trained_words || [],
+    ]);
+}
+
+function searchText(values) {
+    return normalizeSearch(values.flatMap((value) => Array.isArray(value) ? value : [value]).join(" "));
+}
+
+function normalizeSearch(value) {
+    return String(value ?? "").trim().toLowerCase();
 }
 
 function formatBytes(value) {
@@ -363,6 +474,13 @@ function wirePanel(panel) {
         setStatus(panel, error.message);
         notify(error.message, "error");
     }));
+    panel.querySelector("[data-ci-search]").addEventListener("input", () => applyFilters(panel));
+    panel.querySelector("[data-ci-clear-search]").addEventListener("click", () => {
+        const search = panel.querySelector("[data-ci-search]");
+        search.value = "";
+        applyFilters(panel);
+        search.focus();
+    });
     panel.querySelector("[data-ci-images]").addEventListener("click", (event) => {
         const draftButton = event.target.closest("[data-ci-draft]");
         const queueButton = event.target.closest("[data-ci-queue]");
@@ -383,6 +501,13 @@ function wirePanel(panel) {
 function openPanel() {
     const panel = ensurePanel();
     panel.style.display = "flex";
+    if (!panel._civitaiIngestorData && !panel._civitaiIngestorLoadedOnce) {
+        panel._civitaiIngestorLoadedOnce = true;
+        loadCollection(panel).catch((error) => {
+            setStatus(panel, error.message);
+            notify(error.message, "error");
+        });
+    }
 }
 
 app.registerExtension({
