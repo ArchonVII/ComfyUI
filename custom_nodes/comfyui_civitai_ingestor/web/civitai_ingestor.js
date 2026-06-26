@@ -18,7 +18,7 @@ function createButton() {
     }
     const button = document.createElement("button");
     button.id = `${APP_ID}-button`;
-    button.textContent = "Civitai Ingestor";
+    button.textContent = "arch-Civitai Ingestor";
     button.style.cssText = [
         "position:fixed",
         "right:16px",
@@ -40,7 +40,7 @@ function panelHtml() {
     return `
         <div class="ci-card">
             <div class="ci-head">
-                <strong>Civitai Collection Ingestor</strong>
+                <strong>arch-Civitai Collection Ingestor</strong>
                 <button type="button" data-ci-close>Close</button>
             </div>
             <div class="ci-controls">
