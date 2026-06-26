@@ -137,6 +137,10 @@ function collectionIdFromUrl(url) {
     return match ? Number(match[1]) : Number(url);
 }
 
+function currentCollectionId(panel) {
+    return collectionIdFromUrl(panel.querySelector("[data-ci-url]").value) || panel._civitaiIngestorCollectionId;
+}
+
 async function readJson(response) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -162,7 +166,7 @@ async function ingest(panel) {
 }
 
 async function loadCollection(panel) {
-    const collectionId = panel._civitaiIngestorCollectionId || collectionIdFromUrl(panel.querySelector("[data-ci-url]").value);
+    const collectionId = currentCollectionId(panel);
     if (!collectionId) {
         return;
     }
@@ -179,7 +183,7 @@ async function loadCollection(panel) {
 }
 
 async function refreshLocal(panel) {
-    const collectionId = panel._civitaiIngestorCollectionId || collectionIdFromUrl(panel.querySelector("[data-ci-url]").value);
+    const collectionId = currentCollectionId(panel);
     if (!collectionId) {
         notify("No collection loaded.", "error");
         return;
@@ -196,7 +200,7 @@ async function refreshLocal(panel) {
 }
 
 async function cacheImages(panel) {
-    const collectionId = panel._civitaiIngestorCollectionId || collectionIdFromUrl(panel.querySelector("[data-ci-url]").value);
+    const collectionId = currentCollectionId(panel);
     if (!collectionId) {
         notify("No collection loaded.", "error");
         return;
