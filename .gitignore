@@ -13,6 +13,14 @@ __pycache__/
 !/custom_nodes/comfyui_civitai_ingestor/tests/*.py
 !/custom_nodes/comfyui_civitai_ingestor/web/
 !/custom_nodes/comfyui_civitai_ingestor/web/**
+!/custom_nodes/comfyui_random_reference_source/
+!/custom_nodes/comfyui_random_reference_source/*.py
+!/custom_nodes/comfyui_random_reference_source/config/
+!/custom_nodes/comfyui_random_reference_source/config/*.json
+!/custom_nodes/comfyui_random_reference_source/tests/
+!/custom_nodes/comfyui_random_reference_source/tests/*.py
+!/custom_nodes/comfyui_random_reference_source/web/
+!/custom_nodes/comfyui_random_reference_source/web/**
 extra_model_paths.yaml
 /.vs
 .vscode/
