@@ -1,0 +1,13 @@
+[project]
+name = "comfyui-prompt-composer"
+description = "Composable, saveable prompt-building nodes: clothing/body/environment slots, a nude toggle, and reusable titled snippet libraries."
+version = "0.1.0"
+license = { text = "MIT" }
+
+[project.urls]
+Repository = "https://github.com/josephmaguirre/comfyui-prompt-composer"
+
+[tool.comfy]
+PublisherId = "josephmaguirre"
+DisplayName = "arch-Prompt Composer"
+Icon = ""

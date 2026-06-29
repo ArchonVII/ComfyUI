@@ -11,6 +11,7 @@ from custom_nodes.comfyui_random_reference_source.nodes import (
     NONE_FAVORITE,
     RandomReferenceImageSource,
     ReferenceLanePack,
+    build_reference_preview_payload,
     build_image_pool,
     choose_image,
     load_favorites,
@@ -118,6 +119,71 @@ def test_build_image_pool_from_folder_or_selected_files(tmp_path, monkeypatch):
 
     assert [path.name for path in folder_pool] == ["a.png", "b.jpg"]
     assert [path.name for path in selected_pool] == ["b.jpg", "c.webp"]
+
+
+def test_build_image_pool_auto_uses_selection_when_files_are_selected(
+    tmp_path, monkeypatch
+):
+    input_dir = tmp_path / "input"
+    source_dir = input_dir / "subjects"
+    _png(source_dir / "a.png")
+    _png(source_dir / "b.jpg")
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(input_dir))
+
+    pool = build_image_pool(
+        source_mode="auto",
+        folder="subjects",
+        favorite=NONE_FAVORITE,
+        selected_images="b.jpg",
+        include_subfolders=False,
+        favorites={},
+    )
+
+    assert [path.name for path in pool] == ["b.jpg"]
+
+
+def test_build_image_pool_auto_uses_folder_when_no_files_are_selected(
+    tmp_path, monkeypatch
+):
+    input_dir = tmp_path / "input"
+    source_dir = input_dir / "subjects"
+    _png(source_dir / "a.png")
+    _png(source_dir / "b.jpg")
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(input_dir))
+
+    pool = build_image_pool(
+        source_mode="auto",
+        folder="subjects",
+        favorite=NONE_FAVORITE,
+        selected_images="",
+        include_subfolders=False,
+        favorites={},
+    )
+
+    assert [path.name for path in pool] == ["a.png", "b.jpg"]
+
+
+def test_reference_preview_payload_returns_thumbnail_data_urls(tmp_path, monkeypatch):
+    input_dir = tmp_path / "input"
+    source_dir = input_dir / "subjects"
+    _png(source_dir / "a.png")
+    _png(source_dir / "b.jpg")
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(input_dir))
+
+    payload = build_reference_preview_payload(
+        source_mode="selection",
+        folder="subjects",
+        favorite=NONE_FAVORITE,
+        selected_images="a.png\nb.jpg",
+        selection_policy="seeded",
+        seed=1,
+        include_subfolders=False,
+        favorites={},
+    )
+
+    assert payload["mode"] == "selection"
+    assert [item["name"] for item in payload["images"]] == ["a.png", "b.jpg"]
+    assert payload["images"][0]["thumbnail_data_url"].startswith("data:image/png;base64,")
 
 
 def test_build_image_pool_rejects_empty_selection(tmp_path, monkeypatch):

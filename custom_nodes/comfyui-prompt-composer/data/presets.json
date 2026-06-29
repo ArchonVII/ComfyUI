@@ -1,0 +1,89 @@
+{
+  "presets": {
+    "clothing": {
+      "Casual streetwear": {
+        "headwear": "red baseball cap",
+        "top": "white graphic t-shirt",
+        "outerwear": "open denim jacket",
+        "bottom": "blue jeans",
+        "footwear": "white sneakers"
+      },
+      "Business formal": {
+        "full_outfit": "tailored charcoal suit",
+        "top": "crisp white dress shirt",
+        "gloves_accessories": "silk tie, silver watch",
+        "footwear": "polished black oxford shoes"
+      },
+      "Summer beach": {
+        "face_eyewear": "sunglasses",
+        "headwear": "straw sun hat",
+        "full_outfit": "floral sundress",
+        "footwear": "leather sandals"
+      }
+    },
+    "body": {
+      "Young woman": {
+        "subject": "young woman, mid-20s",
+        "body_type": "slim athletic build",
+        "skin": "fair smooth skin",
+        "hair": "long wavy auburn hair",
+        "eyes": "green almond eyes",
+        "expression": "soft natural smile"
+      },
+      "Older man": {
+        "subject": "man in his 50s",
+        "body_type": "broad sturdy build",
+        "skin": "weathered tanned skin",
+        "hair": "short greying hair, stubble beard",
+        "eyes": "deep brown eyes",
+        "expression": "calm confident look"
+      }
+    },
+    "environment": {
+      "Golden hour street": {
+        "location": "city street",
+        "background": "blurred storefronts and traffic",
+        "time_of_day": "late afternoon",
+        "lighting": "warm golden hour backlight",
+        "atmosphere": "relaxed urban mood",
+        "shot": "shallow depth of field, 85mm"
+      },
+      "Cozy interior": {
+        "location": "living room",
+        "setting": "wooden furniture, bookshelves",
+        "time_of_day": "evening",
+        "lighting": "soft warm lamplight",
+        "atmosphere": "cozy intimate",
+        "palette": "warm amber tones"
+      },
+      "Misty forest": {
+        "location": "dense pine forest",
+        "background": "fog between the trees",
+        "time_of_day": "early morning",
+        "weather": "light mist",
+        "lighting": "diffuse cool light, god rays",
+        "atmosphere": "quiet mysterious"
+      }
+    }
+  },
+  "libraries": {
+    "quality": {
+      "Photoreal": "photorealistic, highly detailed, sharp focus, 8k",
+      "Film look": "35mm film grain, cinematic color grading",
+      "Studio": "professional studio photograph, softbox lighting",
+      "Masterpiece": "masterpiece, best quality, award-winning"
+    },
+    "lighting": {
+      "Rim light": "dramatic rim lighting",
+      "Soft window": "soft natural window light",
+      "Neon": "vibrant neon lighting, cyberpunk glow",
+      "Candlelit": "warm candlelight, chiaroscuro"
+    },
+    "camera": {
+      "Portrait": "85mm portrait lens, shallow depth of field",
+      "Wide": "24mm wide angle, deep focus",
+      "Low angle": "low camera angle, looking up",
+      "Overhead": "top-down overhead shot"
+    }
+  }
+}

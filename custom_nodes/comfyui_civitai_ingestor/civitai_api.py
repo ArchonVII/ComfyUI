@@ -12,6 +12,7 @@ from typing import Any, Callable
 DEFAULT_API_BASE = "https://civitai.com"
 RED_API_BASE = "https://civitai.red"
 USER_AGENT = "ComfyUI-Civitai-Ingestor/0.1"
+GLOBAL_FEED_CHECK_LIMIT = 10
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,50 @@ def build_url(api_base: str, path: str, params: dict[str, Any] | None = None) ->
     return f"{api_base.rstrip('/')}{path}{suffix}"
 
 
+def image_page_signature(items: list[Any], limit: int) -> list[tuple[Any, Any, Any]]:
+    signature: list[tuple[Any, Any, Any]] = []
+    for item in items[:limit]:
+        if isinstance(item, dict):
+            signature.append((item.get("id"), item.get("postId"), item.get("url")))
+    return signature
+
+
+def ensure_collection_filter_is_honored(
+    target: CollectionTarget,
+    batch: list[Any],
+    *,
+    token: str | None = None,
+    browsing_level: int | None = None,
+) -> None:
+    check_limit = min(GLOBAL_FEED_CHECK_LIMIT, len(batch))
+    if check_limit <= 0:
+        return
+
+    url = build_url(
+        target.api_base,
+        "/api/v1/images",
+        {
+            "limit": check_limit,
+            "withMeta": "false",
+            "browsingLevel": browsing_level,
+        },
+    )
+    payload = request_json(url, token=token)
+    if not isinstance(payload, dict):
+        return
+
+    global_batch = payload.get("items") or []
+    if not isinstance(global_batch, list):
+        return
+
+    collection_signature = image_page_signature(batch, check_limit)
+    global_signature = image_page_signature(global_batch, check_limit)
+    if collection_signature and collection_signature == global_signature:
+        raise RuntimeError(
+            "Civitai images endpoint ignored collectionId; refusing to import unfiltered global images."
+        )
+
+
 def fetch_collection_images(
     target: CollectionTarget,
     *,
@@ -105,6 +150,14 @@ def fetch_collection_images(
         batch = payload.get("items") or []
         if not isinstance(batch, list):
             raise RuntimeError("Civitai images response did not include an items list.")
+
+        if cursor is None:
+            ensure_collection_filter_is_honored(
+                target,
+                batch,
+                token=token,
+                browsing_level=browsing_level,
+            )
 
         for item in batch:
             if isinstance(item, dict):
@@ -171,4 +224,3 @@ def image_resource_refs(image: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
     return refs
-

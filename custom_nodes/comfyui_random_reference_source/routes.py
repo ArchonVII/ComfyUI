@@ -10,7 +10,12 @@ from aiohttp import web
 
 import folder_paths
 
-from .nodes import VALID_IMAGE_EXTENSIONS, _expand_path_text
+from .nodes import (
+    VALID_IMAGE_EXTENSIONS,
+    _expand_path_text,
+    build_reference_preview_payload,
+    load_favorites,
+)
 
 _ROUTES_REGISTERED = False
 
@@ -120,6 +125,24 @@ async def post_pick_images(request: web.Request) -> web.Response:
     return web.json_response({"paths": paths})
 
 
+async def post_preview(request: web.Request) -> web.Response:
+    data = await _read_json(request)
+    try:
+        payload = build_reference_preview_payload(
+            source_mode=data.get("source_mode", "auto"),
+            folder=data.get("folder", "."),
+            favorite=data.get("favorite", "None"),
+            selected_images=data.get("selected_images", ""),
+            selection_policy=data.get("selection_policy", "random_each_queue"),
+            seed=int(data.get("seed") or 0),
+            include_subfolders=bool(data.get("include_subfolders", False)),
+            favorites=load_favorites(),
+        )
+    except Exception as exc:  # noqa: BLE001 - report preview issues to the node UI
+        return web.json_response({"error": str(exc)}, status=400)
+    return web.json_response(payload)
+
+
 async def _read_json(request: web.Request) -> dict[str, Any]:
     try:
         data = await request.json()
@@ -155,4 +178,5 @@ def register_routes() -> None:
     routes = prompt_server.routes
     routes.post("/arch-random-reference/browse-folder")(post_browse_folder)
     routes.post("/arch-random-reference/pick-images")(post_pick_images)
+    routes.post("/arch-random-reference/preview")(post_preview)
     _ROUTES_REGISTERED = True

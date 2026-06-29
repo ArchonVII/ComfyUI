@@ -141,6 +141,16 @@ function currentCollectionId(panel) {
     return collectionIdFromUrl(panel.querySelector("[data-ci-url]").value) || panel._civitaiIngestorCollectionId;
 }
 
+function emptyCollectionPayload(collectionId = null) {
+    return {
+        collection: collectionId ? { collection_id: collectionId } : null,
+        summary: { images: 0, images_with_meta: 0, resource_files: 0, missing_files: 0, present_files: 0 },
+        images: [],
+        resources: [],
+        image_resources: [],
+    };
+}
+
 async function readJson(response) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -153,6 +163,11 @@ async function ingest(panel) {
     const url = panel.querySelector("[data-ci-url]").value;
     const token = panel.querySelector("[data-ci-token]").value;
     const maxItems = Number(panel.querySelector("[data-ci-max]").value || 50);
+    const collectionId = collectionIdFromUrl(url);
+    if (collectionId) {
+        panel._civitaiIngestorCollectionId = collectionId;
+        render(panel, emptyCollectionPayload(collectionId));
+    }
     setStatus(panel, "Ingesting collection...");
     const response = await api.fetchApi("/civitai-ingestor/ingest", {
         method: "POST",
@@ -171,10 +186,12 @@ async function loadCollection(panel) {
         return;
     }
     panel._civitaiIngestorCollectionId = collectionId;
+    render(panel, emptyCollectionPayload(collectionId));
     setStatus(panel, "Loading saved collection...");
     const response = await api.fetchApi(`/civitai-ingestor/collections/${collectionId}`, { cache: "no-store" });
     const data = await readJson(response);
     if (!data.collection) {
+        render(panel, data);
         setStatus(panel, "No saved collection found. Ingest a collection first.");
         return;
     }
