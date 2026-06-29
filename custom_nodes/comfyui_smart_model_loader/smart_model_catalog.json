@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "diffusion_models": {},
+  "checkpoints": {},
+  "text_encoders": {},
+  "vae": {},
+  "loras": {}
+}

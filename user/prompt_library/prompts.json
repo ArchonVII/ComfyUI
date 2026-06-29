@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "prompts": {
+    "Flux 9B I2I Reference Starter": {
+      "positive": "Using image 1 as the source composition and image 2 as the reference, edit the source image while preserving the source framing, lighting direction, camera perspective, background structure, and output aspect ratio. Borrow only the intended subject, identity, outfit, pose, or style details from the reference image. Keep the result coherent, photorealistic, naturally integrated, and free of duplicated subjects or warped features.",
+      "negative": "low quality, blurry, distorted anatomy, duplicate subject, extra limbs, warped face, mismatched lighting, mismatched perspective, broken hands, text, watermark",
+      "notes": "Starter prompt for the Arch Flux 9B image-to-image reference workflow.",
+      "updated_at": "2026-06-28T00:00:00Z"
+    }
+  }
+}

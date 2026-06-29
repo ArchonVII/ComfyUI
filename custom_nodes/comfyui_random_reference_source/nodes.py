@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import csv
+import base64
 import json
 import os
 import random
 import time
+from io import BytesIO
 from pathlib import Path
 from typing import Mapping
 
@@ -19,7 +21,7 @@ import node_helpers
 VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
 ARCH_CATEGORY = "arch-image/random reference"
 NONE_FAVORITE = "None"
-SOURCE_MODES = ["folder", "selection"]
+SOURCE_MODES = ["auto", "folder", "selection"]
 SELECTION_POLICIES = ["random_each_queue", "seeded"]
 REFERENCE_LANES = [
     "primary_subject",
@@ -175,6 +177,10 @@ def build_image_pool(
     normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
     if normalized_mode in {"selected", "selected_files"}:
         normalized_mode = "selection"
+    if normalized_mode == "auto":
+        normalized_mode = (
+            "selection" if parse_selected_images(selected_images) else "folder"
+        )
     if normalized_mode not in SOURCE_MODES:
         raise ValueError(f"Unsupported source_mode: {source_mode}")
 
@@ -186,6 +192,73 @@ def build_image_pool(
     if not image_files:
         raise ValueError(f"No supported images found in source folder: {source_folder}")
     return image_files
+
+
+def _thumbnail_data_url(image_path: Path, max_size: int = 192) -> str:
+    img = node_helpers.pillow(Image.open, image_path)
+    try:
+        frame = next(ImageSequence.Iterator(img))
+        frame = node_helpers.pillow(ImageOps.exif_transpose, frame).convert("RGB")
+        frame.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        buffer = BytesIO()
+        frame.save(buffer, format="PNG", optimize=True)
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
+    finally:
+        img.close()
+
+
+def build_reference_preview_payload(
+    source_mode: str,
+    folder: str,
+    favorite: str,
+    selected_images: str,
+    selection_policy: str,
+    seed: int,
+    include_subfolders: bool,
+    favorites: Mapping[str, str] | None = None,
+    max_images: int = 8,
+) -> dict[str, object]:
+    favorites = favorites or {}
+    image_pool = build_image_pool(
+        source_mode=source_mode,
+        folder=folder,
+        favorite=favorite,
+        selected_images=selected_images,
+        include_subfolders=include_subfolders,
+        favorites=favorites,
+    )
+    normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
+    if normalized_mode in {"selected", "selected_files"}:
+        normalized_mode = "selection"
+    if normalized_mode == "auto":
+        normalized_mode = (
+            "selection" if parse_selected_images(selected_images) else "folder"
+        )
+
+    if normalized_mode == "selection":
+        preview_paths = image_pool[:max_images]
+    elif str(selection_policy or "").strip().lower() == "seeded":
+        preview_paths = [choose_image(image_pool, seed, selection_policy)]
+    else:
+        preview_paths = image_pool[:max_images]
+
+    source_folder = resolve_source_folder(folder, favorite, favorites)
+    return {
+        "mode": normalized_mode,
+        "source_folder": str(source_folder),
+        "pool_size": len(image_pool),
+        "preview_is_exact_next": normalized_mode == "selection"
+        or str(selection_policy or "").strip().lower() == "seeded",
+        "images": [
+            {
+                "path": str(path),
+                "name": path.name,
+                "thumbnail_data_url": _thumbnail_data_url(path),
+            }
+            for path in preview_paths
+        ],
+    }
 
 
 def choose_image(

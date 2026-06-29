@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "groups": {
+    "age": {
+      "neutral": {},
+      "adult": {
+        "positive": "adult subject"
+      },
+      "mature_adult": {
+        "positive": "mature adult subject"
+      },
+      "older_adult": {
+        "positive": "older adult subject"
+      }
+    },
+    "breast_size": {
+      "neutral": {},
+      "flat": {
+        "positive": "small flat chest",
+        "negative": "large breasts",
+        "loras": [
+          {
+            "name": "Flux\\9b\\Boobs\\PornMaster_flat_chest_flux-2-klein-9b_V1_B.safetensors",
+            "strength_model": 0.65,
+            "strength_clip": 0.45
+          }
+        ]
+      },
+      "large": {
+        "positive": "large breasts",
+        "negative": "small flat chest",
+        "loras": [
+          {
+            "name": "Flux\\9b\\Slider\\klein_slider_bust.safetensors",
+            "strength_model": 0.55,
+            "strength_clip": 0.35
+          }
+        ]
+      },
+      "natural_sagging": {
+        "positive": "natural sagging breasts",
+        "negative": "implausibly firm chest",
+        "loras": [
+          {
+            "name": "Flux\\9b\\Boobs\\Flux.2 Klein 9B - Natural Sagging Breasts.safetensors",
+            "strength_model": 0.7,
+            "strength_clip": 0.45
+          }
+        ]
+      }
+    },
+    "ass_size": {
+      "neutral": {},
+      "small": {
+        "positive": "small hips and butt"
+      },
+      "curvy": {
+        "positive": "curvy hips and butt"
+      },
+      "large": {
+        "positive": "large rounded butt",
+        "negative": "flat hips"
+      }
+    },
+    "height": {
+      "neutral": {},
+      "petite_adult": {
+        "positive": "petite adult build"
+      },
+      "average": {
+        "positive": "average height"
+      },
+      "tall": {
+        "positive": "tall build"
+      }
+    },
+    "weight": {
+      "neutral": {},
+      "slim": {
+        "positive": "slim build"
+      },
+      "athletic": {
+        "positive": "athletic build"
+      },
+      "curvy": {
+        "positive": "curvy build"
+      },
+      "plus_size": {
+        "positive": "plus-size build"
+      }
+    },
+    "hair_color": {
+      "neutral": {},
+      "black": {
+        "positive": "black hair"
+      },
+      "brunette": {
+        "positive": "brown hair"
+      },
+      "blonde": {
+        "positive": "blonde hair"
+      },
+      "red": {
+        "positive": "red hair"
+      },
+      "silver": {
+        "positive": "silver hair"
+      }
+    }
+  }
+}
