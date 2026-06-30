@@ -27,3 +27,15 @@
 - `/api/v1/collections/8081491` and `/api/v1/collections/8081491/items` return HTML 404 pages; use `/api/v1/images?collectionId=...`.
 - Civitai can classify VAE-looking files like `sdxl_vae.safetensors` as `Checkpoint`; target-folder mapping now uses filename heuristics while preserving `noVAE` checkpoint names.
 - Exact workflow/run reconstruction is still gated by image metadata and local model availability. Queueing is wired, but drafts with missing models are intentionally not queued.
+
+## 2026-06-30
+- Rechecked Civitai's current public API docs and confirmed `/api/v1/images` documents `imageId` and `postId` filters, but not `collectionId`.
+- Kept the existing collection guard that rejects responses matching the unfiltered global feed instead of importing unsafe global images.
+- Added ingestion support for pasted Civitai image/post URLs by parsing `https://civitai.com/images/<id>` and `https://civitai.com/posts/<id>`, then fetching through documented `imageId` and `postId` filters.
+- Added metadata normalization for single-image lookups that return nested `meta.meta` payloads.
+- Added a multiline source field and `Paste URL` button to the panel.
+- Verified `python -m pytest custom_nodes/comfyui_civitai_ingestor/tests -q` with 21 passing tests.
+- Verified `python -m compileall -q custom_nodes/comfyui_civitai_ingestor`.
+- Verified `node --check custom_nodes/comfyui_civitai_ingestor/web/civitai_ingestor.js`.
+- Live temp-DB smoke against `https://civitai.com/images/12097475` imported 1 image with prompt metadata and 6 referenced resources; one model-version lookup returned Civitai 404 and was recorded as non-fatal progress.
+- Current-branch ComfyUI route smoke at `http://127.0.0.1:8190/` confirmed the served panel script includes the new paste control.

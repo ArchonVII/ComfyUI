@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from .civitai_api import fetch_collection_images, fetch_model_version, parse_collection_target
+from .civitai_api import fetch_collection_images, fetch_model_version, parse_ingest_target
 from .store import (
     collection_payload,
     connect,
@@ -23,9 +23,12 @@ def ingest_collection(
     db_path: str | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
-    target = parse_collection_target(source)
+    target = parse_ingest_target(source)
     if progress:
-        progress(f"Fetching collection {target.collection_id}.")
+        if target.kind == "collection":
+            progress(f"Fetching collection {target.collection_id}.")
+        else:
+            progress("Fetching pasted Civitai image/post URL(s).")
 
     images = fetch_collection_images(
         target,
@@ -68,6 +71,8 @@ def ingest_collection(
         payload["ingest"] = {
             "collection_id": target.collection_id,
             "api_base": target.api_base,
+            "kind": target.kind,
+            "source_url": target.source_url,
             "fetched_images": len(images),
             "fetched_model_versions": len(wanted_version_ids),
             "local_status": status_counts,
@@ -75,4 +80,3 @@ def ingest_collection(
         return payload
     finally:
         conn.close()
-

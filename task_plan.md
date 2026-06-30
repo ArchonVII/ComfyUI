@@ -14,17 +14,22 @@ Build a ComfyUI custom node extension that ingests a Civitai collection URL, sto
 8. [completed] Add read-only workflow draft generation and panel actions
 9. [completed] Add queue-draft UI path gated by runnable/missing-model status
 10. [completed] Harden target-folder mapping for VAE-looking files
+11. [completed] Add pasted image/post URL ingestion fallback for Civitai collection API drift
 
 ## Decisions
 - Use a custom-node-owned SQLite database under ComfyUI `user/__civitai_ingestor/civitai_ingestor.sqlite3`, not ComfyUI core Alembic migrations.
-- Use Civitai `/api/v1/images?collectionId=...&withMeta=true` plus cursor pagination for collection ingestion.
+- Keep collection URL ingestion guarded because Civitai's public `/api/v1/images` docs do not currently include `collectionId`; refuse imports when the endpoint behaves like the unfiltered global feed.
+- Use documented `/api/v1/images?imageId=...&withMeta=true` and `/api/v1/images?postId=...&withMeta=true` for pasted image/post URL ingestion.
 - Enrich required resources through `/api/v1/model-versions/{id}` and store raw JSON snapshots as well as normalized fields.
 - Reuse local model folder conventions from `folder_paths.py` and the existing `comfyui_smart_model_loader` scan shape where practical.
 
 ## Acceptance Slice
 - User can enter `https://civitai.red/collections/8081491` or `https://civitai.com/collections/8081491`.
+- User can paste one or more `https://civitai.com/images/<id>` or `https://civitai.com/posts/<id>` URLs into the panel and ingest that curated set.
 - Backend ingests the collection and returns counts, image rows, resource rows, and local missing/present status.
+- Backend refuses collection imports if Civitai returns the unfiltered global feed for a `collectionId` request.
 - UI shows progress/status text and a table/list of images/resources.
+- UI provides a `Paste URL` control and multiline source field for copied Civitai URLs.
 - Model download endpoints exist with progress status, storage check, and sequential queue behavior.
 - Cached collection images can be stored under the ingestor user directory and served back to the panel.
 - Workflow drafts can be saved as read-only JSON and queued only when enough metadata and local models are available.
@@ -39,3 +44,4 @@ Build a ComfyUI custom node extension that ingests a Civitai collection URL, sto
 - Second-slice verification: 15 focused pytest tests passed, compile passed, and JS syntax passed.
 - Live cache smoke cached 5 images, then skipped 5 already-cached images on repeat.
 - Live draft smoke saved `C:\tools\image\ComfyUI\user\__civitai_ingestor\workflow_drafts\collection-8081491\image-16382509.workflow-draft.json`.
+- URL-paste fallback verification: 21 focused pytest tests passed, Python compile passed, JS syntax passed, temp-DB live image URL ingest imported 1 image with prompt metadata, and current-branch route smoke passed at `http://127.0.0.1:8190`.
