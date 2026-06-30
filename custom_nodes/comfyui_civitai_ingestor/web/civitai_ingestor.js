@@ -44,7 +44,8 @@ function panelHtml() {
                 <button type="button" data-ci-close>Close</button>
             </div>
             <div class="ci-controls">
-                <input data-ci-url value="${DEFAULT_COLLECTION}" spellcheck="false" />
+                <textarea data-ci-url rows="2" spellcheck="false">${DEFAULT_COLLECTION}</textarea>
+                <button type="button" data-ci-paste-url>Paste URL</button>
                 <input data-ci-token type="password" placeholder="Civitai token (optional)" autocomplete="off" />
                 <input data-ci-max type="number" min="1" max="500" value="50" title="Max images" />
                 <button type="button" data-ci-ingest>Ingest</button>
@@ -94,11 +95,12 @@ function ensurePanel() {
     style.textContent = `
         #${APP_ID} .ci-card { width:min(1180px, calc(100vw - 28px)); height:min(820px, calc(100vh - 28px)); display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid #3f3f46; border-radius:8px; background:#0f172a; color:#f8fafc; font:13px system-ui; box-shadow:0 18px 70px rgba(0,0,0,.45); }
         #${APP_ID} .ci-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-        #${APP_ID} .ci-controls { display:grid; grid-template-columns:minmax(260px, 1fr) minmax(180px, .45fr) 90px repeat(4, auto); gap:8px; }
-        #${APP_ID} button, #${APP_ID} input { border:1px solid #475569; border-radius:6px; background:#111827; color:#f8fafc; font:13px system-ui; }
+        #${APP_ID} .ci-controls { display:grid; grid-template-columns:minmax(280px, 1fr) auto minmax(180px, .38fr) 90px repeat(4, auto); align-items:stretch; gap:8px; }
+        #${APP_ID} button, #${APP_ID} input, #${APP_ID} textarea { border:1px solid #475569; border-radius:6px; background:#111827; color:#f8fafc; font:13px system-ui; }
         #${APP_ID} button { padding:7px 10px; cursor:pointer; white-space:nowrap; }
         #${APP_ID} button:disabled { opacity:.45; cursor:not-allowed; }
-        #${APP_ID} input { padding:7px 8px; min-width:0; }
+        #${APP_ID} input, #${APP_ID} textarea { padding:7px 8px; min-width:0; }
+        #${APP_ID} textarea { min-height:34px; max-height:112px; resize:vertical; }
         #${APP_ID} .ci-status { min-height:20px; color:#cbd5e1; }
         #${APP_ID} .ci-filter { display:grid; grid-template-columns:minmax(220px, 1fr) auto auto; align-items:center; gap:8px; }
         #${APP_ID} .ci-summary { display:flex; flex-wrap:wrap; gap:8px; color:#d1d5db; }
@@ -167,8 +169,11 @@ async function ingest(panel) {
     if (collectionId) {
         panel._civitaiIngestorCollectionId = collectionId;
         render(panel, emptyCollectionPayload(collectionId));
+    } else {
+        panel._civitaiIngestorCollectionId = null;
+        render(panel, emptyCollectionPayload());
     }
-    setStatus(panel, "Ingesting collection...");
+    setStatus(panel, "Ingesting Civitai source...");
     const response = await api.fetchApi("/civitai-ingestor/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,6 +183,28 @@ async function ingest(panel) {
     panel._civitaiIngestorCollectionId = data.ingest?.collection_id || collectionIdFromUrl(url);
     render(panel, data);
     setStatus(panel, `Ingested ${data.summary?.images || 0} images.`);
+}
+
+async function pasteUrl(panel) {
+    const field = panel.querySelector("[data-ci-url]");
+    if (!globalThis.navigator?.clipboard?.readText) {
+        throw new Error("Clipboard read is unavailable.");
+    }
+    const text = String(await globalThis.navigator.clipboard.readText()).trim();
+    if (!text) {
+        setStatus(panel, "Clipboard is empty.");
+        return;
+    }
+    field.value = text;
+    field.focus?.();
+    const collectionId = collectionIdFromUrl(text);
+    if (collectionId) {
+        panel._civitaiIngestorCollectionId = collectionId;
+        render(panel, emptyCollectionPayload(collectionId));
+    } else {
+        panel._civitaiIngestorCollectionId = null;
+    }
+    setStatus(panel, "URL pasted.");
 }
 
 async function loadCollection(panel) {
@@ -476,6 +503,10 @@ function wirePanel(panel) {
         panel.style.display = "none";
     });
     panel.querySelector("[data-ci-ingest]").addEventListener("click", () => ingest(panel).catch((error) => {
+        setStatus(panel, error.message);
+        notify(error.message, "error");
+    }));
+    panel.querySelector("[data-ci-paste-url]").addEventListener("click", () => pasteUrl(panel).catch((error) => {
         setStatus(panel, error.message);
         notify(error.message, "error");
     }));

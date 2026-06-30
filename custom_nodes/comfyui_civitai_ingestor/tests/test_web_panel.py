@@ -171,3 +171,64 @@ vm.runInNewContext(source, context);
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_paste_url_button_reads_clipboard_into_url_field():
+    repo_root = Path(__file__).resolve().parents[3]
+    script_path = repo_root / "custom_nodes" / "comfyui_civitai_ingestor" / "web" / "civitai_ingestor.js"
+    node_script = f"""
+const fs = require("fs");
+const vm = require("vm");
+const scriptPath = {json.dumps(str(script_path))};
+const source = fs.readFileSync(scriptPath, "utf8")
+  .replace(/^import[^\\n]*\\n/gm, "")
+  + "\\nglobalThis.__ci = {{ pasteUrl }};";
+
+const nodes = new Map([
+  ["[data-ci-url]", {{ value: "", focus() {{ this.focused = true; }} }}],
+  ["[data-ci-status]", {{ textContent: "" }}],
+]);
+const panel = {{
+  querySelector(selector) {{
+    if (!nodes.has(selector)) throw new Error(`Missing selector ${{selector}}`);
+    return nodes.get(selector);
+  }},
+}};
+
+const context = {{
+  app: {{ registerExtension() {{}} }},
+  api: {{ fetchApi: async () => {{ throw new Error("fetchApi should not be called"); }} }},
+  navigator: {{
+    clipboard: {{
+      readText: async () => "https://civitai.com/images/12097475",
+    }},
+  }},
+  console,
+  globalThis: null,
+}};
+context.globalThis = context;
+
+vm.runInNewContext(source, context);
+
+(async () => {{
+  await context.__ci.pasteUrl(panel);
+  if (nodes.get("[data-ci-url]").value !== "https://civitai.com/images/12097475") {{
+    throw new Error("Expected clipboard text to populate the URL field");
+  }}
+  if (!nodes.get("[data-ci-url]").focused) {{
+    throw new Error("Expected URL field to be focused after paste");
+  }}
+}})().catch((error) => {{
+  console.error(error.stack || error.message);
+  process.exit(1);
+}});
+"""
+
+    result = subprocess.run(
+        ["node", "-e", node_script],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
