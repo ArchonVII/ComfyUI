@@ -2,6 +2,17 @@ import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
 const NODE_NAME = "RandomReferenceImageSource";
+const SELECTION_POLICIES = new Set([
+  "random_each_queue",
+  "seeded",
+  "sequential",
+]);
+const CONTROL_MODES = new Set([
+  "fixed",
+  "increment",
+  "decrement",
+  "randomize",
+]);
 
 function notify(summary, severity = "info") {
   if (app.extensionManager?.toast?.add) {
@@ -22,6 +33,76 @@ function setWidgetValue(node, widget, value) {
   widget.value = value;
   widget.callback?.(value, app.canvas, node);
   node.setDirtyCanvas(true, true);
+}
+
+function normalizeControlMode(value) {
+  return CONTROL_MODES.has(value) ? value : "randomize";
+}
+
+function syncSequentialSeedControl(node) {
+  if (findWidget(node, "selection_policy")?.value !== "sequential") return;
+  const controlWidget = findWidget(node, "control_after_generate");
+  if (controlWidget?.value !== "increment") {
+    setWidgetValue(node, controlWidget, "increment");
+  }
+}
+
+// Older workflows were saved either as the original compact eight backend
+// values, or with sparse holes from the two interleaved transient buttons.
+// Restore those known shapes by backend widget name before they are resaved in
+// the current dense order.
+function migrateWorkflowWidgetValues(node, values) {
+  if (!Array.isArray(values)) return false;
+
+  let restored = null;
+  if (
+    values.length === 8 &&
+    SELECTION_POLICIES.has(values[5]) &&
+    Number.isFinite(Number(values[6]))
+  ) {
+    restored = {
+      lane: values[0],
+      source_mode: values[1],
+      favorite: values[2],
+      folder: values[3],
+      selected_images: values[4],
+      selection_policy: values[5],
+      seed: Number(values[6]),
+      control_after_generate: "randomize",
+      include_subfolders: Boolean(values[7]),
+    };
+  } else if (
+    values.length >= 11 &&
+    values[4] == null &&
+    values[6] == null &&
+    SELECTION_POLICIES.has(values[7]) &&
+    Number.isFinite(Number(values[8]))
+  ) {
+    // When a compact legacy workflow first encountered the interleaved
+    // buttons, its include_subfolders value was consumed by the newly added
+    // control widget and then resaved at slot 9. A real control mode is a
+    // string; a boolean in that slot is therefore the displaced legacy value.
+    const displacedInclude = typeof values[9] === "boolean" ? values[9] : null;
+    restored = {
+      lane: values[0],
+      source_mode: values[1],
+      favorite: values[2],
+      folder: values[3],
+      selected_images: values[5] ?? "",
+      selection_policy: values[7],
+      seed: Number(values[8]),
+      control_after_generate: normalizeControlMode(values[9]),
+      include_subfolders:
+        displacedInclude === null ? Boolean(values[10]) : displacedInclude,
+    };
+  }
+
+  if (!restored) return false;
+  for (const [name, value] of Object.entries(restored)) {
+    const widget = findWidget(node, name);
+    if (widget) widget.value = value;
+  }
+  return true;
 }
 
 async function callDialog(endpoint, initialDir) {
@@ -127,13 +208,17 @@ function installPreviewWidget(node) {
   container.style.overflow = "hidden";
   node._archReferencePreviewContainer = container;
 
-  node.addDOMWidget("reference_preview", "div", container, {
+  const previewWidget = node.addDOMWidget("reference_preview", "div", container, {
     serialize: false,
     getMinHeight: () => 128,
     getMaxHeight: () => 180,
     getValue: () => "",
     setValue: () => {},
   });
+  if (previewWidget) {
+    previewWidget.serialize = false;
+    previewWidget.serializeValue = () => undefined;
+  }
 
   const watchedWidgets = [
     "source_mode",
@@ -151,6 +236,7 @@ function installPreviewWidget(node) {
     const callback = widget.callback;
     widget.callback = function () {
       const result = callback?.apply(this, arguments);
+      if (name === "selection_policy") syncSequentialSeedControl(node);
       schedulePreview(node);
       return result;
     };
@@ -165,25 +251,30 @@ app.registerExtension({
     if (nodeData.name !== NODE_NAME) return;
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
+    const onConfigure = nodeType.prototype.onConfigure;
+    nodeType.prototype.onConfigure = function (info) {
+      const result = onConfigure?.apply(this, arguments);
+      migrateWorkflowWidgetValues(this, info?.widgets_values);
+      syncSequentialSeedControl(this);
+      schedulePreview(this);
+      return result;
+    };
+
     nodeType.prototype.onNodeCreated = function () {
       const result = onNodeCreated?.apply(this, arguments);
       const node = this;
 
-      // Insert a button widget directly beneath a named widget so it sits
-      // next to the field it controls rather than at the node's bottom.
-      const addButtonAfter = (targetName, label, callback) => {
+      // LiteGraph persists widgets positionally. Keep every transient control
+      // appended after the Python widgets so skipped values cannot create
+      // sparse holes that shift backend fields during workflow restoration.
+      const addTransientButton = (label, callback) => {
         const button = node.addWidget("button", label, null, callback);
         button.serialize = false;
         button.serializeValue = () => undefined;
-        const targetIdx = node.widgets.findIndex((w) => w.name === targetName);
-        if (targetIdx !== -1) {
-          node.widgets.splice(node.widgets.indexOf(button), 1);
-          node.widgets.splice(targetIdx + 1, 0, button);
-        }
         return button;
       };
 
-      addButtonAfter("folder", "📁 Browse folder…", async () => {
+      addTransientButton("📁 Browse folder…", async () => {
         const folderWidget = findWidget(node, "folder");
         try {
           const data = await callDialog("browse-folder", folderWidget?.value);
@@ -196,7 +287,7 @@ app.registerExtension({
         }
       });
 
-      addButtonAfter("selected_images", "🖼 Pick images…", async () => {
+      addTransientButton("🖼 Pick images…", async () => {
         const folderWidget = findWidget(node, "folder");
         const selWidget = findWidget(node, "selected_images");
         const modeWidget = findWidget(node, "source_mode");

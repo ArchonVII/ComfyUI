@@ -22,7 +22,7 @@ VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".ti
 ARCH_CATEGORY = "arch-image/random reference"
 NONE_FAVORITE = "None"
 SOURCE_MODES = ["auto", "folder", "selection"]
-SELECTION_POLICIES = ["random_each_queue", "seeded"]
+SELECTION_POLICIES = ["random_each_queue", "seeded", "sequential"]
 REFERENCE_LANES = [
     "primary_subject",
     "reference_subject",
@@ -272,6 +272,8 @@ def choose_image(
     normalized_policy = str(selection_policy or "random_each_queue").strip().lower()
     if normalized_policy == "seeded":
         return random.Random(int(seed)).choice(list(image_pool))
+    if normalized_policy == "sequential":
+        return image_pool[int(seed) % len(image_pool)]
     if normalized_policy == "random_each_queue":
         return random.SystemRandom().choice(list(image_pool))
     raise ValueError(f"Unsupported selection_policy: {selection_policy}")
@@ -324,7 +326,7 @@ class RandomReferenceImageSource:
                 "selection_policy": (
                     SELECTION_POLICIES,
                     {
-                        "tooltip": "random_each_queue ignores seed and rerolls every prompt; seeded is reproducible for the same seed.",
+                        "tooltip": "random_each_queue ignores seed and rerolls every prompt; seeded is reproducible for the same seed; sequential uses seed as a stable pool index and advances it after each prompt.",
                     },
                 ),
                 "seed": (
@@ -334,7 +336,7 @@ class RandomReferenceImageSource:
                         "min": 0,
                         "max": 0xFFFFFFFFFFFFFFFF,
                         "control_after_generate": True,
-                        "tooltip": "Used only when selection_policy is seeded.",
+                        "tooltip": "Used by seeded and sequential policies. Sequential selects seed modulo pool size.",
                     },
                 ),
                 "include_subfolders": (
@@ -352,7 +354,7 @@ class RandomReferenceImageSource:
     RETURN_NAMES = ("image", "mask", "selected_file", "lane", "metadata_json")
     FUNCTION = "load_random_reference"
     CATEGORY = ARCH_CATEGORY
-    DESCRIPTION = "Load one random reference image from a folder, selected filename pool, or favorite source folder."
+    DESCRIPTION = "Load one random or sequential reference image from a folder, selected filename pool, or favorite source folder."
 
     @classmethod
     def VALIDATE_INPUTS(

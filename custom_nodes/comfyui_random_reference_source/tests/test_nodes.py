@@ -212,6 +212,25 @@ def test_choose_image_seeded_is_stable(tmp_path):
     )
 
 
+def test_selection_policy_exposes_sequential_mode():
+    policies = RandomReferenceImageSource.INPUT_TYPES()["required"][
+        "selection_policy"
+    ][0]
+
+    assert "sequential" in policies
+
+
+def test_choose_image_sequential_visits_each_image_before_wrapping(tmp_path):
+    files = [tmp_path / f"{name}.png" for name in ("a", "b", "c")]
+
+    selected = [
+        choose_image(files, seed=seed, selection_policy="sequential")
+        for seed in range(5, 9)
+    ]
+
+    assert selected == [files[2], files[0], files[1], files[2]]
+
+
 def test_random_reference_image_source_loads_image_mask_and_metadata(
     tmp_path, monkeypatch
 ):
