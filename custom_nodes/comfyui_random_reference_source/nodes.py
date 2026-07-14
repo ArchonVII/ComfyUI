@@ -271,9 +271,11 @@ def choose_image(
 
     normalized_policy = str(selection_policy or "random_each_queue").strip().lower()
     if normalized_policy == "seeded":
-        return random.Random(int(seed)).choice(list(image_pool))
+        normalized_seed = max(1, int(seed))
+        return random.Random(normalized_seed).choice(list(image_pool))
     if normalized_policy == "sequential":
-        return image_pool[int(seed) % len(image_pool)]
+        normalized_seed = max(1, int(seed))
+        return image_pool[(normalized_seed - 1) % len(image_pool)]
     if normalized_policy == "random_each_queue":
         return random.SystemRandom().choice(list(image_pool))
     raise ValueError(f"Unsupported selection_policy: {selection_policy}")
@@ -332,11 +334,11 @@ class RandomReferenceImageSource:
                 "seed": (
                     "INT",
                     {
-                        "default": 0,
-                        "min": 0,
+                        "default": 1,
+                        "min": 1,
                         "max": 0xFFFFFFFFFFFFFFFF,
                         "control_after_generate": True,
-                        "tooltip": "Used by seeded and sequential policies. Sequential selects seed modulo pool size.",
+                        "tooltip": "Used by seeded and sequential policies. Sequential selects (seed - 1) modulo pool size.",
                     },
                 ),
                 "include_subfolders": (

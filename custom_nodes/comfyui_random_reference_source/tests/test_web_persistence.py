@@ -174,7 +174,7 @@ function NodeType() {{}}
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("seed", [0, 123456789])
+@pytest.mark.parametrize("seed", [1, 123456789])
 def test_round_trip_preserves_dense_named_widget_state(seed):
     _run_extension_assertions(
         f"""
@@ -198,6 +198,27 @@ def test_round_trip_preserves_dense_named_widget_state(seed):
   const restored = createNode();
   configureWidgetValues(restored, saved);
   assertPersistedState(restored, expected);
+"""
+    )
+
+
+def test_dense_seed_zero_workflow_is_upgraded_without_losing_seed_mode():
+    _run_extension_assertions(
+        """
+  const restored = createNode();
+  configureWidgetValues(restored, [
+    "reference_subject",
+    "selection",
+    "None",
+    ".",
+    "a.png\\nb.png",
+    "seeded",
+    0,
+    "fixed",
+    false,
+  ]);
+  assertWidget(restored, "seed", 1);
+  assertWidget(restored, "control_after_generate", "fixed");
 """
     )
 
@@ -264,7 +285,7 @@ def test_sparse_interleaved_workflow_is_migrated_by_widget_name():
     )
 
 
-def test_sparse_seed_zero_workflow_matches_the_reported_failure_shape():
+def test_sparse_seed_zero_workflow_is_restored_with_seed_one():
     _run_extension_assertions(
         """
   const restored = createNode();
@@ -289,7 +310,7 @@ def test_sparse_seed_zero_workflow_matches_the_reported_failure_shape():
     folder: ".",
     selected_images: "C:/reference-images/selected.png",
     selection_policy: "random_each_queue",
-    seed: 0,
+    seed: 1,
     control_after_generate: "randomize",
     include_subfolders: false,
   });
@@ -335,12 +356,36 @@ def test_selecting_sequential_mode_sets_incrementing_seed_control():
         """
   const node = createNode({
     selection_policy: "random_each_queue",
+    seed: 0,
     control_after_generate: "randomize",
   });
   const policy = findWidget(node, "selection_policy");
   policy.value = "sequential";
   policy.callback("sequential", app.canvas, node);
+  assertWidget(node, "seed", 1);
   assertWidget(node, "control_after_generate", "increment");
+"""
+    )
+
+
+@pytest.mark.parametrize("control_mode", ["fixed", "decrement", "randomize"])
+def test_sequential_restore_preserves_saved_seed_control_mode(control_mode):
+    _run_extension_assertions(
+        f"""
+  const restored = createNode();
+  configureWidgetValues(restored, [
+    "reference_subject",
+    "selection",
+    "None",
+    ".",
+    "a.png\\nb.png",
+    "sequential",
+    7,
+    {json.dumps(control_mode)},
+    false,
+  ]);
+  assertWidget(restored, "seed", 7);
+  assertWidget(restored, "control_after_generate", {json.dumps(control_mode)});
 """
     )
 
@@ -350,7 +395,7 @@ def test_advanced_sequential_cursor_round_trips_after_frontend_increment():
         """
   const original = createNode({
     selection_policy: "sequential",
-    seed: 0,
+    seed: 1,
     control_after_generate: "increment",
   });
   findWidget(original, "seed").value += 1;
@@ -358,7 +403,7 @@ def test_advanced_sequential_cursor_round_trips_after_frontend_increment():
   const restored = createNode();
   configureWidgetValues(restored, serialiseWidgetValues(original));
   assertWidget(restored, "selection_policy", "sequential");
-  assertWidget(restored, "seed", 1);
+  assertWidget(restored, "seed", 2);
   assertWidget(restored, "control_after_generate", "increment");
 """
     )

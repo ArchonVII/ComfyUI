@@ -39,8 +39,17 @@ function normalizeControlMode(value) {
   return CONTROL_MODES.has(value) ? value : "randomize";
 }
 
+function ensurePositiveSeed(node) {
+  const seedWidget = findWidget(node, "seed");
+  const seed = Number(seedWidget?.value);
+  if (!Number.isFinite(seed) || seed < 1) {
+    setWidgetValue(node, seedWidget, 1);
+  }
+}
+
 function syncSequentialSeedControl(node) {
   if (findWidget(node, "selection_policy")?.value !== "sequential") return;
+  ensurePositiveSeed(node);
   const controlWidget = findWidget(node, "control_after_generate");
   if (controlWidget?.value !== "increment") {
     setWidgetValue(node, controlWidget, "increment");
@@ -255,7 +264,7 @@ app.registerExtension({
     nodeType.prototype.onConfigure = function (info) {
       const result = onConfigure?.apply(this, arguments);
       migrateWorkflowWidgetValues(this, info?.widgets_values);
-      syncSequentialSeedControl(this);
+      ensurePositiveSeed(this);
       schedulePreview(this);
       return result;
     };
