@@ -1,47 +1,79 @@
-# Task Plan: Civitai Collection Ingestor
+# Adaptive LTX and Wan I2V Workflow Implementation Plan
 
-## Goal
-Build a ComfyUI custom node extension that ingests a Civitai collection URL, stores valuable image/model/prompt/settings metadata, checks required resources against local model folders, and exposes a first UI slice for review and downloads.
+**Goal:** Replace three brittle LTX image-to-video workflows and add three Wan 2.2 GGUF image-to-video workflows that adapt resolution to the source image and run on the installed RTX 5070 Ti/16 GB environment.
 
-## Current Phase
-1. [completed] Document current DB/API findings and implementation plan
-2. [completed] Add Civitai importer backend with SQLite persistence and API client
-3. [completed] Add local model matching and download status primitives
-4. [completed] Add ComfyUI frontend panel for collection ingest and status
-5. [completed] Write focused tests for ingestion, matching, and storage behavior
-6. [completed] Run verification and report limitations
-7. [completed] Add local image caching and cached-image serving
-8. [completed] Add read-only workflow draft generation and panel actions
-9. [completed] Add queue-draft UI path gated by runnable/missing-model status
-10. [completed] Harden target-folder mapping for VAE-looking files
-11. [completed] Add pasted image/post URL ingestion fallback for Civitai collection API drift
+**Architecture:** Each workflow scales its source image to a model-specific total-pixel budget while preserving aspect ratio and rounding to a safe spatial multiple, then passes the derived width and height into the video conditioning node. Wan workflows use the installed high/low GGUF experts with explicit expert handoff; advanced guidance is optional and baseline behavior remains inspectable.
 
-## Decisions
-- Use a custom-node-owned SQLite database under ComfyUI `user/__civitai_ingestor/civitai_ingestor.sqlite3`, not ComfyUI core Alembic migrations.
-- Keep collection URL ingestion guarded because Civitai's public `/api/v1/images` docs do not currently include `collectionId`; refuse imports when the endpoint behaves like the unfiltered global feed.
-- Use documented `/api/v1/images?imageId=...&withMeta=true` and `/api/v1/images?postId=...&withMeta=true` for pasted image/post URL ingestion.
-- Enrich required resources through `/api/v1/model-versions/{id}` and store raw JSON snapshots as well as normalized fields.
-- Reuse local model folder conventions from `folder_paths.py` and the existing `comfyui_smart_model_loader` scan shape where practical.
+**Tech stack:** ComfyUI editor-format JSON, native video/image nodes, ComfyUI-GGUF, installed KJNodes/RIFE nodes, Python semantic validation tests.
 
-## Acceptance Slice
-- User can enter `https://civitai.red/collections/8081491` or `https://civitai.com/collections/8081491`.
-- User can paste one or more `https://civitai.com/images/<id>` or `https://civitai.com/posts/<id>` URLs into the panel and ingest that curated set.
-- Backend ingests the collection and returns counts, image rows, resource rows, and local missing/present status.
-- Backend refuses collection imports if Civitai returns the unfiltered global feed for a `collectionId` request.
-- UI shows progress/status text and a table/list of images/resources.
-- UI provides a `Paste URL` control and multiline source field for copied Civitai URLs.
-- Model download endpoints exist with progress status, storage check, and sequential queue behavior.
-- Cached collection images can be stored under the ingestor user directory and served back to the panel.
-- Workflow drafts can be saved as read-only JSON and queued only when enough metadata and local models are available.
-- Exact generation remains gated by available metadata and model availability.
+**Plan status:** Complete; awaiting draft PR review.
 
-## Verification
-- `python -m pytest custom_nodes/comfyui_civitai_ingestor/tests -q` passed.
-- `python -m compileall -q custom_nodes/comfyui_civitai_ingestor` passed.
-- `node --check custom_nodes/comfyui_civitai_ingestor/web/civitai_ingestor.js` passed.
-- Live ComfyUI route smoke passed against `http://127.0.0.1:8188/civitai-ingestor/collections/8081491`.
-- Live ingest smoke passed against `https://civitai.red/collections/8081491` with `max_items = 1`.
-- Second-slice verification: 15 focused pytest tests passed, compile passed, and JS syntax passed.
-- Live cache smoke cached 5 images, then skipped 5 already-cached images on repeat.
-- Live draft smoke saved `C:\tools\image\ComfyUI\user\__civitai_ingestor\workflow_drafts\collection-8081491\image-16382509.workflow-draft.json`.
-- URL-paste fallback verification: 21 focused pytest tests passed, Python compile passed, JS syntax passed, temp-DB live image URL ingest imported 1 image with prompt metadata, and current-branch route smoke passed at `http://127.0.0.1:8190`.
+## Understanding and Constraints
+
+- Build six workflows under `user/default/workflows/agent`.
+- Preserve source aspect ratio without fixed landscape, portrait, or square assumptions.
+- Tune defaults for batch 1 on an RTX 5070 Ti with 16 GB VRAM.
+- Use installed models and node packs; do not download large checkpoints.
+- Do not touch the unrelated modified workflow in the protected master checkout.
+- Keep generation local; no partner/cloud API nodes.
+
+## Decision Log
+
+1. Use `ImageScaleToTotalPixels` followed by `GetImageSize` as the canonical adaptive-sizing chain. This directly implements Wan's input-aspect/pixel-area policy and avoids fragile arithmetic graphs.
+2. Keep LTX 0.9.8 runnable rather than referencing uninstalled LTX 2.3 assets. LTX 2.3 remains the recommended future model migration when storage is available.
+3. Use the installed Wan 2.2 high/low GGUF pair. The existing FP8 workflow references missing files.
+4. Use separate draft, quality, and first/last-frame workflows. One graph with many switches would be harder to audit and easier to misconfigure.
+5. Exclude deprecated TeaCache. Add live-installed EasyCache, NAG, Enhance-A-Video, and RIFLEx controls to both Wan expert lanes, bypassed by default and documented as opt-ins.
+6. Use root planning files as the canonical task record; do not create a duplicate `docs/plans` document.
+7. Proceed with a `no-issue` branch because issues are disabled at `https://github.com/ArchonVII/ComfyUI`.
+
+## Tasks
+
+### 1. Workflow Contract Tests — Complete
+
+- Create `tests/workflows/test_adaptive_video_workflows.py`.
+- Assert all six editor JSON files exist and parse.
+- Assert each graph contains source-aware total-pixel scaling and dimension propagation.
+- Assert frame counts satisfy the model rules and output nodes save MP4.
+- Assert every loader default resolves in the live main-runtime model catalog.
+- Assert Wan graphs use the installed GGUF high/low experts and correct handoff.
+- Run the focused test and capture the expected RED failures against the current workflows.
+
+### 2. Deterministic Workflow Builder — Complete
+
+- Create `scripts/build_adaptive_video_workflows.py`.
+- Reuse the current editor graph schema while generating stable node IDs, links, groups, notes, and widget values.
+- Generate the three replacement LTX workflows and three Wan workflows.
+- Keep source images selectable and avoid missing placeholder defaults.
+- Run the focused tests until GREEN.
+
+### 3. Runtime Validation — Complete
+
+- Validate all node types and input schemas against `http://127.0.0.1:8190/object_info`.
+- Convert or submit one low-cost Wan draft prompt against an isolated worktree server using the main runtime base.
+- Confirm adaptive dimensions follow a real portrait input and remain model-safe.
+- Record any runtime limitation without weakening semantic tests.
+
+### 4. Delivery — In progress
+
+- Review `git diff`, confirm only scoped files changed, and rerun full focused verification.
+- Update this plan, `findings.md`, and `progress.md` with final evidence and closeout state.
+- Commit selectively, push the branch, and open a draft PR using the repository template.
+
+## Errors Encountered
+
+| Error | Attempt | Resolution |
+| --- | --- | --- |
+| `package.json` absent during session-start script check | 1 | No npm agent helpers exist in this checkout; used repository-native git checks. |
+| PowerShell interpolated `$name:` as an invalid variable | 1 | Switched to format-string output. |
+| `gh issue list` reported issues disabled | 1 | Use the fork's established `no-issue` branch convention and record the limitation. |
+| Live `object_info` request was refused after research | 1 | The original ComfyUI process stopped; defer live checks to an isolated worktree server. |
+| Existing weak workflow files were absent from the new worktree | 1 | They are intentionally ignored local assets; generate and force-add only the six scoped files. |
+| Model-resolution tests failed when the runtime-base environment variable was omitted | 1 | Reran with `COMFY_RUNTIME_BASE=C:\tools\image\ComfyUI`; the worktree intentionally does not duplicate large models. |
+| LightX2V Seko LoRAs reported unsupported residual keys through the GGUF loader | 1 | Kept the installed four-step pair because GGUF LoRA support is explicitly experimental, the supported patches loaded, and the full dual-expert smoke rendered coherently; recorded the limitation in findings. |
+
+## Plan Closeout
+
+- Status: Implementation and runtime validation complete.
+- Six deterministic workflows generated, 28 contract tests pass, all executable nodes match the live registry, and the Wan fast path produced a verified 9-frame MP4.
+- Remaining delivery action: selective commit, push, and draft PR.

@@ -1,41 +1,33 @@
-# Progress: Civitai Collection Ingestor
+# Progress: Adaptive LTX and Wan I2V Workflows
 
-## 2026-06-23
-- Read ComfyUI DB, app settings, model folder code, and existing smart model loader.
-- Probed Civitai collection/image/model-version APIs.
-- Confirmed `collectionId=8081491&withMeta=true` returns collection images and generation metadata when available.
-- Created feature branch `agent/codex/no-issue-civitai-collection-ingestor`.
-- Added `custom_nodes/comfyui_civitai_ingestor` with SQLite persistence, Civitai API ingestion, model-version enrichment, local model matching, sequential download jobs, and a ComfyUI frontend panel.
-- Added focused tests for URL parsing, image/resource extraction, SQLite storage, ingest orchestration, and local model matching.
-- Verified `python -m pytest custom_nodes/comfyui_civitai_ingestor/tests -q` with 8 passing tests.
-- Verified `python -m compileall -q custom_nodes/comfyui_civitai_ingestor`.
-- Verified `node --check custom_nodes/comfyui_civitai_ingestor/web/civitai_ingestor.js`.
-- Started ComfyUI locally at `http://127.0.0.1:8188` and verified the extension route and JavaScript asset.
-- Live ingest smoke against `https://civitai.red/collections/8081491` with `max_items = 1` fetched 1 image and 5 referenced model versions.
-- Continued the implementation with image caching, cached-image serving, workflow draft generation, read-only draft files, and panel actions for `Cache images`, `Save draft`, and `Queue draft`.
-- Added tests for image caching, workflow draft generation, read-only draft persistence, VAE target-folder routing, and `noVAE` checkpoint guardrails.
-- Verified `python -m pytest custom_nodes/comfyui_civitai_ingestor/tests -q` with 15 passing tests.
-- Verified `python -m compileall -q custom_nodes/comfyui_civitai_ingestor`.
-- Verified `node --check custom_nodes/comfyui_civitai_ingestor/web/civitai_ingestor.js`.
-- Reingested `https://civitai.red/collections/8081491` with `max_items = 5`; refreshed 5 images and 9 model versions.
-- Cached all 5 collection images locally, then verified the repeat cache run skipped 5 already-cached images.
-- Verified cached image route `http://127.0.0.1:8188/civitai-ingestor/images/16382509/cached`.
-- Saved a read-only draft at `C:\tools\image\ComfyUI\user\__civitai_ingestor\workflow_drafts\collection-8081491\image-16382509.workflow-draft.json`.
+## 2026-07-14
 
-## Errors
-- `https://civitai.red/collections/8081491` returns a Cloudflare browser challenge to plain `Invoke-WebRequest`; use `civitai.com` API normalization instead.
-- `/api/v1/collections/8081491` and `/api/v1/collections/8081491/items` return HTML 404 pages; use `/api/v1/images?collectionId=...`.
-- Civitai can classify VAE-looking files like `sdxl_vae.safetensors` as `Checkpoint`; target-folder mapping now uses filename heuristics while preserving `noVAE` checkpoint names.
-- Exact workflow/run reconstruction is still gated by image metadata and local model availability. Queueing is wired, but drafts with missing models are intentionally not queued.
+- Inspected all six existing LTX/Wan agent workflows and summarized their node graphs.
+- Verified the protected master checkout has one unrelated modified workflow and left it untouched.
+- Resolved live host, GPU, disk, node, model, branch, and server facts.
+- Researched official Wan 2.2, LightX2V/Wan2.2-Lightning, NAG, Enhance-A-Video, RIFLEx, EasyCache, and LTX 2.3 sources.
+- Confirmed the six-workflow implementation scope with the user.
+- Attempted required issue gating; `https://github.com/ArchonVII/ComfyUI` has issues disabled.
+- Created worktree `C:\tools\image\ComfyUI-worktrees\no-issue-wan-i2v-workflows` on branch `agent/codex/no-issue-wan-i2v-workflows` from fresh `fork/master`.
+- Refreshed the canonical root planning files for this lane.
+- Confirmed the target workflow directory is ignored by default and the existing weak workflows are local-only assets; the branch will force-add only the six scoped replacements.
+- Confirmed `C:\tools\image\ComfyUI\input\example.png` exists as a stable loader default.
+- Added deterministic workflow generation for three adaptive LTX 0.9.8 paths and three adaptive Wan 2.2 GGUF paths.
+- Added paired high/low LightX2V four-step LoRAs to the Wan draft graph and 40-step no-LoRA schedules to the Wan quality graphs.
+- Added bypassed EasyCache, Enhance-A-Video, RIFLEx, and NAG chains to both Wan experts, with safe usage notes in each workflow.
+- Started isolated ComfyUI validation at `http://127.0.0.1:8190/` and checked every executable node/input against its live registry.
+- Ran a real portrait through adaptive sizing: `2133x4096` became model-safe `480x896` at the 0.40 MP policy.
+- Executed the complete reduced Wan fast path and visually inspected its middle frame.
 
-## 2026-06-30
-- Rechecked Civitai's current public API docs and confirmed `/api/v1/images` documents `imageId` and `postId` filters, but not `collectionId`.
-- Kept the existing collection guard that rejects responses matching the unfiltered global feed instead of importing unsafe global images.
-- Added ingestion support for pasted Civitai image/post URLs by parsing `https://civitai.com/images/<id>` and `https://civitai.com/posts/<id>`, then fetching through documented `imageId` and `postId` filters.
-- Added metadata normalization for single-image lookups that return nested `meta.meta` payloads.
-- Added a multiline source field and `Paste URL` button to the panel.
-- Verified `python -m pytest custom_nodes/comfyui_civitai_ingestor/tests -q` with 21 passing tests.
-- Verified `python -m compileall -q custom_nodes/comfyui_civitai_ingestor`.
-- Verified `node --check custom_nodes/comfyui_civitai_ingestor/web/civitai_ingestor.js`.
-- Live temp-DB smoke against `https://civitai.com/images/12097475` imported 1 image with prompt metadata and 6 referenced resources; one model-version lookup returned Civitai 404 and was recorded as non-fatal progress.
-- Current-branch ComfyUI route smoke at `http://127.0.0.1:8190/` confirmed the served panel script includes the new paste control.
+## Verification Log
+
+- RED confirmed: `C:\tools\image\ComfyUI\venv\Scripts\python.exe -m pytest tests\workflows\test_adaptive_video_workflows.py -q` produced 24 expected missing-workflow failures and 1 passing retirement guard.
+- GREEN: `$env:COMFY_RUNTIME_BASE='C:\tools\image\ComfyUI'; C:\tools\image\ComfyUI\venv\Scripts\python.exe -m pytest tests\workflows\test_adaptive_video_workflows.py -q` -> `28 passed in 0.09s`.
+- Live schema: six graphs, 150 total nodes, no missing executable types, and no unknown executable inputs.
+- Runtime prompt `b1dc40af-b950-453f-ad3f-b145d70c0e51` -> completed in 40.68 seconds with no node errors.
+- Smoke artifact: `C:\tools\image\ComfyUI\output\agent\smoke\wan22-fast-9f_00001_.mp4` -> `224x224`, 9 frames, 24 fps, H.264, 13,996 bytes.
+- Visual check: middle frame is coherent and preserves the source character/content.
+
+## Current Step
+
+- Review the scoped diff, rerun verification, then commit selectively and open the draft PR.
