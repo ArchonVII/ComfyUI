@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import shutil
@@ -40,6 +41,10 @@ from tools.lora_training.render_musubi_config import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_ROOT = REPO_ROOT / "tools" / "lora_training" / "templates"
+LOSSY_WEBP_37X19 = base64.b64decode(
+    "UklGRkoAAABXRUJQVlA4ID4AAACQAwCdASolABMAPm02l0ikIyIhJWgAgA2JZwDQvoB+"
+    "AAAr98NwAP7eEn/+N24w34Lv/4VfG5CyKDUAZAAAAA=="
+)
 
 
 def _write_png(path: Path, width: int = 32, height: int = 24) -> None:
@@ -153,6 +158,49 @@ def test_valid_dataset_manifest_is_deterministic_and_omits_caption_content(tmp_p
     ).hexdigest()
     assert "studio portrait" not in json.dumps(first)
     assert "caption_sha256" in first["images"][0]
+
+
+def test_ordinary_lossy_webp_dimensions_are_validated_without_a_decoder(
+    tmp_path: Path,
+) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    (dataset / "portrait.webp").write_bytes(LOSSY_WEBP_37X19)
+    (dataset / "portrait.txt").write_text(
+        "jmaHero, ordinary lossy WebP portrait\n", encoding="utf-8"
+    )
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert report.ok, report.errors
+    assert report.images[0]["width"] == 37
+    assert report.images[0]["height"] == 19
+
+
+@pytest.mark.parametrize(
+    "corruption", ["start-code", "truncated", "chunk-size", "frame-partition-size"]
+)
+def test_malformed_lossy_webp_is_rejected(
+    tmp_path: Path, corruption: str
+) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    webp = bytearray(LOSSY_WEBP_37X19)
+    if corruption == "start-code":
+        webp[23:26] = b"\x00\x00\x00"
+    elif corruption == "truncated":
+        del webp[-1]
+    elif corruption == "chunk-size":
+        webp[16:20] = (len(webp) + 100).to_bytes(4, "little")
+    else:
+        webp[20:23] = (1000 << 5).to_bytes(3, "little")
+    (dataset / "portrait.webp").write_bytes(webp)
+    (dataset / "portrait.txt").write_text("jmaHero, portrait\n", encoding="utf-8")
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert not report.ok
+    assert any("Could not read dimensions" in error for error in report.errors)
 
 
 def test_missing_sidecar_caption_is_an_actionable_error(tmp_path: Path) -> None:

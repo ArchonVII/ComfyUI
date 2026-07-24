@@ -8,7 +8,7 @@ import shutil
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 
 IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".webp"})
@@ -70,6 +70,79 @@ def validate_trigger_token(token: str) -> str:
     return token
 
 
+def _webp_dimensions(stream: BinaryIO, file_size: int) -> tuple[int, int] | None:
+    stream.seek(0)
+    riff_header = stream.read(12)
+    if (
+        len(riff_header) != 12
+        or riff_header[:4] != b"RIFF"
+        or riff_header[8:12] != b"WEBP"
+    ):
+        return None
+
+    riff_size = int.from_bytes(riff_header[4:8], "little")
+    declared_end = 8 + riff_size
+    if riff_size < 4 or declared_end != file_size:
+        return None
+
+    cursor = 12
+    while cursor < declared_end:
+        if declared_end - cursor < 8:
+            return None
+        stream.seek(cursor)
+        chunk_header = stream.read(8)
+        if len(chunk_header) != 8:
+            return None
+        chunk_type = chunk_header[:4]
+        chunk_size = int.from_bytes(chunk_header[4:8], "little")
+        payload_start = cursor + 8
+        payload_end = payload_start + chunk_size
+        padded_end = payload_end + (chunk_size & 1)
+        if payload_end > declared_end or padded_end > declared_end:
+            return None
+
+        if chunk_type == b"VP8X":
+            if chunk_size != 10:
+                return None
+            payload = stream.read(10)
+            if len(payload) != 10:
+                return None
+            width = 1 + int.from_bytes(payload[4:7], "little")
+            height = 1 + int.from_bytes(payload[7:10], "little")
+            return width, height
+
+        if chunk_type == b"VP8L":
+            if chunk_size < 5:
+                return None
+            payload = stream.read(5)
+            if len(payload) != 5 or payload[0] != 0x2F:
+                return None
+            bits = int.from_bytes(payload[1:5], "little")
+            return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+
+        if chunk_type == b"VP8 ":
+            if chunk_size < 10:
+                return None
+            frame_header = stream.read(10)
+            frame_tag = int.from_bytes(frame_header[:3], "little")
+            if (
+                len(frame_header) != 10
+                or frame_tag & 1
+                or frame_tag >> 5 > chunk_size - 10
+                or frame_header[3:6] != b"\x9d\x01\x2a"
+            ):
+                return None
+            width = int.from_bytes(frame_header[6:8], "little") & 0x3FFF
+            height = int.from_bytes(frame_header[8:10], "little") & 0x3FFF
+            if width == 0 or height == 0:
+                return None
+            return width, height
+
+        cursor = padded_end
+
+    return None
+
+
 def _image_dimensions(path: Path) -> tuple[int, int]:
     with path.open("rb") as stream:
         header = stream.read(32)
@@ -116,14 +189,10 @@ def _image_dimensions(path: Path) -> tuple[int, int]:
                 stream.seek(max(segment_length - 2, 0), 1)
 
         if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
-            chunk = header[12:16]
-            if chunk == b"VP8X" and len(header) >= 30:
-                width = 1 + int.from_bytes(header[24:27], "little")
-                height = 1 + int.from_bytes(header[27:30], "little")
-                return width, height
-            if chunk == b"VP8L" and len(header) >= 25 and header[20] == 0x2F:
-                bits = int.from_bytes(header[21:25], "little")
-                return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+            stream.seek(0, 2)
+            dimensions = _webp_dimensions(stream, stream.tell())
+            if dimensions is not None:
+                return dimensions
 
     raise ValueError(
         f"Could not read dimensions from '{path.name}'. Re-encode it as a valid PNG, JPEG, or WebP image."
