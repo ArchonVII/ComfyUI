@@ -53,6 +53,8 @@ WIDGET_POSITIONS = {
     "KSampler": {"steps": 2, "cfg": 3},
     "KSamplerAdvanced": {"steps": 3, "cfg": 4},
     "LoraLoaderModelOnly": {"lora_name": 0},
+    "ImageCompositeMasked": {"resize_source": 2},
+    "ModelSamplingAuraFlow": {"shift": 0},
     "PuLIDModelLoader": {"pulid_file": 0},
     "UnetLoaderGGUF": {"unet_name": 0},
     "VAELoader": {"vae_name": 0},
@@ -297,6 +299,80 @@ def configured_sampler_steps(workflow, sampler):
         f"expected one scheduler for sampler {sampler['id']}, found {len(schedulers)}"
     )
     return widget_value(schedulers[0], "steps")
+
+
+def sampler_model_source(workflow, sampler):
+    if sampler["type"] in {"KSampler", "KSamplerAdvanced"}:
+        return source_for_input(workflow, sampler, "model")[0]
+
+    guider = source_for_input(workflow, sampler, "guider")[0]
+    return source_for_input(workflow, guider, "model")[0]
+
+
+def qwen_official_sampling_branches(workflow):
+    unet = node_of_type(workflow, "UnetLoaderGGUF")
+    lora = node_of_type(workflow, "LoraLoaderModelOnly")
+    assert widget_value(lora, "lora_name") == QWEN_LIGHTNING_LORA
+    assert_input_from(workflow, lora, "model", unet)
+    assert lora.get("mode", 0) == 4
+
+    active_patches = [
+        node
+        for node in nodes_of_type(workflow, "ModelSamplingAuraFlow")
+        if node.get("mode", 0) == 0
+        and widget_value(node, "shift") == pytest.approx(3.1)
+    ]
+    dormant_patches = [
+        node
+        for node in nodes_of_type(workflow, "ModelSamplingAuraFlow")
+        if node.get("mode", 0) == 4
+        and widget_value(node, "shift") == pytest.approx(3.1)
+    ]
+    assert len(active_patches) == 1
+    assert len(dormant_patches) == 1
+    active_patch = active_patches[0]
+    dormant_patch = dormant_patches[0]
+    assert active_patch["id"] != dormant_patch["id"]
+    assert_input_from(workflow, active_patch, "model", unet)
+    assert_input_from(workflow, dormant_patch, "model", lora)
+
+    active_samplers_for_patch = [
+        sampler
+        for sampler in active_samplers(workflow)
+        if configured_sampler_steps(workflow, sampler) == 28
+        and (
+            sampler_model_source(workflow, sampler)["id"] == active_patch["id"]
+            or path_exists(
+                workflow,
+                active_patch,
+                sampler_model_source(workflow, sampler),
+            )
+        )
+    ]
+    assert len(active_samplers_for_patch) == 1
+    active_sampler = active_samplers_for_patch[0]
+    assert not path_exists(workflow, lora, active_sampler)
+
+    dormant_samplers_for_patch = [
+        sampler
+        for sampler in workflow["nodes"]
+        if sampler["type"] in SAMPLER_TYPES
+        and sampler.get("mode", 0) == 4
+        and configured_sampler_steps(workflow, sampler) == 4
+        and (
+            sampler_model_source(workflow, sampler)["id"] == dormant_patch["id"]
+            or path_exists(
+                workflow,
+                dormant_patch,
+                sampler_model_source(workflow, sampler),
+            )
+        )
+    ]
+    assert len(dormant_samplers_for_patch) == 1
+    dormant_sampler = dormant_samplers_for_patch[0]
+    assert path_exists(workflow, lora, dormant_sampler)
+    assert dormant_sampler["id"] != active_sampler["id"]
+    return active_patch, active_sampler, dormant_patch, dormant_sampler
 
 
 def notes_text(workflow):
@@ -828,17 +904,8 @@ def test_qwen_active_model_conditioning_and_accuracy_recipe_share_sampler():
     assert lora.get("mode", 0) == 4, "Lightning LoRA must default bypassed"
     assert_input_from(workflow, lora, "model", unet)
 
-    samplers = [
-        sampler
-        for sampler in active_samplers(workflow)
-        if active_path_exists(workflow, lora, sampler)
-        and active_path_exists(workflow, conditioning, sampler)
-    ]
-    assert len(samplers) == 1, (
-        "one active sampler must consume Qwen edit conditioning and the "
-        "GGUF -> bypassed Lightning model path"
-    )
-    sampler = samplers[0]
+    active_patch, sampler, _, _ = qwen_official_sampling_branches(workflow)
+    assert active_path_exists(workflow, conditioning, sampler)
 
     decoders = [
         decoder
@@ -860,7 +927,7 @@ def test_qwen_active_model_conditioning_and_accuracy_recipe_share_sampler():
             scheduler
             for scheduler in nodes_of_type(workflow, "BasicScheduler")
             if scheduler.get("mode", 0) == 0
-            and active_path_exists(workflow, lora, scheduler)
+            and active_path_exists(workflow, active_patch, scheduler)
             and active_path_exists(workflow, scheduler, sampler)
         ]
     assert step_nodes
@@ -901,7 +968,6 @@ def test_qwen_active_model_conditioning_and_accuracy_recipe_share_sampler():
         sampler,
         decoder,
         output,
-        allow_bypassed=(lora,),
     )
 
 
@@ -982,25 +1048,9 @@ def test_qwen_has_distinct_four_step_dormant_lightning_route():
     assert widget_value(lora, "lora_name") == QWEN_LIGHTNING_LORA
     assert lora.get("mode", 0) == 4
 
-    accuracy_samplers = [
-        sampler
-        for sampler in active_samplers(workflow)
-        if path_exists(workflow, lora, sampler)
-        and configured_sampler_steps(workflow, sampler) >= 20
-    ]
-    assert len(accuracy_samplers) == 1
-    accuracy_sampler = accuracy_samplers[0]
-
-    dormant_samplers = [
-        sampler
-        for sampler in workflow["nodes"]
-        if sampler["type"] in SAMPLER_TYPES
-        and sampler.get("mode", 0) == 4
-        and path_exists(workflow, lora, sampler)
-        and configured_sampler_steps(workflow, sampler) == 4
-    ]
-    assert len(dormant_samplers) == 1
-    dormant_sampler = dormant_samplers[0]
+    _, accuracy_sampler, _, dormant_sampler = qwen_official_sampling_branches(
+        workflow
+    )
     assert dormant_sampler["id"] != accuracy_sampler["id"]
 
     dormant_decoders = [
@@ -1018,3 +1068,20 @@ def test_qwen_has_distinct_four_step_dormant_lightning_route():
         and has_link(workflow, dormant_decoder, 0, preview, "images")
     ]
     assert len(dormant_previews) == 1
+
+
+def test_qwen_official_31_sampling_patch_has_isolated_accuracy_and_lightning_paths():
+    workflow = load_workflow(QWEN_WORKFLOW)
+    active_patch, active_sampler, dormant_patch, dormant_sampler = (
+        qwen_official_sampling_branches(workflow)
+    )
+    assert widget_value(active_patch, "shift") == pytest.approx(3.1)
+    assert widget_value(dormant_patch, "shift") == pytest.approx(3.1)
+    assert configured_sampler_steps(workflow, active_sampler) == 28
+    assert configured_sampler_steps(workflow, dormant_sampler) == 4
+
+
+def test_masked_composite_resizes_source_for_dimension_safe_restoration():
+    workflow = load_workflow(MASKED_WORKFLOW)
+    composite = node_of_type(workflow, "ImageCompositeMasked")
+    assert widget_value(composite, "resize_source") is True
