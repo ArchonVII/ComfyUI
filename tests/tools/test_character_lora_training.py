@@ -1,0 +1,497 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import struct
+import subprocess
+import sys
+import tomllib
+import zlib
+from pathlib import Path
+
+import pytest
+
+from tools.lora_training.character_dataset import (
+    DatasetValidationError,
+    InsufficientDiskSpaceError,
+    build_dataset_manifest,
+    check_free_space,
+    validate_character_dataset,
+    validate_qwen_control_directory,
+    validate_trigger_token,
+)
+from tools.lora_training.render_musubi_config import (
+    APPROVED_LORA_RELATIVE_PATH,
+    MUSUBI_REVISION,
+    MUSUBI_ROOT,
+    TRAINING_ROOT,
+    ExistingRunError,
+    ModelCheckpointError,
+    build_musubi_commands,
+    render_run,
+    resource_warnings,
+)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TEMPLATE_ROOT = REPO_ROOT / "tools" / "lora_training" / "templates"
+
+
+def _write_png(path: Path, width: int = 32, height: int = 24) -> None:
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        body = kind + payload
+        return struct.pack(">I", len(payload)) + body + struct.pack(">I", zlib.crc32(body))
+
+    rows = b"".join(b"\x00" + (b"\x40\x80\xc0" * width) for _ in range(height))
+    payload = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+    path.write_bytes(payload)
+
+
+def _valid_dataset(root: Path, count: int = 10, token: str = "jmaHero") -> Path:
+    root.mkdir(parents=True)
+    for index in range(count):
+        stem = f"portrait-{index:02d}"
+        _write_png(root / f"{stem}.png", width=32 + index, height=24 + index)
+        (root / f"{stem}.txt").write_text(
+            f"{token}, studio portrait, angle {index}\n", encoding="utf-8"
+        )
+    return root
+
+
+def _model_files(root: Path, model: str) -> dict[str, Path]:
+    root.mkdir(parents=True)
+    if model == "flux2-klein9b":
+        names = {
+            "dit": "flux2-klein-base-9b-bf16.safetensors",
+            "vae": "flux2-ae.safetensors",
+            "text_encoder": "qwen3-8b-bf16-00001-of-00004.safetensors",
+        }
+    else:
+        names = {
+            "dit": "qwen-image-edit-2511-bf16.safetensors",
+            "vae": "qwen-image-vae.safetensors",
+            "text_encoder": "qwen-2.5-vl-7b-bf16.safetensors",
+        }
+    result = {}
+    for key, name in names.items():
+        result[key] = root / name
+        result[key].write_bytes(b"checkpoint placeholder")
+    return result
+
+
+def _paired_controls(dataset: Path, root: Path) -> Path:
+    root.mkdir(parents=True)
+    for target in sorted(dataset.glob("*.png")):
+        _write_png(root / target.name, width=40, height=40)
+    return root
+
+
+def test_valid_dataset_manifest_is_deterministic_and_omits_caption_content(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+
+    first = build_dataset_manifest(dataset, "jmaHero")
+    second = build_dataset_manifest(dataset, "jmaHero")
+
+    assert first == second
+    assert first["schema_version"] == 1
+    assert first["trigger_token"] == "jmaHero"
+    assert first["image_count"] == 10
+    assert [item["image"] for item in first["images"]] == sorted(
+        item["image"] for item in first["images"]
+    )
+    assert first["images"][0]["width"] == 32
+    assert first["images"][0]["height"] == 24
+    assert first["images"][0]["sha256"] == hashlib.sha256(
+        (dataset / "portrait-00.png").read_bytes()
+    ).hexdigest()
+    assert "studio portrait" not in json.dumps(first)
+    assert "caption_sha256" in first["images"][0]
+
+
+def test_missing_sidecar_caption_is_an_actionable_error(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    _write_png(dataset / "uncaptioned.png")
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert not report.ok
+    assert any("uncaptioned.txt" in message and "sidecar caption" in message for message in report.errors)
+
+
+def test_unsupported_files_and_orphan_captions_are_reported(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    (dataset / "notes.csv").write_text("private metadata", encoding="utf-8")
+    (dataset / "orphan.txt").write_text("jmaHero", encoding="utf-8")
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert any("notes.csv" in message and "unsupported" in message for message in report.errors)
+    assert any("orphan.txt" in message and "matching image" in message for message in report.errors)
+
+
+def test_duplicate_image_stems_are_case_insensitive(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    _write_png(dataset / "Portrait-00.jpg")
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert any("duplicate image stem" in message and "portrait-00" in message.lower() for message in report.errors)
+
+
+@pytest.mark.parametrize(
+    ("count", "phrase"),
+    [
+        (9, "10-30"),
+        (31, "10-30"),
+    ],
+)
+def test_image_count_outside_recommended_range_warns(
+    tmp_path: Path, count: int, phrase: str
+) -> None:
+    report = validate_character_dataset(_valid_dataset(tmp_path / "dataset", count), "jmaHero")
+
+    assert report.ok
+    assert any(phrase in warning and str(count) in warning for warning in report.warnings)
+
+
+@pytest.mark.parametrize(
+    "token",
+    ["", "two words", "../escape", "hero,person", "-leading", "ab", "a" * 65],
+)
+def test_unsafe_trigger_tokens_are_rejected(token: str) -> None:
+    with pytest.raises(ValueError, match="trigger token"):
+        validate_trigger_token(token)
+
+
+def test_caption_without_trigger_token_warns_without_exposing_caption(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    (dataset / "portrait-00.txt").write_text("a private description", encoding="utf-8")
+
+    report = validate_character_dataset(dataset, "jmaHero")
+
+    assert report.ok
+    assert any("portrait-00.txt" in warning and "trigger token" in warning for warning in report.warnings)
+    assert "private description" not in json.dumps(report.to_dict())
+
+
+def test_invalid_dataset_raises_aggregate_exception(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    _write_png(dataset / "uncaptioned.png")
+
+    with pytest.raises(DatasetValidationError, match="uncaptioned.txt"):
+        build_dataset_manifest(dataset, "jmaHero")
+
+
+def test_disk_guard_reports_required_and_available_space(tmp_path: Path) -> None:
+    with pytest.raises(InsufficientDiskSpaceError, match=r"20\.0 GiB.*4\.0 GiB"):
+        check_free_space(tmp_path, minimum_gib=20, available_bytes=4 * 1024**3)
+
+    assert check_free_space(
+        tmp_path, minimum_gib=20, available_bytes=25 * 1024**3
+    ) == 25
+
+
+def test_qwen_controls_match_same_stem_and_numbered_variants_deterministically(
+    tmp_path: Path,
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    controls = _paired_controls(dataset, tmp_path / "controls")
+    (controls / "portrait-00.png").unlink()
+    _write_png(controls / "portrait-00_10.png")
+    _write_png(controls / "portrait-00_2.png")
+    _write_png(controls / "portrait-00_0000.png")
+
+    first = validate_qwen_control_directory(dataset, controls)
+    second = validate_qwen_control_directory(dataset, controls)
+
+    assert first == second
+    assert first.ok
+    assert first.pairs["portrait-00"] == [
+        "portrait-00_0000.png",
+        "portrait-00_2.png",
+        "portrait-00_10.png",
+    ]
+
+
+def test_qwen_controls_report_missing_and_extra_files(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    controls = _paired_controls(dataset, tmp_path / "controls")
+    (controls / "portrait-00.png").unlink()
+    _write_png(controls / "not-a-target.png")
+
+    report = validate_qwen_control_directory(dataset, controls)
+
+    assert not report.ok
+    assert any("portrait-00" in error and "control image" in error for error in report.errors)
+    assert any("not-a-target.png" in error and "target" in error for error in report.errors)
+
+
+def test_qwen_controls_reject_duplicate_numeric_slots_and_mixed_conventions(
+    tmp_path: Path,
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    controls = _paired_controls(dataset, tmp_path / "controls")
+    (controls / "portrait-00.png").unlink()
+    _write_png(controls / "portrait-00_0.png")
+    _write_png(controls / "portrait-00_0000.jpg")
+    _write_png(controls / "portrait-01_0.png")
+
+    report = validate_qwen_control_directory(dataset, controls)
+
+    assert any("portrait-00" in error and "duplicate control index 0" in error for error in report.errors)
+    assert any("portrait-01" in error and "mixes" in error for error in report.errors)
+
+
+def test_model_specific_resource_warnings_cover_this_workstation() -> None:
+    flux = resource_warnings("flux2-klein9b", vram_gib=16, ram_gib=31)
+    qwen = resource_warnings("qwen-edit-2511", vram_gib=16, ram_gib=31)
+
+    assert any("16 GiB VRAM" in warning and "experimental" in warning for warning in flux)
+    assert any("31 GiB RAM" in warning and "swap" in warning for warning in flux)
+    assert any("64 GiB" in warning and "31 GiB" in warning for warning in qwen)
+
+
+@pytest.mark.parametrize("model", ["flux2-klein9b", "qwen-edit-2511"])
+def test_renderer_refuses_gguf_as_a_training_base(tmp_path: Path, model: str) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", model)
+    models["dit"] = tmp_path / "models" / "inference-Q4_K_M.gguf"
+    models["dit"].write_bytes(b"gguf")
+    controls = (
+        _paired_controls(dataset, tmp_path / "controls")
+        if model == "qwen-edit-2511"
+        else None
+    )
+
+    with pytest.raises(ModelCheckpointError, match="GGUF.*inference.*BF16"):
+        render_run(
+            model=model,
+            dataset_dir=dataset,
+            control_dir=controls,
+            run_dir=tmp_path / "run",
+            run_name="hero-lora",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+
+def test_flux_distilled_checkpoint_is_not_accepted_as_base_training_model(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    models["dit"] = tmp_path / "models" / "flux2-klein-9b-distilled.safetensors"
+    models["dit"].write_bytes(b"distilled")
+
+    with pytest.raises(ModelCheckpointError, match="distilled.*klein-base-9b"):
+        render_run(
+            model="flux2-klein9b",
+            dataset_dir=dataset,
+            run_dir=tmp_path / "run",
+            run_name="hero-lora",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+
+def test_flux_render_is_deterministic_and_uses_low_memory_settings(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+
+    first = render_run(
+        model="flux2-klein9b",
+        dataset_dir=dataset,
+        run_dir=tmp_path / "run-a",
+        run_name="hero-lora",
+        trigger_token="jmaHero",
+        model_paths=models,
+        template_root=TEMPLATE_ROOT,
+        available_bytes=100 * 1024**3,
+    )
+    second = render_run(
+        model="flux2-klein9b",
+        dataset_dir=dataset,
+        run_dir=tmp_path / "run-b",
+        run_name="hero-lora",
+        trigger_token="jmaHero",
+        model_paths=models,
+        template_root=TEMPLATE_ROOT,
+        available_bytes=100 * 1024**3,
+    )
+
+    assert first.train_config.read_bytes() == second.train_config.read_bytes()
+    assert first.dataset_config.read_bytes() == second.dataset_config.read_bytes()
+    assert first.manifest.read_bytes() == second.manifest.read_bytes()
+    dataset_toml = tomllib.loads(first.dataset_config.read_text(encoding="utf-8"))
+    train_toml = tomllib.loads(first.train_config.read_text(encoding="utf-8"))
+    assert dataset_toml["general"]["batch_size"] == 1
+    assert dataset_toml["datasets"][0]["image_directory"] == dataset.as_posix()
+    assert train_toml["model_version"] == "klein-base-9b"
+    assert train_toml["network_module"] == "networks.lora_flux_2"
+    assert train_toml["mixed_precision"] == "bf16"
+    assert train_toml["fp8_base"] is True
+    assert train_toml["fp8_scaled"] is True
+    assert train_toml["fp8_text_encoder"] is True
+    assert train_toml["gradient_checkpointing"] is True
+    assert train_toml["blocks_to_swap"] == 16
+    assert train_toml["block_swap_h2d_only"] is True
+    assert train_toml["block_swap_ring_size"] == 1
+
+
+def test_qwen_render_uses_real_edit_2511_keys_and_commands(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    controls = _paired_controls(dataset, tmp_path / "controls")
+    models = _model_files(tmp_path / "models", "qwen-edit-2511")
+    result = render_run(
+        model="qwen-edit-2511",
+        dataset_dir=dataset,
+        control_dir=controls,
+        run_dir=tmp_path / "run",
+        run_name="hero-qwen-lora",
+        trigger_token="jmaHero",
+        model_paths=models,
+        template_root=TEMPLATE_ROOT,
+        available_bytes=100 * 1024**3,
+    )
+
+    train_toml = tomllib.loads(result.train_config.read_text(encoding="utf-8"))
+    assert train_toml["model_version"] == "edit-2511"
+    assert train_toml["network_module"] == "networks.lora_qwen_image"
+    assert train_toml["fp8_vl"] is True
+    assert train_toml["blocks_to_swap"] == 45
+    assert train_toml["timestep_sampling"] == "qwen_shift"
+    assert "cache_latents" not in train_toml
+    assert "cache_text_encoder_outputs" not in train_toml
+    dataset_toml = tomllib.loads(result.dataset_config.read_text(encoding="utf-8"))
+    assert dataset_toml["datasets"][0]["control_directory"] == controls.as_posix()
+    assert dataset_toml["datasets"][0]["control_resolution"] == [1024, 1024]
+    manifest = json.loads(result.manifest.read_text(encoding="utf-8"))
+    assert manifest["images"][0]["controls"][0]["image"] == "portrait-00.png"
+    assert "sha256" in manifest["images"][0]["controls"][0]
+
+    commands = build_musubi_commands(
+        model="qwen-edit-2511",
+        trainer_root=MUSUBI_ROOT,
+        dataset_config=result.dataset_config,
+        train_config=result.train_config,
+        model_paths=models,
+    )
+    command_text = "\n".join(" ".join(command) for command in commands)
+    assert "qwen_image_cache_latents.py" in command_text
+    assert "qwen_image_cache_text_encoder_outputs.py" in command_text
+    assert "qwen_image_train_network.py" in command_text
+    assert "--config_file" in command_text
+    assert "ComfyUI\\venv" not in command_text
+
+
+def test_qwen_render_requires_a_valid_control_directory(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "qwen-edit-2511")
+
+    with pytest.raises(DatasetValidationError, match="control directory"):
+        render_run(
+            model="qwen-edit-2511",
+            dataset_dir=dataset,
+            control_dir=None,
+            run_dir=tmp_path / "run",
+            run_name="hero-qwen-lora",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+
+def test_existing_run_configs_are_never_overwritten(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    kwargs = {
+        "model": "flux2-klein9b",
+        "dataset_dir": dataset,
+        "run_dir": tmp_path / "run",
+        "run_name": "hero-lora",
+        "trigger_token": "jmaHero",
+        "model_paths": models,
+        "template_root": TEMPLATE_ROOT,
+        "available_bytes": 100 * 1024**3,
+    }
+    first = render_run(**kwargs)
+    original = first.train_config.read_bytes()
+
+    with pytest.raises(ExistingRunError, match="will not overwrite"):
+        render_run(**kwargs)
+
+    assert first.train_config.read_bytes() == original
+
+
+def test_cli_dry_run_validates_without_writing_run(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    run_dir = tmp_path / "run"
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "lora_training" / "render_musubi_config.py"),
+        "--model",
+        "flux2-klein9b",
+        "--dataset-dir",
+        str(dataset),
+        "--run-dir",
+        str(run_dir),
+        "--run-name",
+        "hero-lora",
+        "--trigger-token",
+        "jmaHero",
+        "--dit",
+        str(models["dit"]),
+        "--vae",
+        str(models["vae"]),
+        "--text-encoder",
+        str(models["text_encoder"]),
+        "--available-disk-gib",
+        "100",
+        "--dry-run",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 0, completed.stderr
+    assert "VALID" in completed.stdout
+    assert "flux_2_cache_latents.py" in completed.stdout
+    assert not run_dir.exists()
+
+
+def test_fixed_roots_revision_templates_and_wrappers_are_explicit() -> None:
+    assert MUSUBI_REVISION == "8934cfbbb4b9bcfa8071ce209129f0c5eb5df2e6"
+    assert MUSUBI_ROOT == Path(r"C:\tools\image\trainers\musubi-tuner")
+    assert TRAINING_ROOT == Path(r"C:\tools\image\training\characters")
+    assert APPROVED_LORA_RELATIVE_PATH == Path("models/loras/trained/characters")
+
+    for template in (
+        TEMPLATE_ROOT / "character-flux2-klein9b.toml",
+        TEMPLATE_ROOT / "character-qwen-edit-2511.toml",
+    ):
+        assert template.is_file()
+
+    installer = (REPO_ROOT / "tools" / "lora_training" / "install-musubi.ps1").read_text(
+        encoding="utf-8"
+    )
+    starter = (
+        REPO_ROOT / "tools" / "lora_training" / "start-character-training.ps1"
+    ).read_text(encoding="utf-8")
+    assert MUSUBI_REVISION in installer
+    assert r"C:\tools\image\trainers\musubi-tuner" in installer
+    assert ".venv" in installer
+    assert "ComfyUI\\venv" not in installer
+    assert "DryRun" in starter
+    assert r"C:\tools\image\training\characters" in starter
+    assert r"models\loras\trained\characters" in starter
+    assert "ComfyUI\\venv" not in starter
