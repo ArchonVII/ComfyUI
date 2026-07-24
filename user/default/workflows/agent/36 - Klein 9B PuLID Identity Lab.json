@@ -226,7 +226,7 @@
         "Node name for S&R": "CLIPLoader"
       },
       "widgets_values": [
-        "Flux\\flux2-klein-qwen3-4b.safetensors",
+        "Qwen\\qwen_3_8b_fp8mixed.safetensors",
         "flux2",
         "default"
       ]

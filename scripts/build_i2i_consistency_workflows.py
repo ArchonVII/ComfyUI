@@ -22,7 +22,7 @@ PULID_NAME = "36 - Klein 9B PuLID Identity Lab.json"
 QWEN_NAME = "37 - Qwen 2511 Q4KM Precision MultiRef.json"
 
 KLEIN_MODEL = r"Flux\9b\DarkBeast-Klein9b-V2-BFS-FP8-ComfyUI.safetensors"
-KLEIN_CLIP = r"Flux\flux2-klein-qwen3-4b.safetensors"
+KLEIN_CLIP = r"Qwen\qwen_3_8b_fp8mixed.safetensors"
 KLEIN_VAE = "flux2-vae.safetensors"
 KLEIN_LORA = r"Flux\9b\1 ------ Helper\Flux2-Klein-9B-consistency-V2.safetensors"
 
