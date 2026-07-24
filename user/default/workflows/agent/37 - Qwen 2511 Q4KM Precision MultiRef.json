@@ -1,8 +1,8 @@
 {
   "id": "14cb45ee-cdbf-5f7e-99a2-05147684e8eb",
   "revision": 0,
-  "last_node_id": 19,
-  "last_link_id": 27,
+  "last_node_id": 21,
+  "last_link_id": 29,
   "nodes": [
     {
       "id": 1,
@@ -42,9 +42,9 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            4,
             6,
-            18
+            8,
+            20
           ]
         },
         {
@@ -101,7 +101,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            19
+            21
           ]
         },
         {
@@ -158,7 +158,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            20
+            22
           ]
         },
         {
@@ -207,7 +207,8 @@
           "type": "MODEL",
           "slot_index": 0,
           "links": [
-            1
+            1,
+            2
           ]
         }
       ],
@@ -262,8 +263,7 @@
           "type": "MODEL",
           "slot_index": 0,
           "links": [
-            8,
-            21
+            3
           ]
         }
       ],
@@ -278,6 +278,100 @@
     },
     {
       "id": 6,
+      "type": "ModelSamplingAuraFlow",
+      "pos": [
+        -1220,
+        -560
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "name": "shift",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "shift"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            10
+          ]
+        }
+      ],
+      "title": "Official Qwen accuracy sampling shift 3.1",
+      "properties": {
+        "Node name for S&R": "ModelSamplingAuraFlow"
+      },
+      "widgets_values": [
+        3.1
+      ]
+    },
+    {
+      "id": 7,
+      "type": "ModelSamplingAuraFlow",
+      "pos": [
+        -820,
+        -560
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "shift",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "shift"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            23
+          ]
+        }
+      ],
+      "title": "Optional Lightning sampling shift 3.1 - bypassed",
+      "properties": {
+        "Node name for S&R": "ModelSamplingAuraFlow"
+      },
+      "widgets_values": [
+        3.1
+      ]
+    },
+    {
+      "id": 8,
       "type": "CLIPLoader",
       "pos": [
         -820,
@@ -288,7 +382,7 @@
         180
       ],
       "flags": {},
-      "order": 5,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -322,9 +416,9 @@
           "type": "CLIP",
           "slot_index": 0,
           "links": [
-            2,
-            5,
-            16
+            4,
+            7,
+            18
           ]
         }
       ],
@@ -339,7 +433,7 @@
       ]
     },
     {
-      "id": 7,
+      "id": 9,
       "type": "VAELoader",
       "pos": [
         -440,
@@ -350,7 +444,7 @@
         180
       ],
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -368,11 +462,11 @@
           "type": "VAE",
           "slot_index": 0,
           "links": [
-            3,
-            7,
-            13,
-            17,
-            26
+            5,
+            9,
+            15,
+            19,
+            28
           ]
         }
       ],
@@ -385,7 +479,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 10,
       "type": "TextEncodeQwenImageEdit",
       "pos": [
         -1020,
@@ -396,13 +490,13 @@
         240
       ],
       "flags": {},
-      "order": 7,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 2
+          "link": 4
         },
         {
           "name": "prompt",
@@ -415,12 +509,12 @@
         {
           "name": "vae",
           "type": "VAE",
-          "link": 3
+          "link": 5
         },
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 4
+          "link": 6
         }
       ],
       "outputs": [
@@ -429,7 +523,7 @@
           "type": "CONDITIONING",
           "slot_index": 0,
           "links": [
-            9
+            11
           ]
         }
       ],
@@ -442,7 +536,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 11,
       "type": "CLIPTextEncode",
       "pos": [
         -600,
@@ -453,13 +547,13 @@
         190
       ],
       "flags": {},
-      "order": 8,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 5
+          "link": 7
         },
         {
           "name": "text",
@@ -476,8 +570,8 @@
           "type": "CONDITIONING",
           "slot_index": 0,
           "links": [
-            10,
-            23
+            12,
+            25
           ]
         }
       ],
@@ -490,7 +584,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 12,
       "type": "VAEEncode",
       "pos": [
         -1020,
@@ -501,18 +595,18 @@
         180
       ],
       "flags": {},
-      "order": 9,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
           "name": "pixels",
           "type": "IMAGE",
-          "link": 6
+          "link": 8
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 7
+          "link": 9
         }
       ],
       "outputs": [
@@ -521,8 +615,8 @@
           "type": "LATENT",
           "slot_index": 0,
           "links": [
-            11,
-            24
+            13,
+            26
           ]
         }
       ],
@@ -533,7 +627,7 @@
       "widgets_values": []
     },
     {
-      "id": 11,
+      "id": 13,
       "type": "KSampler",
       "pos": [
         -120,
@@ -544,13 +638,13 @@
         430
       ],
       "flags": {},
-      "order": 10,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 8
+          "link": 10
         },
         {
           "name": "seed",
@@ -595,17 +689,17 @@
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 9
+          "link": 11
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 10
+          "link": 12
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 11
+          "link": 13
         },
         {
           "name": "denoise",
@@ -622,7 +716,7 @@
           "type": "LATENT",
           "slot_index": 0,
           "links": [
-            12
+            14
           ]
         }
       ],
@@ -641,7 +735,7 @@
       ]
     },
     {
-      "id": 12,
+      "id": 14,
       "type": "VAEDecode",
       "pos": [
         300,
@@ -652,18 +746,18 @@
         180
       ],
       "flags": {},
-      "order": 11,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 12
+          "link": 14
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 13
+          "link": 15
         }
       ],
       "outputs": [
@@ -672,8 +766,8 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            14,
-            15
+            16,
+            17
           ]
         }
       ],
@@ -684,7 +778,7 @@
       "widgets_values": []
     },
     {
-      "id": 13,
+      "id": 15,
       "type": "SaveImage",
       "pos": [
         680,
@@ -695,13 +789,13 @@
         260
       ],
       "flags": {},
-      "order": 12,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 14
+          "link": 16
         },
         {
           "name": "filename_prefix",
@@ -729,7 +823,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 16,
       "type": "PreviewImage",
       "pos": [
         1040,
@@ -740,13 +834,13 @@
         260
       ],
       "flags": {},
-      "order": 13,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 15
+          "link": 17
         }
       ],
       "outputs": [
@@ -764,7 +858,7 @@
       "widgets_values": []
     },
     {
-      "id": 15,
+      "id": 17,
       "type": "TextEncodeQwenImageEditPlus",
       "pos": [
         -1020,
@@ -775,13 +869,13 @@
         300
       ],
       "flags": {},
-      "order": 14,
+      "order": 16,
       "mode": 4,
       "inputs": [
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 16
+          "link": 18
         },
         {
           "name": "prompt",
@@ -794,22 +888,22 @@
         {
           "name": "vae",
           "type": "VAE",
-          "link": 17
+          "link": 19
         },
         {
           "name": "image1",
           "type": "IMAGE",
-          "link": 18
+          "link": 20
         },
         {
           "name": "image2",
           "type": "IMAGE",
-          "link": 19
+          "link": 21
         },
         {
           "name": "image3",
           "type": "IMAGE",
-          "link": 20
+          "link": 22
         }
       ],
       "outputs": [
@@ -818,7 +912,7 @@
           "type": "CONDITIONING",
           "slot_index": 0,
           "links": [
-            22
+            24
           ]
         }
       ],
@@ -831,7 +925,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 18,
       "type": "KSampler",
       "pos": [
         -420,
@@ -842,13 +936,13 @@
         430
       ],
       "flags": {},
-      "order": 15,
+      "order": 17,
       "mode": 4,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 21
+          "link": 23
         },
         {
           "name": "seed",
@@ -893,17 +987,17 @@
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 22
+          "link": 24
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 23
+          "link": 25
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 24
+          "link": 26
         },
         {
           "name": "denoise",
@@ -920,7 +1014,7 @@
           "type": "LATENT",
           "slot_index": 0,
           "links": [
-            25
+            27
           ]
         }
       ],
@@ -939,7 +1033,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 19,
       "type": "VAEDecode",
       "pos": [
         20,
@@ -950,18 +1044,18 @@
         180
       ],
       "flags": {},
-      "order": 16,
+      "order": 18,
       "mode": 4,
       "inputs": [
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 25
+          "link": 27
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 26
+          "link": 28
         }
       ],
       "outputs": [
@@ -970,7 +1064,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            27
+            29
           ]
         }
       ],
@@ -981,7 +1075,7 @@
       "widgets_values": []
     },
     {
-      "id": 18,
+      "id": 20,
       "type": "PreviewImage",
       "pos": [
         380,
@@ -992,13 +1086,13 @@
         260
       ],
       "flags": {},
-      "order": 17,
+      "order": 19,
       "mode": 4,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 27
+          "link": 29
         }
       ],
       "outputs": [
@@ -1016,7 +1110,7 @@
       "widgets_values": []
     },
     {
-      "id": 19,
+      "id": 21,
       "type": "MarkdownNote",
       "pos": [
         -1600,
@@ -1027,7 +1121,7 @@
         360
       ],
       "flags": {},
-      "order": 18,
+      "order": 20,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -1036,7 +1130,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Qwen 2511 Q4_K_M precision I2I\n\nThe default active route uses only the primary reference, 28 steps, and CFG 3.5. The Lightning LoRA is bypassed for accuracy. References 2 and 3, the Plus conditioner, second sampler, decoder, and preview form one fully wired dormant lane. Enable that entire lane together; do not enable only an optional loader."
+        "## Qwen 2511 Q4_K_M precision I2I\n\nThe default active route uses only the primary reference, the official AuraFlow shift 3.1 patch, 28 steps, and CFG 3.5. It has no Lightning LoRA ancestry. References 2 and 3, the Lightning 4steps LoRA, a separate shift 3.1 patch, Plus conditioner, 4-step sampler, decoder, and preview form one fully wired dormant lane. Enabling the dormant lane does not alter the accuracy lane. Enable that entire lane together; do not enable only an optional loader. Mute the active Save Image and Preview Image nodes when running only the dormant lane to avoid double work."
       ]
     }
   ],
@@ -1051,209 +1145,225 @@
     ],
     [
       2,
-      6,
-      0,
-      8,
-      0,
-      "CLIP"
-    ],
-    [
-      3,
-      7,
-      0,
-      8,
-      2,
-      "VAE"
-    ],
-    [
       4,
-      1,
       0,
-      8,
-      3,
-      "IMAGE"
-    ],
-    [
-      5,
       6,
-      0,
-      9,
-      0,
-      "CLIP"
-    ],
-    [
-      6,
-      1,
-      0,
-      10,
-      0,
-      "IMAGE"
-    ],
-    [
-      7,
-      7,
-      0,
-      10,
-      1,
-      "VAE"
-    ],
-    [
-      8,
-      5,
-      0,
-      11,
       0,
       "MODEL"
     ],
     [
-      9,
-      8,
+      3,
+      5,
       0,
-      11,
-      6,
-      "CONDITIONING"
-    ],
-    [
-      10,
-      9,
-      0,
-      11,
-      7,
-      "CONDITIONING"
-    ],
-    [
-      11,
-      10,
-      0,
-      11,
-      8,
-      "LATENT"
-    ],
-    [
-      12,
-      11,
-      0,
-      12,
-      0,
-      "LATENT"
-    ],
-    [
-      13,
       7,
       0,
-      12,
-      1,
-      "VAE"
+      "MODEL"
     ],
     [
-      14,
-      12,
+      4,
+      8,
       0,
-      13,
-      0,
-      "IMAGE"
-    ],
-    [
-      15,
-      12,
-      0,
-      14,
-      0,
-      "IMAGE"
-    ],
-    [
-      16,
-      6,
-      0,
-      15,
+      10,
       0,
       "CLIP"
     ],
     [
-      17,
-      7,
+      5,
+      9,
       0,
-      15,
+      10,
       2,
       "VAE"
     ],
     [
-      18,
+      6,
       1,
       0,
-      15,
+      10,
       3,
       "IMAGE"
+    ],
+    [
+      7,
+      8,
+      0,
+      11,
+      0,
+      "CLIP"
+    ],
+    [
+      8,
+      1,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      9,
+      0,
+      12,
+      1,
+      "VAE"
+    ],
+    [
+      10,
+      6,
+      0,
+      13,
+      0,
+      "MODEL"
+    ],
+    [
+      11,
+      10,
+      0,
+      13,
+      6,
+      "CONDITIONING"
+    ],
+    [
+      12,
+      11,
+      0,
+      13,
+      7,
+      "CONDITIONING"
+    ],
+    [
+      13,
+      12,
+      0,
+      13,
+      8,
+      "LATENT"
+    ],
+    [
+      14,
+      13,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      15,
+      9,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      16,
+      14,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      14,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      8,
+      0,
+      17,
+      0,
+      "CLIP"
     ],
     [
       19,
-      2,
+      9,
       0,
-      15,
-      4,
-      "IMAGE"
+      17,
+      2,
+      "VAE"
     ],
     [
       20,
-      3,
+      1,
       0,
-      15,
-      5,
+      17,
+      3,
       "IMAGE"
     ],
     [
       21,
-      5,
+      2,
       0,
-      16,
+      17,
+      4,
+      "IMAGE"
+    ],
+    [
+      22,
+      3,
+      0,
+      17,
+      5,
+      "IMAGE"
+    ],
+    [
+      23,
+      7,
+      0,
+      18,
       0,
       "MODEL"
     ],
     [
-      22,
-      15,
+      24,
+      17,
       0,
-      16,
+      18,
       6,
       "CONDITIONING"
     ],
     [
-      23,
-      9,
+      25,
+      11,
       0,
-      16,
+      18,
       7,
       "CONDITIONING"
     ],
     [
-      24,
-      10,
+      26,
+      12,
       0,
-      16,
+      18,
       8,
       "LATENT"
     ],
     [
-      25,
-      16,
+      27,
+      18,
       0,
-      17,
+      19,
       0,
       "LATENT"
     ],
     [
-      26,
-      7,
+      28,
+      9,
       0,
-      17,
+      19,
       1,
       "VAE"
     ],
     [
-      27,
-      17,
+      29,
+      19,
       0,
-      18,
+      20,
       0,
       "IMAGE"
     ]

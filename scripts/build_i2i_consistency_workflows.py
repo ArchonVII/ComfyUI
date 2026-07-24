@@ -472,7 +472,7 @@ def build_masked() -> dict:
             ("mask", "MASK", False),
         ),
         outputs=(("IMAGE", "IMAGE"),),
-        widgets=(0, 0, False),
+        widgets=(0, 0, True),
         size=(350, 260),
     )
     score = identity_score(
@@ -729,6 +729,29 @@ def build_qwen() -> dict:
         mode=4,
         size=(370, 200),
     )
+    active_sampling = graph.add(
+        "ModelSamplingAuraFlow",
+        title="Official Qwen accuracy sampling shift 3.1",
+        pos=(-1220, -560),
+        inputs=(
+            ("model", "MODEL", False),
+            ("shift", "FLOAT", True),
+        ),
+        outputs=(("MODEL", "MODEL"),),
+        widgets=(3.1,),
+    )
+    dormant_sampling = graph.add(
+        "ModelSamplingAuraFlow",
+        title="Optional Lightning sampling shift 3.1 - bypassed",
+        pos=(-820, -560),
+        inputs=(
+            ("model", "MODEL", False),
+            ("shift", "FLOAT", True),
+        ),
+        outputs=(("MODEL", "MODEL"),),
+        widgets=(3.1,),
+        mode=4,
+    )
     clip = clip_loader(
         graph,
         name=QWEN_CLIP,
@@ -847,22 +870,28 @@ def build_qwen() -> dict:
         title="Precision and multi-reference controls",
         text=(
             "## Qwen 2511 Q4_K_M precision I2I\n\nThe default active route uses "
-            "only the primary reference, 28 steps, and CFG 3.5. The Lightning LoRA "
-            "is bypassed for accuracy. References 2 and 3, the Plus conditioner, "
-            "second sampler, decoder, and preview form one fully wired dormant lane. "
-            "Enable that entire lane together; do not enable only an optional loader."
+            "only the primary reference, the official AuraFlow shift 3.1 patch, "
+            "28 steps, and CFG 3.5. It has no Lightning LoRA ancestry. References "
+            "2 and 3, the Lightning 4steps LoRA, a separate shift 3.1 patch, Plus "
+            "conditioner, 4-step sampler, decoder, and preview form one fully wired "
+            "dormant lane. Enabling the dormant lane does not alter the accuracy "
+            "lane. Enable that entire lane together; do not enable only an optional "
+            "loader. Mute the active Save Image and Preview Image nodes when running "
+            "only the dormant lane to avoid double work."
         ),
         pos=(-1600, 900),
     )
 
     graph.connect(unet, 0, lora, "model")
+    graph.connect(unet, 0, active_sampling, "model")
+    graph.connect(lora, 0, dormant_sampling, "model")
     graph.connect(clip, 0, primary_conditioning, "clip")
     graph.connect(vae, 0, primary_conditioning, "vae")
     graph.connect(primary, 0, primary_conditioning, "image")
     graph.connect(clip, 0, negative, "clip")
     graph.connect(primary, 0, primary_latent, "pixels")
     graph.connect(vae, 0, primary_latent, "vae")
-    graph.connect(lora, 0, active_sampler, "model")
+    graph.connect(active_sampling, 0, active_sampler, "model")
     graph.connect(primary_conditioning, 0, active_sampler, "positive")
     graph.connect(negative, 0, active_sampler, "negative")
     graph.connect(primary_latent, 0, active_sampler, "latent_image")
@@ -876,7 +905,7 @@ def build_qwen() -> dict:
     graph.connect(primary, 0, optional_conditioning, "image1")
     graph.connect(optional_two, 0, optional_conditioning, "image2")
     graph.connect(optional_three, 0, optional_conditioning, "image3")
-    graph.connect(lora, 0, dormant_sampler, "model")
+    graph.connect(dormant_sampling, 0, dormant_sampler, "model")
     graph.connect(optional_conditioning, 0, dormant_sampler, "positive")
     graph.connect(negative, 0, dormant_sampler, "negative")
     graph.connect(primary_latent, 0, dormant_sampler, "latent_image")
