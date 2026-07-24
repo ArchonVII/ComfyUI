@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import struct
 import subprocess
 import sys
@@ -27,6 +28,7 @@ from tools.lora_training.render_musubi_config import (
     TRAINING_ROOT,
     ExistingRunError,
     ModelCheckpointError,
+    _validate_model_paths,
     build_musubi_commands,
     render_run,
     resource_warnings,
@@ -80,8 +82,39 @@ def _model_files(root: Path, model: str) -> dict[str, Path]:
     result = {}
     for key, name in names.items():
         result[key] = root / name
-        result[key].write_bytes(b"checkpoint placeholder")
+        _write_safetensors(result[key])
     return result
+
+
+def _write_safetensors(
+    path: Path,
+    *,
+    dtype: str = "BF16",
+    tensor_name: str = "model.weight",
+) -> None:
+    element_sizes = {
+        "BF16": 2,
+        "F16": 2,
+        "F32": 4,
+        "F8_E4M3": 1,
+        "F8_E4M3FN": 1,
+        "F8_E5M2": 1,
+        "I8": 1,
+        "U8": 1,
+    }
+    data_size = element_sizes[dtype]
+    header = json.dumps(
+        {
+            "__metadata__": {"format": "pt"},
+            tensor_name: {
+                "dtype": dtype,
+                "shape": [1],
+                "data_offsets": [0, data_size],
+            },
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    path.write_bytes(struct.pack("<Q", len(header)) + header + (b"\0" * data_size))
 
 
 def _paired_controls(dataset: Path, root: Path) -> Path:
@@ -288,7 +321,7 @@ def test_flux_distilled_checkpoint_is_not_accepted_as_base_training_model(tmp_pa
     dataset = _valid_dataset(tmp_path / "dataset")
     models = _model_files(tmp_path / "models", "flux2-klein9b")
     models["dit"] = tmp_path / "models" / "flux2-klein-9b-distilled.safetensors"
-    models["dit"].write_bytes(b"distilled")
+    _write_safetensors(models["dit"])
 
     with pytest.raises(ModelCheckpointError, match="distilled.*klein-base-9b"):
         render_run(
@@ -301,6 +334,96 @@ def test_flux_distilled_checkpoint_is_not_accepted_as_base_training_model(tmp_pa
             template_root=TEMPLATE_ROOT,
             available_bytes=100 * 1024**3,
         )
+
+
+@pytest.mark.parametrize("role", ["dit", "vae", "text_encoder"])
+def test_renamed_gguf_magic_is_rejected_for_every_model_role(
+    tmp_path: Path, role: str
+) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    renamed = tmp_path / "models" / f"apparently-safe-{role}-bf16.safetensors"
+    renamed.write_bytes(b"GGUF" + (b"\0" * 64))
+    models[role] = renamed
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*GGUF.*magic"):
+        _validate_model_paths("flux2-klein9b", models)
+
+
+@pytest.mark.parametrize(
+    ("role", "marker"),
+    [
+        ("dit", "inference"),
+        ("dit", "distilled"),
+        ("dit", "lightning"),
+        ("vae", "turbo"),
+        ("text_encoder", "quantized"),
+    ],
+)
+def test_inference_filename_markers_are_rejected_for_all_roles(
+    tmp_path: Path, role: str, marker: str
+) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    marked = tmp_path / "models" / f"asset-{marker}-bf16.safetensors"
+    _write_safetensors(marked)
+    models[role] = marked
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*{marker}"):
+        _validate_model_paths("flux2-klein9b", models)
+
+
+@pytest.mark.parametrize("role", ["dit", "vae", "text_encoder"])
+@pytest.mark.parametrize("dtype", ["F8_E4M3FN", "F8_E5M2", "I8"])
+def test_quantized_safetensors_header_is_rejected_even_after_rename(
+    tmp_path: Path, role: str, dtype: str
+) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    renamed = tmp_path / "models" / f"apparently-safe-{role}-bf16.safetensors"
+    _write_safetensors(renamed, dtype=dtype)
+    models[role] = renamed
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*dtype.*{dtype}"):
+        _validate_model_paths("flux2-klein9b", models)
+
+
+@pytest.mark.parametrize(
+    ("role", "filename"),
+    [
+        ("dit", "qwen-image-edit-2511-fp8_e4m3fn.safetensors"),
+        ("dit", "qwen-image-edit-2511-FP8.safetensors"),
+        ("dit", "qwen-image-edit-2511-quantized.safetensors"),
+        ("text_encoder", "qwen-2.5-vl-7b-fp8_scaled.safetensors"),
+    ],
+)
+def test_qwen_rejects_named_fp8_and_quantized_assets(
+    tmp_path: Path, role: str, filename: str
+) -> None:
+    models = _model_files(tmp_path / "models", "qwen-edit-2511")
+    unsafe = tmp_path / "models" / filename
+    _write_safetensors(unsafe)
+    models[role] = unsafe
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*(?:FP8|fp8|quantized)"):
+        _validate_model_paths("qwen-edit-2511", models)
+
+
+@pytest.mark.parametrize("role", ["dit", "text_encoder"])
+def test_qwen_trainable_assets_require_bf16_tensors(tmp_path: Path, role: str) -> None:
+    models = _model_files(tmp_path / "models", "qwen-edit-2511")
+    f32_only = tmp_path / "models" / f"qwen-{role}-base.safetensors"
+    _write_safetensors(f32_only, dtype="F32")
+    models[role] = f32_only
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*BF16"):
+        _validate_model_paths("qwen-edit-2511", models)
+
+
+def test_all_model_roles_require_safetensors_files(tmp_path: Path) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    models["vae"] = tmp_path / "models" / "vae.bin"
+    models["vae"].write_bytes(b"not safetensors")
+
+    with pytest.raises(ModelCheckpointError, match=r"vae.*\.safetensors"):
+        _validate_model_paths("flux2-klein9b", models)
 
 
 def test_flux_render_is_deterministic_and_uses_low_memory_settings(tmp_path: Path) -> None:
@@ -467,6 +590,51 @@ def test_cli_dry_run_validates_without_writing_run(tmp_path: Path) -> None:
     assert "VALID" in completed.stdout
     assert "flux_2_cache_latents.py" in completed.stdout
     assert not run_dir.exists()
+
+
+def test_renderer_runs_with_the_exact_python_isolation_mode_used_by_wrapper(
+    tmp_path: Path,
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    renderer = REPO_ROOT / "tools" / "lora_training" / "render_musubi_config.py"
+    starter = (
+        REPO_ROOT / "tools" / "lora_training" / "start-character-training.ps1"
+    ).read_text(encoding="utf-8")
+    assert "$RendererPython = (Get-Command py" in starter
+    assert "'-3', $Renderer" in starter
+    assert "Invoke-Checked -FilePath $RendererPython -ArgumentList $rendererArgs" in starter
+    renderer_python = shutil.which("py")
+    assert renderer_python is not None, "Windows Python launcher required by wrapper"
+    command = [
+        renderer_python,
+        "-3",
+        str(renderer),
+        "--model",
+        "flux2-klein9b",
+        "--dataset-dir",
+        str(dataset),
+        "--run-dir",
+        str(tmp_path / "wrapper-run"),
+        "--run-name",
+        "wrapper-hero",
+        "--trigger-token",
+        "jmaHero",
+        "--dit",
+        str(models["dit"]),
+        "--vae",
+        str(models["vae"]),
+        "--text-encoder",
+        str(models["text_encoder"]),
+        "--available-disk-gib",
+        "100",
+        "--dry-run",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 0, completed.stderr
+    assert "VALID" in completed.stdout
 
 
 def test_fixed_roots_revision_templates_and_wrappers_are_explicit() -> None:

@@ -40,6 +40,7 @@ $TrainerRoot = 'C:\tools\image\trainers\musubi-tuner'
 $TrainingRoot = 'C:\tools\image\training\characters'
 $TrainerPython = Join-Path $TrainerRoot '.venv\Scripts\python.exe'
 $Renderer = Join-Path $PSScriptRoot 'render_musubi_config.py'
+$RendererPython = (Get-Command py -ErrorAction Stop).Source
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $ApprovedLoraRoot = Join-Path $RepositoryRoot 'models\loras\trained\characters'
 $RunDir = Join-Path (Join-Path (Join-Path $TrainingRoot 'runs') $RunName) $Model
@@ -103,17 +104,10 @@ if ($Model -eq 'qwen-edit-2511' -and -not $ControlDir) {
 if ($Model -eq 'flux2-klein9b' -and $ControlDir) {
     throw "This Klein character template is caption-only; do not pass -ControlDir."
 }
-if (-not (Test-Path -LiteralPath $TrainerPython -PathType Leaf)) {
-    throw "Isolated Musubi Python is missing at '$TrainerPython'. Run install-musubi.ps1 first."
-}
-if ($env:VIRTUAL_ENV -and ([System.IO.Path]::GetFullPath($env:VIRTUAL_ENV) -ne [System.IO.Path]::GetFullPath((Split-Path -Parent (Split-Path -Parent $TrainerPython))))) {
-    throw "Another virtual environment is active. Deactivate it before starting the isolated trainer."
-}
-
 Assert-FreeSpace -Path $TrainingRoot -MinimumGiB $MinimumFreeGiB
 
 $rendererArgs = @(
-    '-I', $Renderer,
+    '-3', $Renderer,
     '--model', $Model,
     '--dataset-dir', $DatasetDir,
     '--run-dir', $RunDir,
@@ -138,8 +132,15 @@ Write-Warning "This low-memory lane targets approximately 16 GB VRAM and remains
 
 if ($DryRun) {
     $rendererArgs += '--dry-run'
-    Invoke-Checked -FilePath $TrainerPython -ArgumentList $rendererArgs
+    Invoke-Checked -FilePath $RendererPython -ArgumentList $rendererArgs
     return
+}
+
+if (-not (Test-Path -LiteralPath $TrainerPython -PathType Leaf)) {
+    throw "Isolated Musubi Python is missing at '$TrainerPython'. Run install-musubi.ps1 first."
+}
+if ($env:VIRTUAL_ENV -and ([System.IO.Path]::GetFullPath($env:VIRTUAL_ENV) -ne [System.IO.Path]::GetFullPath((Split-Path -Parent (Split-Path -Parent $TrainerPython))))) {
+    throw "Another virtual environment is active. Deactivate it before starting the isolated trainer."
 }
 
 $expectedOutput = Join-Path $OutputDir ($RunName + '.safetensors')
@@ -147,7 +148,7 @@ if (Test-Path -LiteralPath $expectedOutput) {
     throw "Training output already exists and will not be overwritten: $expectedOutput"
 }
 
-Invoke-Checked -FilePath $TrainerPython -ArgumentList $rendererArgs
+Invoke-Checked -FilePath $RendererPython -ArgumentList $rendererArgs
 
 $DatasetConfig = Join-Path $RunDir 'dataset.toml'
 $TrainConfig = Join-Path $RunDir 'train.toml'

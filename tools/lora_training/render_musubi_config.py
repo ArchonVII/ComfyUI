@@ -30,6 +30,24 @@ TRAINING_ROOT = Path(r"C:\tools\image\training\characters")
 APPROVED_LORA_RELATIVE_PATH = Path("models/loras/trained/characters")
 MINIMUM_TRAINING_FREE_GIB = 50.0
 _SAFE_RUN_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$")
+_INFERENCE_FILENAME_MARKERS = (
+    "inference",
+    "distill",
+    "lightning",
+    "turbo",
+    "quantized",
+    "quantised",
+    "fp8",
+    "e4m3",
+    "int8",
+    "int4",
+    "q4_",
+    "q5_",
+    "q6_",
+    "q8_",
+)
+_QUANTIZED_DTYPES = frozenset({"I8", "U8", "I4", "U4"})
+_MAX_SAFETENSORS_HEADER_BYTES = 64 * 1024 * 1024
 
 
 class ExistingRunError(FileExistsError):
@@ -124,6 +142,68 @@ def _validate_run_name(run_name: str) -> str:
     return run_name
 
 
+def _read_safetensors_dtypes(path: Path, label: str) -> frozenset[str]:
+    with path.open("rb") as stream:
+        prefix = stream.read(8)
+        if prefix[:4] == b"GGUF":
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has GGUF file magic despite its name. "
+                "GGUF is inference-only here; select an unquantized .safetensors training asset."
+            )
+        if len(prefix) != 8:
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has no valid safetensors header."
+            )
+        header_length = int.from_bytes(prefix, "little")
+        remaining = path.stat().st_size - 8
+        if (
+            header_length <= 0
+            or header_length > _MAX_SAFETENSORS_HEADER_BYTES
+            or header_length > remaining
+        ):
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has an invalid safetensors header length."
+            )
+        header_bytes = stream.read(header_length)
+
+    try:
+        header = json.loads(header_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ModelCheckpointError(
+            f"{label} checkpoint '{path.name}' has an unreadable safetensors JSON header."
+        ) from exc
+    if not isinstance(header, dict):
+        raise ModelCheckpointError(
+            f"{label} checkpoint '{path.name}' has an invalid safetensors header object."
+        )
+
+    dtypes: set[str] = set()
+    for tensor_name, tensor in header.items():
+        if tensor_name == "__metadata__":
+            continue
+        if not isinstance(tensor, dict) or not isinstance(tensor.get("dtype"), str):
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has malformed tensor metadata "
+                f"for '{tensor_name}'."
+            )
+        dtypes.add(tensor["dtype"].upper())
+    if not dtypes:
+        raise ModelCheckpointError(
+            f"{label} checkpoint '{path.name}' declares no tensors in its safetensors header."
+        )
+    return frozenset(dtypes)
+
+
+def _checkpoint_advice(model: str, label: str) -> str:
+    if model == "flux2-klein9b" and label == "dit":
+        return "Select the official unquantized BF16 klein-base-9b .safetensors checkpoint."
+    if model == "qwen-edit-2511" and label == "dit":
+        return "Select the unquantized Qwen-Image-Edit-2511 BF16 .safetensors checkpoint."
+    if model == "qwen-edit-2511" and label == "text_encoder":
+        return "Select the unquantized Qwen2.5-VL BF16 text encoder, not fp8_scaled."
+    return f"Select an unquantized training-compatible .safetensors asset for {label}."
+
+
 def _validate_model_paths(model: str, model_paths: Mapping[str, Path | str]) -> dict[str, Path]:
     missing = sorted({"dit", "vae", "text_encoder"} - set(model_paths))
     if missing:
@@ -133,23 +213,46 @@ def _validate_model_paths(model: str, model_paths: Mapping[str, Path | str]) -> 
         for name in ("dit", "vae", "text_encoder")
     }
     for label, path in resolved.items():
-        if path.suffix.casefold() == ".gguf":
-            raise ModelCheckpointError(
-                f"GGUF checkpoint '{path.name}' is an inference weight and cannot be used as "
-                f"the trainable {label}. Select the official BF16/base .safetensors checkpoint."
-            )
         if not path.is_file():
             raise ModelCheckpointError(f"{label} checkpoint does not exist: {path}")
-    dit_name = resolved["dit"].name.casefold()
-    if model == "flux2-klein9b" and (
-        "distill" in dit_name
-        or ("klein-9b" in dit_name and "base" not in dit_name)
-        or ("klein_9b" in dit_name and "base" not in dit_name)
-    ):
-        raise ModelCheckpointError(
-            f"Checkpoint '{resolved['dit'].name}' appears distilled/inference-only. "
-            "Train FLUX.2 with the BF16 klein-base-9b checkpoint."
+        if path.suffix.casefold() == ".gguf":
+            raise ModelCheckpointError(
+                f"{label} GGUF checkpoint '{path.name}' is an inference weight and cannot be "
+                "used for training. Select the official unquantized BF16/base .safetensors checkpoint."
+            )
+        if path.suffix.casefold() != ".safetensors":
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' must be a .safetensors training asset. "
+                + _checkpoint_advice(model, label)
+            )
+        folded_name = path.name.casefold()
+        marker = next(
+            (candidate for candidate in _INFERENCE_FILENAME_MARKERS if candidate in folded_name),
+            None,
         )
+        if marker is not None:
+            raise ModelCheckpointError(
+                f"{label} checkpoint filename '{path.name}' contains inference/quantized marker "
+                f"'{marker}'. {_checkpoint_advice(model, label)}"
+            )
+
+        dtypes = _read_safetensors_dtypes(path, label)
+        quantized = sorted(
+            dtype
+            for dtype in dtypes
+            if dtype.startswith("F8") or dtype in _QUANTIZED_DTYPES
+        )
+        if quantized:
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' contains unsupported quantized tensor "
+                f"dtype(s): {', '.join(quantized)}. {_checkpoint_advice(model, label)}"
+            )
+        if model == "qwen-edit-2511" and label in {"dit", "text_encoder"} and "BF16" not in dtypes:
+            observed = ", ".join(sorted(dtypes))
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' does not declare BF16 tensors "
+                f"(observed: {observed}). {_checkpoint_advice(model, label)}"
+            )
     return resolved
 
 
