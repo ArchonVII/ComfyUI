@@ -938,6 +938,30 @@ def test_approval_only_requires_an_existing_staged_output(tmp_path: Path) -> Non
     assert not repository_root.exists()
 
 
+def test_dry_run_and_approval_are_rejected_before_destination_write(
+    tmp_path: Path,
+) -> None:
+    script, training_root, repository_root = _localized_starter(tmp_path)
+    run_name = "switch-conflict"
+    staged = (
+        training_root
+        / "outputs"
+        / run_name
+        / "flux2-klein9b"
+        / f"{run_name}.safetensors"
+    )
+    staged.parent.mkdir(parents=True)
+    staged.write_bytes(b"reviewed-lora")
+    command = [*_approval_command(script, run_name), "-DryRun"]
+
+    completed = subprocess.run(command, text=True, capture_output=True)
+
+    assert completed.returncode != 0
+    assert "-DryRun and -ApproveOutput are mutually exclusive" in completed.stderr
+    assert staged.read_bytes() == b"reviewed-lora"
+    assert not repository_root.exists()
+
+
 def test_renderer_runs_with_the_exact_python_isolation_mode_used_by_wrapper(
     tmp_path: Path,
 ) -> None:

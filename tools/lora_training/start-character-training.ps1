@@ -36,6 +36,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+if ($DryRun -and $ApproveOutput) {
+    throw "-DryRun and -ApproveOutput are mutually exclusive. Use -DryRun to validate a future training run, or -ApproveOutput to copy an already reviewed staged LoRA."
+}
+
 $TrainerRoot = 'C:\tools\image\trainers\musubi-tuner'
 $TrainingRoot = 'C:\tools\image\training\characters'
 $TrainerPython = Join-Path $TrainerRoot '.venv\Scripts\python.exe'
