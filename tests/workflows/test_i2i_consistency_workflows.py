@@ -1,4 +1,5 @@
 import json
+import re
 from collections import deque
 from pathlib import Path
 
@@ -280,6 +281,22 @@ def path_exists(workflow, source, target, *, allowed_modes=frozenset({0, 4})):
 
 def active_path_exists(workflow, source, target):
     return path_exists(workflow, source, target, allowed_modes=frozenset({0}))
+
+
+def configured_sampler_steps(workflow, sampler):
+    if sampler["type"] in {"KSampler", "KSamplerAdvanced"}:
+        return widget_value(sampler, "steps")
+
+    schedulers = [
+        scheduler
+        for scheduler in nodes_of_type(workflow, "BasicScheduler")
+        if scheduler.get("mode", 0) == sampler.get("mode", 0)
+        and path_exists(workflow, scheduler, sampler)
+    ]
+    assert len(schedulers) == 1, (
+        f"expected one scheduler for sampler {sampler['id']}, found {len(schedulers)}"
+    )
+    return widget_value(schedulers[0], "steps")
 
 
 def notes_text(workflow):
@@ -886,3 +903,118 @@ def test_qwen_active_model_conditioning_and_accuracy_recipe_share_sampler():
         output,
         allow_bypassed=(lora,),
     )
+
+
+def test_pulid_note_documents_numeric_conservative_and_strong_strengths():
+    workflow = load_workflow(PULID_WORKFLOW)
+    apply_pulid = node_of_type(workflow, "ApplyPuLIDFlux2")
+    assert widget_value(apply_pulid, "strength") == pytest.approx(1.4)
+
+    text = notes_text(workflow)
+    assert "strength" in text
+    sections = [
+        section.strip()
+        for section in re.split(r"(?<!\d)\.(?!\d)|[\n;]+", text)
+        if section.strip()
+    ]
+
+    def values_near(label):
+        values = []
+        for section in sections:
+            if label in section:
+                values.extend(
+                    float(value)
+                    for value in re.findall(
+                        r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])",
+                        section,
+                    )
+                )
+        return values
+
+    conservative = values_near("conservative")
+    strong = values_near("strong")
+    assert conservative, "document a numeric conservative PuLID strength or range"
+    assert strong, "document a numeric strong PuLID strength or range"
+    assert max(strong) > max(conservative)
+
+    default_is_explicit = re.search(
+        r"(?:default|recommended)[^.\n]{0,60}\b1\.4\b"
+        r"|\b1\.4\b[^.\n]{0,60}(?:default|recommended)",
+        text,
+    )
+    default_is_conservative = min(conservative) <= 1.4 <= max(conservative)
+    assert default_is_explicit or default_is_conservative
+
+
+@pytest.mark.parametrize(
+    ("name", "result_type"),
+    (
+        (MASKED_WORKFLOW, "ImageCompositeMasked"),
+        (QWEN_WORKFLOW, "VAEDecode"),
+    ),
+)
+def test_active_precision_result_has_an_active_preview(name, result_type):
+    workflow = load_workflow(name)
+    if result_type == "ImageCompositeMasked":
+        result = node_of_type(workflow, result_type)
+    else:
+        active_decoders = [
+            node
+            for node in nodes_of_type(workflow, result_type)
+            if node.get("mode", 0) == 0
+        ]
+        assert len(active_decoders) == 1
+        result = active_decoders[0]
+
+    previews = [
+        preview
+        for preview in nodes_of_type(workflow, "PreviewImage")
+        if preview.get("mode", 0) == 0
+        and has_link(workflow, result, 0, preview, "images")
+    ]
+    assert len(previews) == 1
+    assert_input_from(workflow, previews[0], "images", result)
+
+
+def test_qwen_has_distinct_four_step_dormant_lightning_route():
+    workflow = load_workflow(QWEN_WORKFLOW)
+    lora = node_of_type(workflow, "LoraLoaderModelOnly")
+    assert widget_value(lora, "lora_name") == QWEN_LIGHTNING_LORA
+    assert lora.get("mode", 0) == 4
+
+    accuracy_samplers = [
+        sampler
+        for sampler in active_samplers(workflow)
+        if path_exists(workflow, lora, sampler)
+        and configured_sampler_steps(workflow, sampler) >= 20
+    ]
+    assert len(accuracy_samplers) == 1
+    accuracy_sampler = accuracy_samplers[0]
+
+    dormant_samplers = [
+        sampler
+        for sampler in workflow["nodes"]
+        if sampler["type"] in SAMPLER_TYPES
+        and sampler.get("mode", 0) == 4
+        and path_exists(workflow, lora, sampler)
+        and configured_sampler_steps(workflow, sampler) == 4
+    ]
+    assert len(dormant_samplers) == 1
+    dormant_sampler = dormant_samplers[0]
+    assert dormant_sampler["id"] != accuracy_sampler["id"]
+
+    dormant_decoders = [
+        decoder
+        for decoder in nodes_of_type(workflow, "VAEDecode")
+        if decoder.get("mode", 0) == 4
+        and has_link(workflow, dormant_sampler, 0, decoder, "samples")
+    ]
+    assert len(dormant_decoders) == 1
+    dormant_decoder = dormant_decoders[0]
+    dormant_previews = [
+        preview
+        for preview in nodes_of_type(workflow, "PreviewImage")
+        if preview.get("mode", 0) == 4
+        and has_link(workflow, dormant_decoder, 0, preview, "images")
+    ]
+    assert len(dormant_previews) == 1
