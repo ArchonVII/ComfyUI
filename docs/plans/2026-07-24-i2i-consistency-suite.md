@@ -232,8 +232,9 @@ Merge through GitHub without bypass, preserve the dirty runtime checkout, fast-f
 
 ## Plan Closeout
 
-- Status: Task 5 complete at suite head
-  `558f6acee39d95f9b1df7a319fd950b015a21dfe`; Task 6 remains pending.
+- Status: implementation and local validation complete through suite head
+  `d52aacd62fdcb6ef09b1f07dde0effc5b50b5c71`; Task 6 remote delivery is
+  tracked by PR #12 and the GitHub merge record.
 - Live schema: the isolated validation server exposed 2,702 node types. All 52
   executable nodes across the three generated workflows resolved, with zero
   missing node types and zero unknown executable input names. The six editor-only
@@ -255,9 +256,9 @@ Merge through GitHub without bypass, preserve the dirty runtime checkout, fast-f
 - Train-only assets: full BF16/unquantized Klein base and Qwen Edit checkpoints
   remain deliberately deferred until a real dataset exists. The installed
   distilled FP8 and Q4_K_M inference weights must not be used as training bases.
-- Focused local verification: passed after the documentation update. The two
-  focused pytest modules passed all 88 tests; two consecutive builder runs produced
+- Focused local verification: passed on the final implementation head. The two
+  focused pytest modules passed all 93 tests; two consecutive builder runs produced
   byte-identical workflow JSON; Python compilation, both PowerShell parser checks,
   and `git diff --check` passed.
-- PR, GitHub-required checks, review gates, merge, runtime activation, and worktree
-  cleanup: pending Task 6.
+- Delivery record: PR #12 carries the final GitHub-required checks, review gates,
+  merge result, runtime activation confirmation, and retired-worktree cleanup.
