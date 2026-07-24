@@ -1,8 +1,8 @@
 {
   "id": "f86fc971-dcb3-58f4-b539-e485060f398c",
   "revision": 0,
-  "last_node_id": 15,
-  "last_link_id": 19,
+  "last_node_id": 16,
+  "last_link_id": 20,
   "nodes": [
     {
       "id": 1,
@@ -696,7 +696,8 @@
           "slot_index": 0,
           "links": [
             18,
-            19
+            19,
+            20
           ]
         }
       ],
@@ -950,6 +951,41 @@
     },
     {
       "id": 15,
+      "type": "PreviewImage",
+      "pos": [
+        1340,
+        -260
+      ],
+      "size": [
+        320,
+        260
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Preview final masked composite",
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
       "type": "MarkdownNote",
       "pos": [
         -1400,
@@ -960,7 +996,7 @@
         360
       ],
       "flags": {},
-      "order": 14,
+      "order": 15,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -1123,6 +1159,14 @@
       12,
       0,
       14,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      12,
+      0,
+      15,
       0,
       "IMAGE"
     ]

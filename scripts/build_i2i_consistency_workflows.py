@@ -244,6 +244,8 @@ def ksampler(
     steps: int = 28,
     cfg: float = 3.0,
     denoise: float = 0.72,
+    sampler_name: str = "euler",
+    scheduler: str = "beta",
 ) -> dict:
     return graph.add(
         "KSampler",
@@ -262,7 +264,15 @@ def ksampler(
             ("denoise", "FLOAT", True),
         ),
         outputs=(("LATENT", "LATENT"),),
-        widgets=(347129883, "fixed", steps, cfg, "euler", "beta", denoise),
+        widgets=(
+            347129883,
+            "fixed",
+            steps,
+            cfg,
+            sampler_name,
+            scheduler,
+            denoise,
+        ),
         mode=mode,
         size=(330, 430),
     )
@@ -476,6 +486,14 @@ def build_masked() -> dict:
         prefix="agent/i2i-consistency/klein-masked",
         pos=(980, -260),
     )
+    preview = graph.add(
+        "PreviewImage",
+        title="Preview final masked composite",
+        pos=(1340, -260),
+        inputs=(("images", "IMAGE", False),),
+        outputs=(("images", "IMAGE"),),
+        size=(320, 260),
+    )
     note(
         graph,
         title="Masked precision instructions",
@@ -508,6 +526,7 @@ def build_masked() -> dict:
     graph.connect(original, 0, score, "reference_image")
     graph.connect(composite, 0, score, "generated_image")
     graph.connect(composite, 0, output, "images")
+    graph.connect(composite, 0, preview, "images")
     return graph.workflow()
 
 
@@ -633,8 +652,12 @@ def build_pulid() -> dict:
             "## Experimental PuLID identity lab\n\nPuLID is an experimental "
             "face-only / face identity control. The scene image controls composition "
             "and the separate face portrait controls identity. Body consistency is "
-            "not supported by this node and remains on the upstream roadmap. Use the "
-            "OpenCV score as an audit signal, not a guarantee."
+            "not supported by this node and remains on the upstream roadmap.\n\n"
+            "Strength guidance: conservative 0.8-1.1; recommended default 1.4; "
+            "strong 1.6-2.0. Start at the 1.4 default, lower it if facial features "
+            "look over-constrained, and reserve the strong range for difficult "
+            "identity references. Use the OpenCV score as an audit signal, not a "
+            "guarantee."
         ),
         pos=(-1500, 540),
     )
@@ -765,6 +788,14 @@ def build_qwen() -> dict:
         prefix="agent/i2i-consistency/qwen-2511-q4km",
         pos=(680, -280),
     )
+    active_preview = graph.add(
+        "PreviewImage",
+        title="Preview active accuracy result",
+        pos=(1040, -280),
+        inputs=(("images", "IMAGE", False),),
+        outputs=(("images", "IMAGE"),),
+        size=(320, 260),
+    )
     optional_conditioning = graph.add(
         "TextEncodeQwenImageEditPlus",
         title="Optional three-reference conditioner - enable together",
@@ -790,9 +821,11 @@ def build_qwen() -> dict:
         title="Optional multi-reference sampler - bypassed",
         pos=(-420, 420),
         mode=4,
-        steps=28,
-        cfg=3.5,
-        denoise=0.75,
+        steps=4,
+        cfg=1.0,
+        denoise=1.0,
+        sampler_name="euler",
+        scheduler="simple",
     )
     dormant_decode = vae_decode(
         graph,
@@ -836,6 +869,7 @@ def build_qwen() -> dict:
     graph.connect(active_sampler, 0, active_decode, "samples")
     graph.connect(vae, 0, active_decode, "vae")
     graph.connect(active_decode, 0, output, "images")
+    graph.connect(active_decode, 0, active_preview, "images")
 
     graph.connect(clip, 0, optional_conditioning, "clip")
     graph.connect(vae, 0, optional_conditioning, "vae")

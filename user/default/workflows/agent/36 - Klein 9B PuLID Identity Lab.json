@@ -1063,7 +1063,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Experimental PuLID identity lab\n\nPuLID is an experimental face-only / face identity control. The scene image controls composition and the separate face portrait controls identity. Body consistency is not supported by this node and remains on the upstream roadmap. Use the OpenCV score as an audit signal, not a guarantee."
+        "## Experimental PuLID identity lab\n\nPuLID is an experimental face-only / face identity control. The scene image controls composition and the separate face portrait controls identity. Body consistency is not supported by this node and remains on the upstream roadmap.\n\nStrength guidance: conservative 0.8-1.1; recommended default 1.4; strong 1.6-2.0. Start at the 1.4 default, lower it if facial features look over-constrained, and reserve the strong range for difficult identity references. Use the OpenCV score as an audit signal, not a guarantee."
       ]
     }
   ],
