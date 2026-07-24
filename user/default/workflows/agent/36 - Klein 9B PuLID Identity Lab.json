@@ -1,0 +1,1242 @@
+{
+  "id": "34b93f7a-3499-5952-a0e3-49340855e8b0",
+  "revision": 0,
+  "last_node_id": 18,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        -1500,
+        -260
+      ],
+      "size": [
+        300,
+        320
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "Scene reference - composition and edit source",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm",
+        "image"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        -1500,
+        140
+      ],
+      "size": [
+        300,
+        320
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            5,
+            19
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "Face identity reference - close clear portrait",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm",
+        "image"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "UNETLoader",
+      "pos": [
+        -1500,
+        -760
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "unet_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "unet_name"
+          }
+        },
+        {
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "weight_dtype"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "title": "Flux.2 Klein 9B diffusion model",
+      "properties": {
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "Flux\\9b\\DarkBeast-Klein9b-V2-BFS-FP8-ComfyUI.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPLoader",
+      "pos": [
+        -1140,
+        -760
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "clip_name"
+          }
+        },
+        {
+          "name": "type",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "type"
+          }
+        },
+        {
+          "name": "device",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "device"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 0,
+          "links": [
+            6,
+            7
+          ]
+        }
+      ],
+      "title": "flux2 text encoder",
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "Flux\\flux2-klein-qwen3-4b.safetensors",
+        "flux2",
+        "default"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "VAELoader",
+      "pos": [
+        -780,
+        -760
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "vae_name"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            9,
+            17
+          ]
+        }
+      ],
+      "title": "Precision VAE",
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PuLIDInsightFaceLoader",
+      "pos": [
+        -1140,
+        140
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "provider",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "provider"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "INSIGHTFACE",
+          "type": "INSIGHTFACE",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "title": "Load InsightFace (PuLID)",
+      "properties": {
+        "Node name for S&R": "PuLIDInsightFaceLoader"
+      },
+      "widgets_values": [
+        "CUDA"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "PuLIDEVACLIPLoader",
+      "pos": [
+        -780,
+        140
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "EVA_CLIP",
+          "type": "EVA_CLIP",
+          "slot_index": 0,
+          "links": [
+            3
+          ]
+        }
+      ],
+      "title": "Load EVA-CLIP (PuLID)",
+      "properties": {
+        "Node name for S&R": "PuLIDEVACLIPLoader"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "PuLIDModelLoader",
+      "pos": [
+        -420,
+        140
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pulid_file",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "pulid_file"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PULID_MODEL",
+          "type": "PULID_MODEL",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "title": "Load PuLID Flux.2 Klein v2",
+      "properties": {
+        "Node name for S&R": "PuLIDModelLoader"
+      },
+      "widgets_values": [
+        "pulid_flux2_klein_v2.safetensors"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "ApplyPuLIDFlux2",
+      "pos": [
+        -60,
+        -20
+      ],
+      "size": [
+        360,
+        300
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "pulid_model",
+          "type": "PULID_MODEL",
+          "link": 2
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "strength"
+          }
+        },
+        {
+          "name": "eva_clip",
+          "type": "EVA_CLIP",
+          "link": 3
+        },
+        {
+          "name": "face_analysis",
+          "type": "INSIGHTFACE",
+          "link": 4
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "face_index",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "face_index"
+          }
+        },
+        {
+          "name": "debug_mode",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "debug_mode"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            12
+          ]
+        }
+      ],
+      "title": "Apply face identity to Klein model",
+      "properties": {
+        "Node name for S&R": "ApplyPuLIDFlux2"
+      },
+      "widgets_values": [
+        1.4,
+        0,
+        false
+      ]
+    },
+    {
+      "id": 10,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -760,
+        -500
+      ],
+      "size": [
+        360,
+        190
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 6
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            10
+          ]
+        }
+      ],
+      "title": "Scene edit instruction",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "Preserve the scene reference composition, pose, lighting, wardrobe, and background while matching the face identity reference."
+      ]
+    },
+    {
+      "id": 11,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -360,
+        -500
+      ],
+      "size": [
+        360,
+        190
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 7
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            14
+          ]
+        }
+      ],
+      "title": "Identity artifact exclusions",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "wrong identity, face distortion, duplicate face, altered background, bad anatomy, text, watermark"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "VAEEncode",
+      "pos": [
+        -760,
+        -250
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 8
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            11,
+            15
+          ]
+        }
+      ],
+      "title": "Encode scene reference latent",
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 13,
+      "type": "ReferenceLatent",
+      "pos": [
+        -360,
+        -250
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 10
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            13
+          ]
+        }
+      ],
+      "title": "Attach scene reference to conditioning",
+      "properties": {
+        "Node name for S&R": "ReferenceLatent"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 14,
+      "type": "KSampler",
+      "pos": [
+        360,
+        -300
+      ],
+      "size": [
+        330,
+        430
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 12
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "seed"
+          }
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "steps"
+          }
+        },
+        {
+          "name": "cfg",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "cfg"
+          }
+        },
+        {
+          "name": "sampler_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "sampler_name"
+          }
+        },
+        {
+          "name": "scheduler",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "scheduler"
+          }
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 13
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 14
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 15
+        },
+        {
+          "name": "denoise",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "denoise"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            16
+          ]
+        }
+      ],
+      "title": "Sample scene + PuLID identity",
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        347129883,
+        "fixed",
+        28,
+        3.0,
+        "euler",
+        "beta",
+        0.72
+      ]
+    },
+    {
+      "id": 15,
+      "type": "VAEDecode",
+      "pos": [
+        760,
+        -220
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 16
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            18,
+            20
+          ]
+        }
+      ],
+      "title": "Decode PuLID result",
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "SaveImage",
+      "pos": [
+        1120,
+        -280
+      ],
+      "size": [
+        320,
+        260
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Save PuLID identity result",
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "agent/i2i-consistency/klein-pulid"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "OpenCVIdentityScore",
+      "pos": [
+        1120,
+        80
+      ],
+      "size": [
+        390,
+        420
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "reference_image",
+          "type": "IMAGE",
+          "link": 19
+        },
+        {
+          "name": "generated_image",
+          "type": "IMAGE",
+          "link": 20
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "link": null
+        },
+        {
+          "name": "catalog_root",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "catalog_root"
+          }
+        },
+        {
+          "name": "subject_name",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "subject_name"
+          }
+        },
+        {
+          "name": "catalog_mode",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "catalog_mode"
+          }
+        },
+        {
+          "name": "catalog_aggregation",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "catalog_aggregation"
+          }
+        },
+        {
+          "name": "max_catalog_images",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_catalog_images"
+          }
+        },
+        {
+          "name": "include_subfolders",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "include_subfolders"
+          }
+        },
+        {
+          "name": "face_score_threshold",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "face_score_threshold"
+          }
+        },
+        {
+          "name": "same_identity_threshold",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "same_identity_threshold"
+          }
+        },
+        {
+          "name": "face_selection",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "face_selection"
+          }
+        },
+        {
+          "name": "write_manifest",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "write_manifest"
+          }
+        },
+        {
+          "name": "manifest_dir",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "manifest_dir"
+          }
+        },
+        {
+          "name": "run_label",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "run_label"
+          }
+        },
+        {
+          "name": "metadata_key",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "metadata_key"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "source_cosine_similarity",
+          "type": "FLOAT",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "source_same_identity",
+          "type": "BOOLEAN",
+          "slot_index": 1,
+          "links": []
+        },
+        {
+          "name": "best_catalog_subject",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": []
+        },
+        {
+          "name": "best_catalog_reference",
+          "type": "STRING",
+          "slot_index": 3,
+          "links": []
+        },
+        {
+          "name": "report_json",
+          "type": "STRING",
+          "slot_index": 4,
+          "links": []
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "slot_index": 5,
+          "links": []
+        }
+      ],
+      "title": "Audit face identity reference vs result",
+      "properties": {
+        "Node name for S&R": "OpenCVIdentityScore"
+      },
+      "widgets_values": [
+        "people",
+        "",
+        "off",
+        "mean_top3",
+        64,
+        true,
+        0.7,
+        0.363,
+        "largest",
+        true,
+        "default/identity_score_runs",
+        "i2i-consistency",
+        "identity_score_report"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "MarkdownNote",
+      "pos": [
+        -1500,
+        540
+      ],
+      "size": [
+        500,
+        360
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "PuLID scope and limitations",
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Experimental PuLID identity lab\n\nPuLID is an experimental face-only / face identity control. The scene image controls composition and the separate face portrait controls identity. Body consistency is not supported by this node and remains on the upstream roadmap. Use the OpenCV score as an audit signal, not a guarantee."
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      3,
+      0,
+      9,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      8,
+      0,
+      9,
+      1,
+      "PULID_MODEL"
+    ],
+    [
+      3,
+      7,
+      0,
+      9,
+      3,
+      "EVA_CLIP"
+    ],
+    [
+      4,
+      6,
+      0,
+      9,
+      4,
+      "INSIGHTFACE"
+    ],
+    [
+      5,
+      2,
+      0,
+      9,
+      5,
+      "IMAGE"
+    ],
+    [
+      6,
+      4,
+      0,
+      10,
+      0,
+      "CLIP"
+    ],
+    [
+      7,
+      4,
+      0,
+      11,
+      0,
+      "CLIP"
+    ],
+    [
+      8,
+      1,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      5,
+      0,
+      12,
+      1,
+      "VAE"
+    ],
+    [
+      10,
+      10,
+      0,
+      13,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      11,
+      12,
+      0,
+      13,
+      1,
+      "LATENT"
+    ],
+    [
+      12,
+      9,
+      0,
+      14,
+      0,
+      "MODEL"
+    ],
+    [
+      13,
+      13,
+      0,
+      14,
+      6,
+      "CONDITIONING"
+    ],
+    [
+      14,
+      11,
+      0,
+      14,
+      7,
+      "CONDITIONING"
+    ],
+    [
+      15,
+      12,
+      0,
+      14,
+      8,
+      "LATENT"
+    ],
+    [
+      16,
+      14,
+      0,
+      15,
+      0,
+      "LATENT"
+    ],
+    [
+      17,
+      5,
+      0,
+      15,
+      1,
+      "VAE"
+    ],
+    [
+      18,
+      15,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      19,
+      2,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      15,
+      0,
+      17,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "i2i_consistency_suite": {
+      "workflow_slug": "klein-9b-pulid-identity-lab",
+      "version": 1,
+      "target_model": "Flux2-Klein-9B"
+    }
+  },
+  "version": 0.4
+}
