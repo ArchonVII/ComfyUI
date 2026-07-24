@@ -39,6 +39,10 @@ QWEN_LIGHTNING_LORA = (
     r"Qwen\Qwen IE 2511"
     r"\Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors"
 )
+KLEIN_9B_TEXT_ENCODER = r"Qwen\qwen_3_8b_fp8mixed.safetensors"
+INCOMPATIBLE_KLEIN_4B_TEXT_ENCODER = (
+    r"Flux\flux2-klein-qwen3-4b.safetensors"
+)
 
 SAMPLER_TYPES = {"KSampler", "KSamplerAdvanced", "SamplerCustomAdvanced"}
 
@@ -1085,3 +1089,17 @@ def test_masked_composite_resizes_source_for_dimension_safe_restoration():
     workflow = load_workflow(MASKED_WORKFLOW)
     composite = node_of_type(workflow, "ImageCompositeMasked")
     assert widget_value(composite, "resize_source") is True
+
+
+@pytest.mark.parametrize("name", (MASKED_WORKFLOW, PULID_WORKFLOW))
+def test_klein_9b_workflows_use_the_qwen_8b_text_encoder(name):
+    workflow = load_workflow(name)
+    clip = node_of_type(workflow, "CLIPLoader")
+    selected_encoder = widget_value(clip, "clip_name")
+
+    assert selected_encoder != INCOMPATIBLE_KLEIN_4B_TEXT_ENCODER, (
+        "Flux Klein 9B is incompatible with the Qwen 4B encoder "
+        "(hidden width 7680 vs 12288)"
+    )
+    assert selected_encoder == KLEIN_9B_TEXT_ENCODER
+    assert_active(clip)
