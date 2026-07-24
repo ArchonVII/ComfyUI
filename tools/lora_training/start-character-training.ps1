@@ -92,6 +92,22 @@ function Invoke-Checked {
     }
 }
 
+$expectedOutput = Join-Path $OutputDir ($RunName + '.safetensors')
+$approved = Join-Path $ApprovedLoraRoot ($RunName + '-' + $Model + '.safetensors')
+if ($ApproveOutput) {
+    Assert-UnderRoot -Path $OutputDir -Root $TrainingRoot -Label 'Output directory'
+    if (-not (Test-Path -LiteralPath $expectedOutput -PathType Leaf)) {
+        throw "No staged training output was found at '$expectedOutput'. Run training without -ApproveOutput, review the staged LoRA, then approve it."
+    }
+    if (Test-Path -LiteralPath $approved) {
+        throw "Approved LoRA already exists and will not be overwritten: $approved"
+    }
+    New-Item -ItemType Directory -Path $ApprovedLoraRoot -Force | Out-Null
+    [System.IO.File]::Copy($expectedOutput, $approved, $false)
+    Write-Host "Approved LoRA copied to: $approved"
+    return
+}
+
 Assert-UnderRoot -Path $DatasetDir -Root $TrainingRoot -Label 'Dataset directory'
 Assert-UnderRoot -Path $RunDir -Root $TrainingRoot -Label 'Run directory'
 Assert-UnderRoot -Path $OutputDir -Root $TrainingRoot -Label 'Output directory'
@@ -143,7 +159,6 @@ if ($env:VIRTUAL_ENV -and ([System.IO.Path]::GetFullPath($env:VIRTUAL_ENV) -ne [
     throw "Another virtual environment is active. Deactivate it before starting the isolated trainer."
 }
 
-$expectedOutput = Join-Path $OutputDir ($RunName + '.safetensors')
 if (Test-Path -LiteralPath $expectedOutput) {
     throw "Training output already exists and will not be overwritten: $expectedOutput"
 }
@@ -170,13 +185,16 @@ else {
 
 Push-Location $RunDir
 try {
-    Invoke-Checked -FilePath $TrainerPython -ArgumentList @(
+    $latentArgs = @(
         (Join-Path $SourceRoot $latentScript),
         '--dataset_config', $DatasetConfig,
         '--vae', $Vae,
-        '--model_version', $modelVersion,
-        '--vae_dtype', 'bfloat16'
+        '--model_version', $modelVersion
     )
+    if ($Model -eq 'flux2-klein9b') {
+        $latentArgs += @('--vae_dtype', 'bfloat16')
+    }
+    Invoke-Checked -FilePath $TrainerPython -ArgumentList $latentArgs
     Invoke-Checked -FilePath $TrainerPython -ArgumentList @(
         (Join-Path $SourceRoot $textScript),
         '--dataset_config', $DatasetConfig,
@@ -208,16 +226,4 @@ $completion = @{
     run_name = $RunName
 } | ConvertTo-Json
 $completion | Set-Content -LiteralPath (Join-Path $RunDir 'training-complete.json') -Encoding utf8
-
-if ($ApproveOutput) {
-    New-Item -ItemType Directory -Path $ApprovedLoraRoot -Force | Out-Null
-    $approved = Join-Path $ApprovedLoraRoot ($RunName + '-' + $Model + '.safetensors')
-    if (Test-Path -LiteralPath $approved) {
-        throw "Approved LoRA already exists and will not be overwritten: $approved"
-    }
-    Copy-Item -LiteralPath $expectedOutput -Destination $approved
-    Write-Host "Approved LoRA copied to: $approved"
-}
-else {
-    Write-Host "Training output remains staged locally. Re-run with -ApproveOutput only after reviewing it."
-}
+Write-Host "Training output remains staged locally. Re-run with -ApproveOutput only after reviewing it."

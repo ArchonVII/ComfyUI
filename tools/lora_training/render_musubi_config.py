@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shutil
 import sys
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -143,6 +146,7 @@ def _validate_run_name(run_name: str) -> str:
 
 
 def _read_safetensors_dtypes(path: Path, label: str) -> frozenset[str]:
+    file_size = path.stat().st_size
     with path.open("rb") as stream:
         prefix = stream.read(8)
         if prefix[:4] == b"GGUF":
@@ -155,7 +159,7 @@ def _read_safetensors_dtypes(path: Path, label: str) -> frozenset[str]:
                 f"{label} checkpoint '{path.name}' has no valid safetensors header."
             )
         header_length = int.from_bytes(prefix, "little")
-        remaining = path.stat().st_size - 8
+        remaining = file_size - 8
         if (
             header_length <= 0
             or header_length > _MAX_SAFETENSORS_HEADER_BYTES
@@ -177,7 +181,9 @@ def _read_safetensors_dtypes(path: Path, label: str) -> frozenset[str]:
             f"{label} checkpoint '{path.name}' has an invalid safetensors header object."
         )
 
+    payload_size = file_size - 8 - header_length
     dtypes: set[str] = set()
+    intervals: list[tuple[int, int, str]] = []
     for tensor_name, tensor in header.items():
         if tensor_name == "__metadata__":
             continue
@@ -186,10 +192,40 @@ def _read_safetensors_dtypes(path: Path, label: str) -> frozenset[str]:
                 f"{label} checkpoint '{path.name}' has malformed tensor metadata "
                 f"for '{tensor_name}'."
             )
+        offsets = tensor.get("data_offsets")
+        if (
+            not isinstance(offsets, list)
+            or len(offsets) != 2
+            or any(not isinstance(offset, int) or isinstance(offset, bool) for offset in offsets)
+        ):
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has malformed data_offsets "
+                f"for '{tensor_name}'; offsets must be two integer payload positions."
+            )
+        start, end = offsets
+        if start < 0 or end < start or end > payload_size:
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has data_offsets [{start}, {end}] "
+                f"outside its {payload_size}-byte payload for '{tensor_name}'."
+            )
+        intervals.append((start, end, tensor_name))
         dtypes.add(tensor["dtype"].upper())
     if not dtypes:
         raise ModelCheckpointError(
             f"{label} checkpoint '{path.name}' declares no tensors in its safetensors header."
+        )
+    cursor = 0
+    for start, end, tensor_name in sorted(intervals):
+        if start != cursor:
+            raise ModelCheckpointError(
+                f"{label} checkpoint '{path.name}' has non-contiguous or overlapping "
+                f"data_offsets at '{tensor_name}' within its payload."
+            )
+        cursor = end
+    if cursor != payload_size:
+        raise ModelCheckpointError(
+            f"{label} checkpoint '{path.name}' data_offsets cover {cursor} bytes but "
+            f"the file payload contains {payload_size} bytes."
         )
     return frozenset(dtypes)
 
@@ -370,6 +406,8 @@ def render_run(
     template_root: Path | str | None = None,
     available_bytes: int | None = None,
 ) -> RenderResult:
+    requested_run = Path(run_dir).expanduser().resolve()
+    _assert_run_available(requested_run)
     templates = (
         Path(template_root)
         if template_root is not None
@@ -386,25 +424,43 @@ def render_run(
         template_root=templates,
         available_bytes=available_bytes,
     )
+    run.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = _run_lock_path(run)
+    try:
+        lock_descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise ExistingRunError(
+            f"Safety guard will not overwrite or mix run state while another render "
+            f"holds '{lock_path}'. Choose a new run name/directory or remove a verified stale lock."
+        ) from exc
+    os.close(lock_descriptor)
+
+    temporary_run = run.parent / f".{run.name}.tmp-{uuid.uuid4().hex}"
+    try:
+        _assert_run_available(run, include_lock=False)
+        temporary_run.mkdir()
+        _write_text_exclusive(temporary_run / "dataset.toml", dataset_text)
+        _write_text_exclusive(temporary_run / "train.toml", training_text)
+        _write_text_exclusive(
+            temporary_run / "dataset-manifest.json",
+            json.dumps(manifest_data, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        )
+        _assert_run_available(run, include_lock=False)
+        try:
+            os.rename(temporary_run, run)
+        except FileExistsError as exc:
+            raise ExistingRunError(
+                f"Safety guard will not overwrite run state created while publishing "
+                f"'{run}'. Choose a new run name/directory."
+            ) from exc
+    finally:
+        if temporary_run.exists():
+            shutil.rmtree(temporary_run)
+        lock_path.unlink(missing_ok=True)
+
     dataset_config = run / "dataset.toml"
     train_config = run / "train.toml"
     manifest_path = run / "dataset-manifest.json"
-    existing = [path for path in (dataset_config, train_config, manifest_path) if path.exists()]
-    if existing:
-        raise ExistingRunError(
-            "Safety guard will not overwrite existing run config(s): "
-            + ", ".join(str(path) for path in existing)
-            + ". Choose a new run name/directory."
-        )
-
-    run.mkdir(parents=True, exist_ok=True)
-    dataset_config.write_text(dataset_text, encoding="utf-8", newline="\n")
-    train_config.write_text(training_text, encoding="utf-8", newline="\n")
-    manifest_path.write_text(
-        json.dumps(manifest_data, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
     return RenderResult(
         run_dir=run,
         dataset_config=dataset_config,
@@ -412,6 +468,29 @@ def render_run(
         manifest=manifest_path,
         warnings=tuple(manifest_data.get("warnings", [])),
     )
+
+
+def _run_lock_path(run: Path) -> Path:
+    return run.parent / f".{run.name}.lock"
+
+
+def _assert_run_available(run: Path, *, include_lock: bool = True) -> None:
+    if os.path.lexists(run):
+        raise ExistingRunError(
+            f"Safety guard will not overwrite existing run state at '{run}'. "
+            "Choose a new run name/directory."
+        )
+    lock_path = _run_lock_path(run)
+    if include_lock and os.path.lexists(lock_path):
+        raise ExistingRunError(
+            f"Safety guard will not overwrite or mix run state while another render "
+            f"holds '{lock_path}'. Choose a new run name/directory or remove a verified stale lock."
+        )
+
+
+def _write_text_exclusive(path: Path, text: str) -> None:
+    with path.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
 
 
 def build_musubi_commands(
@@ -436,9 +515,9 @@ def build_musubi_commands(
         str(paths["vae"]),
         "--model_version",
         profile.model_version,
-        "--vae_dtype",
-        "bfloat16",
     )
+    if model == "flux2-klein9b":
+        latent += ("--vae_dtype", "bfloat16")
     text = (
         str(python),
         str(source / profile.text_script),
@@ -511,6 +590,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     templates = Path(__file__).resolve().parent / "templates"
     try:
         if args.dry_run:
+            run = args.run_dir.expanduser().resolve()
+            _assert_run_available(run)
             _prepare(
                 model=args.model,
                 dataset_dir=args.dataset_dir,
@@ -522,6 +603,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 template_root=templates,
                 available_bytes=available,
             )
+            _assert_run_available(run)
             commands = build_musubi_commands(
                 model=args.model,
                 trainer_root=MUSUBI_ROOT,
@@ -529,7 +611,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 train_config=args.run_dir / "train.toml",
                 model_paths=model_paths,
             )
-            print("VALID: dataset, checkpoints, trigger token, run name, and disk guard passed.")
+            print(
+                "VALID: dataset and trigger/run syntax validated; safetensors "
+                "container/dtype checks passed; semantic identity/provenance unverified; "
+                "disk guard passed."
+            )
             for phase, command in zip(("cache-latents", "cache-text", "train"), commands):
                 print(f"{phase}: {_display_command(command)}")
             return 0

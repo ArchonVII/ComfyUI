@@ -6,12 +6,15 @@ import shutil
 import struct
 import subprocess
 import sys
+import threading
 import tomllib
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
+import tools.lora_training.render_musubi_config as render_module
 from tools.lora_training.character_dataset import (
     DatasetValidationError,
     InsufficientDiskSpaceError,
@@ -91,6 +94,8 @@ def _write_safetensors(
     *,
     dtype: str = "BF16",
     tensor_name: str = "model.weight",
+    data_offsets: list[int] | None = None,
+    payload_size: int | None = None,
 ) -> None:
     element_sizes = {
         "BF16": 2,
@@ -103,18 +108,22 @@ def _write_safetensors(
         "U8": 1,
     }
     data_size = element_sizes[dtype]
+    offsets = data_offsets if data_offsets is not None else [0, data_size]
+    stored_payload_size = data_size if payload_size is None else payload_size
     header = json.dumps(
         {
             "__metadata__": {"format": "pt"},
             tensor_name: {
                 "dtype": dtype,
                 "shape": [1],
-                "data_offsets": [0, data_size],
+                "data_offsets": offsets,
             },
         },
         separators=(",", ":"),
     ).encode("utf-8")
-    path.write_bytes(struct.pack("<Q", len(header)) + header + (b"\0" * data_size))
+    path.write_bytes(
+        struct.pack("<Q", len(header)) + header + (b"\0" * stored_payload_size)
+    )
 
 
 def _paired_controls(dataset: Path, root: Path) -> Path:
@@ -426,6 +435,28 @@ def test_all_model_roles_require_safetensors_files(tmp_path: Path) -> None:
         _validate_model_paths("flux2-klein9b", models)
 
 
+def test_truncated_safetensors_payload_is_rejected(tmp_path: Path) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    truncated = models["vae"]
+    truncated.write_bytes(truncated.read_bytes()[:-1])
+
+    with pytest.raises(
+        ModelCheckpointError, match=r"vae.*data_offsets.*payload"
+    ):
+        _validate_model_paths("flux2-klein9b", models)
+
+
+def test_out_of_bounds_safetensors_offsets_are_rejected(tmp_path: Path) -> None:
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    malformed = models["vae"]
+    _write_safetensors(malformed, data_offsets=[0, 8], payload_size=2)
+
+    with pytest.raises(
+        ModelCheckpointError, match=r"vae.*data_offsets.*payload"
+    ):
+        _validate_model_paths("flux2-klein9b", models)
+
+
 def test_flux_render_is_deterministic_and_uses_low_memory_settings(tmp_path: Path) -> None:
     dataset = _valid_dataset(tmp_path / "dataset")
     models = _model_files(tmp_path / "models", "flux2-klein9b")
@@ -501,21 +532,6 @@ def test_qwen_render_uses_real_edit_2511_keys_and_commands(tmp_path: Path) -> No
     assert manifest["images"][0]["controls"][0]["image"] == "portrait-00.png"
     assert "sha256" in manifest["images"][0]["controls"][0]
 
-    commands = build_musubi_commands(
-        model="qwen-edit-2511",
-        trainer_root=MUSUBI_ROOT,
-        dataset_config=result.dataset_config,
-        train_config=result.train_config,
-        model_paths=models,
-    )
-    command_text = "\n".join(" ".join(command) for command in commands)
-    assert "qwen_image_cache_latents.py" in command_text
-    assert "qwen_image_cache_text_encoder_outputs.py" in command_text
-    assert "qwen_image_train_network.py" in command_text
-    assert "--config_file" in command_text
-    assert "ComfyUI\\venv" not in command_text
-
-
 def test_qwen_render_requires_a_valid_control_directory(tmp_path: Path) -> None:
     dataset = _valid_dataset(tmp_path / "dataset")
     models = _model_files(tmp_path / "models", "qwen-edit-2511")
@@ -532,6 +548,90 @@ def test_qwen_render_requires_a_valid_control_directory(tmp_path: Path) -> None:
             template_root=TEMPLATE_ROOT,
             available_bytes=100 * 1024**3,
         )
+
+
+@pytest.mark.parametrize(
+    ("model", "latent_script", "text_script", "train_script", "version", "text_flag"),
+    [
+        (
+            "flux2-klein9b",
+            "flux_2_cache_latents.py",
+            "flux_2_cache_text_encoder_outputs.py",
+            "flux_2_train_network.py",
+            "klein-base-9b",
+            "--fp8_text_encoder",
+        ),
+        (
+            "qwen-edit-2511",
+            "qwen_image_cache_latents.py",
+            "qwen_image_cache_text_encoder_outputs.py",
+            "qwen_image_train_network.py",
+            "edit-2511",
+            "--fp8_vl",
+        ),
+    ],
+)
+def test_musubi_commands_have_exact_model_specific_arguments(
+    tmp_path: Path,
+    model: str,
+    latent_script: str,
+    text_script: str,
+    train_script: str,
+    version: str,
+    text_flag: str,
+) -> None:
+    models = _model_files(tmp_path / "models", model)
+    dataset_config = tmp_path / "dataset.toml"
+    train_config = tmp_path / "train.toml"
+    python = MUSUBI_ROOT / ".venv" / "Scripts" / "python.exe"
+    source = MUSUBI_ROOT / "src" / "musubi_tuner"
+
+    latent, text, train = build_musubi_commands(
+        model=model,
+        trainer_root=MUSUBI_ROOT,
+        dataset_config=dataset_config,
+        train_config=train_config,
+        model_paths=models,
+    )
+
+    expected_latent = (
+        str(python),
+        str(source / latent_script),
+        "--dataset_config",
+        str(dataset_config),
+        "--vae",
+        str(models["vae"]),
+        "--model_version",
+        version,
+    )
+    if model == "flux2-klein9b":
+        expected_latent += ("--vae_dtype", "bfloat16")
+    assert latent == expected_latent
+    assert text == (
+        str(python),
+        str(source / text_script),
+        "--dataset_config",
+        str(dataset_config),
+        "--text_encoder",
+        str(models["text_encoder"]),
+        "--batch_size",
+        "1",
+        "--model_version",
+        version,
+        text_flag,
+    )
+    assert train == (
+        str(python),
+        "-m",
+        "accelerate.commands.launch",
+        "--num_cpu_threads_per_process",
+        "1",
+        "--mixed_precision",
+        "bf16",
+        str(source / train_script),
+        "--config_file",
+        str(train_config),
+    )
 
 
 def test_existing_run_configs_are_never_overwritten(tmp_path: Path) -> None:
@@ -554,6 +654,106 @@ def test_existing_run_configs_are_never_overwritten(tmp_path: Path) -> None:
         render_run(**kwargs)
 
     assert first.train_config.read_bytes() == original
+
+
+def test_existing_empty_run_directory_is_never_populated(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    with pytest.raises(ExistingRunError, match="will not overwrite"):
+        render_run(
+            model="flux2-klein9b",
+            dataset_dir=dataset,
+            run_dir=run_dir,
+            run_name="hero-lora",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+    assert list(run_dir.iterdir()) == []
+
+
+def test_concurrent_render_publishes_one_complete_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    run_dir = tmp_path / "run"
+    barrier = threading.Barrier(2)
+    original_write_text = Path.write_text
+
+    def synchronized_legacy_write(path: Path, *args: object, **kwargs: object) -> int:
+        if path == run_dir / "dataset.toml":
+            barrier.wait(timeout=5)
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", synchronized_legacy_write)
+    kwargs = {
+        "model": "flux2-klein9b",
+        "dataset_dir": dataset,
+        "run_dir": run_dir,
+        "run_name": "hero-lora",
+        "trigger_token": "jmaHero",
+        "model_paths": models,
+        "template_root": TEMPLATE_ROOT,
+        "available_bytes": 100 * 1024**3,
+    }
+
+    def attempt() -> object:
+        try:
+            return render_run(**kwargs)
+        except Exception as exc:  # The losing publisher is the expected result.
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _: attempt(), range(2)))
+
+    assert sum(isinstance(item, render_module.RenderResult) for item in outcomes) == 1
+    assert sum(isinstance(item, ExistingRunError) for item in outcomes) == 1
+    assert sorted(path.name for path in run_dir.iterdir()) == [
+        "dataset-manifest.json",
+        "dataset.toml",
+        "train.toml",
+    ]
+
+
+def test_render_failure_cleans_temporary_state_without_publishing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    run_dir = tmp_path / "run"
+    writes = 0
+
+    def fail_second_write(path: Path, text: str) -> None:
+        nonlocal writes
+        writes += 1
+        if writes == 2:
+            raise OSError("forced write failure")
+
+    monkeypatch.setattr(
+        render_module, "_write_text_exclusive", fail_second_write, raising=False
+    )
+
+    with pytest.raises(OSError, match="forced write failure"):
+        render_run(
+            model="flux2-klein9b",
+            dataset_dir=dataset,
+            run_dir=run_dir,
+            run_name="hero-lora",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+    assert not run_dir.exists()
+    assert not list(tmp_path.glob(".run.tmp-*"))
+    assert not (tmp_path / ".run.lock").exists()
 
 
 def test_cli_dry_run_validates_without_writing_run(tmp_path: Path) -> None:
@@ -587,9 +787,155 @@ def test_cli_dry_run_validates_without_writing_run(tmp_path: Path) -> None:
     completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
 
     assert completed.returncode == 0, completed.stderr
-    assert "VALID" in completed.stdout
+    assert (
+        "safetensors container/dtype checks passed; "
+        "semantic identity/provenance unverified"
+    ) in completed.stdout
     assert "flux_2_cache_latents.py" in completed.stdout
     assert not run_dir.exists()
+
+
+def test_cli_dry_run_rejects_existing_run_state_without_writes(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    marker = run_dir / "reviewed.txt"
+    marker.write_text("preserve", encoding="utf-8")
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "lora_training" / "render_musubi_config.py"),
+        "--model",
+        "flux2-klein9b",
+        "--dataset-dir",
+        str(dataset),
+        "--run-dir",
+        str(run_dir),
+        "--run-name",
+        "hero-lora",
+        "--trigger-token",
+        "jmaHero",
+        "--dit",
+        str(models["dit"]),
+        "--vae",
+        str(models["vae"]),
+        "--text-encoder",
+        str(models["text_encoder"]),
+        "--available-disk-gib",
+        "100",
+        "--dry-run",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 2
+    assert "will not overwrite" in completed.stderr
+    assert marker.read_text(encoding="utf-8") == "preserve"
+    assert list(run_dir.iterdir()) == [marker]
+
+
+def _localized_starter(tmp_path: Path) -> tuple[Path, Path, Path]:
+    starter = REPO_ROOT / "tools" / "lora_training" / "start-character-training.ps1"
+    text = starter.read_text(encoding="utf-8")
+    trainer_root = tmp_path / "missing-trainer"
+    training_root = tmp_path / "training"
+    repository_root = tmp_path / "repository"
+
+    def quoted(path: Path) -> str:
+        return str(path).replace("'", "''")
+
+    text = text.replace(
+        "$TrainerRoot = 'C:\\tools\\image\\trainers\\musubi-tuner'",
+        f"$TrainerRoot = '{quoted(trainer_root)}'",
+    )
+    text = text.replace(
+        "$TrainingRoot = 'C:\\tools\\image\\training\\characters'",
+        f"$TrainingRoot = '{quoted(training_root)}'",
+    )
+    text = text.replace(
+        "$RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\\..'))",
+        f"$RepositoryRoot = '{quoted(repository_root)}'",
+    )
+    localized = tmp_path / "start-character-training.ps1"
+    localized.write_text(text, encoding="utf-8")
+    return localized, training_root, repository_root
+
+
+def _approval_command(script: Path, run_name: str) -> list[str]:
+    pwsh = shutil.which("pwsh")
+    assert pwsh is not None, "PowerShell 7 is required"
+    return [
+        pwsh,
+        "-NoProfile",
+        "-File",
+        str(script),
+        "-Model",
+        "flux2-klein9b",
+        "-Character",
+        "review-hero",
+        "-RunName",
+        run_name,
+        "-TriggerToken",
+        "reviewHero",
+        "-Dit",
+        "unused-dit.safetensors",
+        "-Vae",
+        "unused-vae.safetensors",
+        "-TextEncoder",
+        "unused-text.safetensors",
+        "-MinimumFreeGiB",
+        "1",
+        "-ApproveOutput",
+    ]
+
+
+def test_approval_only_copies_staged_output_without_trainer_or_overwrite(
+    tmp_path: Path,
+) -> None:
+    script, training_root, repository_root = _localized_starter(tmp_path)
+    run_name = "reviewed-hero"
+    staged = (
+        training_root
+        / "outputs"
+        / run_name
+        / "flux2-klein9b"
+        / f"{run_name}.safetensors"
+    )
+    staged.parent.mkdir(parents=True)
+    staged.write_bytes(b"reviewed-lora")
+    command = _approval_command(script, run_name)
+
+    first = subprocess.run(command, text=True, capture_output=True)
+    approved = (
+        repository_root
+        / "models"
+        / "loras"
+        / "trained"
+        / "characters"
+        / f"{run_name}-flux2-klein9b.safetensors"
+    )
+
+    assert first.returncode == 0, first.stderr
+    assert approved.read_bytes() == b"reviewed-lora"
+    assert "Approved LoRA copied" in first.stdout
+
+    staged.write_bytes(b"changed-after-review")
+    second = subprocess.run(command, text=True, capture_output=True)
+
+    assert second.returncode != 0
+    assert "already exists and will not be overwritten" in second.stderr
+    assert approved.read_bytes() == b"reviewed-lora"
+
+
+def test_approval_only_requires_an_existing_staged_output(tmp_path: Path) -> None:
+    script, _, repository_root = _localized_starter(tmp_path)
+    command = _approval_command(script, "missing-stage")
+
+    completed = subprocess.run(command, text=True, capture_output=True)
+
+    assert completed.returncode != 0
+    assert "No staged training output was found" in completed.stderr
+    assert not repository_root.exists()
 
 
 def test_renderer_runs_with_the_exact_python_isolation_mode_used_by_wrapper(
