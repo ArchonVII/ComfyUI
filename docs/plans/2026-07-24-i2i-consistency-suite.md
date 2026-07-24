@@ -8,7 +8,8 @@
 
 **Tech Stack:** ComfyUI editor JSON, Python workflow builders and contract tests, ComfyUI-GGUF, ComfyUI-PuLID-Flux2, InsightFace, Qwen-Image-Edit-2511 GGUF, Musubi Tuner, PowerShell launch wrappers, pytest.
 
-**Plan Status:** Active until implementation closeout; update the Plan Closeout section before PR ready/merge.
+**Plan Status:** Task 5 live validation and documentation complete; Task 6 delivery,
+remote gates, merge, and activation remain pending.
 
 ---
 
@@ -231,7 +232,32 @@ Merge through GitHub without bypass, preserve the dirty runtime checkout, fast-f
 
 ## Plan Closeout
 
-- Status: Active.
-- Final verification: pending.
-- Runtime assets: pending.
-- PR and merge: pending.
+- Status: Task 5 complete at suite head
+  `558f6acee39d95f9b1df7a319fd950b015a21dfe`; Task 6 remains pending.
+- Live schema: the isolated validation server exposed 2,702 node types. All 52
+  executable nodes across the three generated workflows resolved, with zero
+  missing node types and zero unknown executable input names. The six editor-only
+  `LoadImage.upload` pseudo-inputs were correctly excluded from backend validation.
+- Klein masked smoke: a fresh 256x256, two-step run completed in 6.609 seconds.
+  All 59,119 pixels outside the final composite mask were byte-equal to the source
+  with maximum channel delta 0.
+- PuLID smoke: a 256x256, two-step run completed in 61.131 seconds including the
+  first-use EVA download. Both faces were detected and the measured cosine
+  similarity was 0.519441. This is recorded evidence, not a suite-defined
+  acceptance threshold.
+- Qwen smoke: the active one-reference Q4_K_M accuracy lane completed a 256x256,
+  two-step run in 32.558 seconds, with the loader confirming Q4_K and Q6_K tensors
+  and model offloading.
+- Runtime assets: required inference models, custom nodes, AntelopeV2, EVA, and
+  selective Python dependencies were installed and verified. Exact local hashes,
+  source revisions, license caveats, and measured smoke outputs are recorded in
+  `docs/i2i-consistency-suite.md`.
+- Train-only assets: full BF16/unquantized Klein base and Qwen Edit checkpoints
+  remain deliberately deferred until a real dataset exists. The installed
+  distilled FP8 and Q4_K_M inference weights must not be used as training bases.
+- Focused local verification: passed after the documentation update. The two
+  focused pytest modules passed all 88 tests; two consecutive builder runs produced
+  byte-identical workflow JSON; Python compilation, both PowerShell parser checks,
+  and `git diff --check` passed.
+- PR, GitHub-required checks, review gates, merge, runtime activation, and worktree
+  cleanup: pending Task 6.
