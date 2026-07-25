@@ -32,5 +32,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchPtCombine": "arch-pt-Combine",
 }
 
+WEB_DIRECTORY = "./web"
+
 
 register_routes()
