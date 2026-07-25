@@ -6,67 +6,43 @@
       "key": "identity",
       "label": "Identity",
       "sections": [
-        {
-          "key": "subject",
-          "label": "Subject",
-          "order": 10,
-          "fields": [
-            {"key": "gender", "label": "Gender", "order": 10, "control": "buttons", "groups": ["gender"], "catalog_scope": "shared"}
-          ]
-        }
+        {"key": "core_identity", "label": "Core identity", "order": 10, "fields": [{"key": "gender", "label": "Gender", "order": 10, "control": "buttons", "groups": ["gender"], "catalog_scope": "shared"}]},
+        {"key": "body_structure", "label": "Body structure", "order": 20, "fields": [{"key": "body_notes", "label": "Body notes", "order": 10, "control": "free_text"}]},
+        {"key": "appearance", "label": "Appearance", "order": 30, "fields": [{"key": "appearance_notes", "label": "Appearance notes", "order": 10, "control": "free_text"}]},
+        {"key": "expression", "label": "Expression", "order": 40, "fields": [{"key": "expression_notes", "label": "Expression notes", "order": 10, "control": "free_text"}]}
       ]
     },
     {
       "key": "pose",
       "label": "Pose",
       "sections": [
-        {
-          "key": "hands",
-          "label": "Hands",
-          "order": 10,
-          "fields": [
-            {"key": "hand_position", "label": "Hand position", "order": 10, "control": "searchable_options", "groups": ["hand_position"], "catalog_scope": "side_aware"}
-          ]
-        }
+        {"key": "overall_pose", "label": "Overall pose", "order": 10, "fields": [{"key": "pose_notes", "label": "Pose notes", "order": 10, "control": "free_text"}]},
+        {"key": "frame_orientation", "label": "Frame orientation", "order": 20, "fields": [{"key": "orientation_notes", "label": "Orientation notes", "order": 10, "control": "free_text"}]},
+        {"key": "head_torso", "label": "Head and torso", "order": 30, "fields": [{"key": "head_torso_notes", "label": "Head and torso notes", "order": 10, "control": "free_text"}]},
+        {"key": "arms_hands", "label": "Arms and hands", "order": 40, "fields": [{"key": "hand_position", "label": "Hand position", "order": 10, "control": "searchable_options", "groups": ["hand_position"], "catalog_scope": "side_aware"}]},
+        {"key": "legs_feet", "label": "Legs and feet", "order": 50, "fields": [{"key": "legs_feet_notes", "label": "Legs and feet notes", "order": 10, "control": "free_text"}]}
       ]
     },
     {
       "key": "clothing",
       "label": "Clothing",
       "sections": [
-        {
-          "key": "wardrobe",
-          "label": "Wardrobe",
-          "order": 10,
-          "fields": [
-            {"key": "garment", "label": "Garment", "order": 10, "control": "searchable_options", "groups": ["garment"], "catalog_scope": "shared"}
-          ]
-        }
+        {"key": "state_transfer", "label": "State transfer", "order": 10, "fields": [{"key": "transfer_notes", "label": "Transfer notes", "order": 10, "control": "free_text"}]},
+        {"key": "upper_body", "label": "Upper body", "order": 20, "fields": [{"key": "garment", "label": "Garment", "order": 10, "control": "searchable_options", "groups": ["garment"], "catalog_scope": "shared"}]},
+        {"key": "waist_lower_body", "label": "Waist and lower body", "order": 30, "fields": [{"key": "lower_body_notes", "label": "Lower body notes", "order": 10, "control": "free_text"}]},
+        {"key": "whole_outfit", "label": "Whole outfit", "order": 40, "fields": [{"key": "outfit_notes", "label": "Outfit notes", "order": 10, "control": "free_text"}]},
+        {"key": "materials_details", "label": "Materials and details", "order": 50, "fields": [{"key": "material_notes", "label": "Material notes", "order": 10, "control": "free_text"}]}
       ]
     },
     {
       "key": "environment",
       "label": "Environment",
       "sections": [
-        {
-          "key": "scene",
-          "label": "Scene",
-          "order": 10,
-          "fields": [
-            {"key": "weather", "label": "Weather", "order": 10, "control": "searchable_options", "groups": ["weather"], "catalog_scope": "shared"},
-            {
-              "key": "atmosphere",
-              "label": "Atmosphere",
-              "order": 20,
-              "control": "semantic_spectrum",
-              "enabled_by_default": false,
-              "spectrum": [
-                {"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}},
-                {"minimum": 0.34, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}},
-                {"minimum": 0.67, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}
-              ]
-            }
-          ]
+        {"key": "scene_type", "label": "Scene type", "order": 10, "fields": [{"key": "scene_notes", "label": "Scene notes", "order": 10, "control": "free_text"}]},
+        {"key": "location", "label": "Location", "order": 20, "fields": [{"key": "location_notes", "label": "Location notes", "order": 10, "control": "free_text"}]},
+        {"key": "scene_contents", "label": "Scene contents", "order": 30, "fields": [{"key": "contents_notes", "label": "Contents notes", "order": 10, "control": "free_text"}]},
+        {"key": "time_conditions", "label": "Time and conditions", "order": 40, "fields": [{"key": "weather", "label": "Weather", "order": 10, "control": "searchable_options", "groups": ["weather"], "catalog_scope": "shared"}]},
+        {"key": "mood_character", "label": "Mood and character", "order": 50, "fields": [{"key": "atmosphere", "label": "Atmosphere", "order": 10, "control": "semantic_spectrum", "enabled_by_default": false, "spectrum": [{"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}}, {"minimum": 0.34, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}}, {"minimum": 0.67, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}]}]
         }
       ]
     },
@@ -74,29 +50,23 @@
       "key": "camera",
       "label": "Camera",
       "sections": [
-        {
-          "key": "framing",
-          "label": "Framing",
-          "order": 10,
-          "fields": [
-            {"key": "view", "label": "View", "order": 10, "control": "searchable_options", "groups": ["view"], "catalog_scope": "shared"},
-            {"key": "notes", "label": "Notes", "order": 20, "control": "free_text"}
-          ]
-        }
+        {"key": "framing_distance", "label": "Framing and distance", "order": 10, "fields": [{"key": "view", "label": "View", "order": 10, "control": "searchable_options", "groups": ["view"], "catalog_scope": "shared"}]},
+        {"key": "viewpoint_angle", "label": "Viewpoint and angle", "order": 20, "fields": [{"key": "angle_notes", "label": "Angle notes", "order": 10, "control": "free_text"}]},
+        {"key": "lens_optics", "label": "Lens and optics", "order": 30, "fields": [{"key": "lens_notes", "label": "Lens notes", "order": 10, "control": "free_text"}]},
+        {"key": "focus_depth", "label": "Focus and depth", "order": 40, "fields": [{"key": "focus_notes", "label": "Focus notes", "order": 10, "control": "free_text"}]},
+        {"key": "composition_effects", "label": "Composition and effects", "order": 50, "fields": [{"key": "notes", "label": "Notes", "order": 10, "control": "free_text"}]}
       ]
     },
     {
       "key": "lighting",
       "label": "Lighting",
       "sections": [
-        {
-          "key": "light_setup",
-          "label": "Light setup",
-          "order": 10,
-          "fields": [
-            {"key": "direction", "label": "Direction", "order": 10, "control": "buttons", "groups": ["direction"], "catalog_scope": "shared"}
-          ]
-        }
+        {"key": "environment_illumination", "label": "Environment illumination", "order": 10, "fields": [{"key": "illumination_notes", "label": "Illumination notes", "order": 10, "control": "free_text"}]},
+        {"key": "light_sources", "label": "Light sources", "order": 20, "fields": [{"key": "source_notes", "label": "Source notes", "order": 10, "control": "free_text"}]},
+        {"key": "primary_direction", "label": "Primary direction", "order": 30, "fields": [{"key": "direction", "label": "Direction", "order": 10, "control": "buttons", "groups": ["direction"], "catalog_scope": "shared"}]},
+        {"key": "color_temperature", "label": "Color temperature", "order": 40, "fields": [{"key": "temperature_notes", "label": "Temperature notes", "order": 10, "control": "free_text"}]},
+        {"key": "quality_shadows", "label": "Quality and shadows", "order": 50, "fields": [{"key": "shadow_notes", "label": "Shadow notes", "order": 10, "control": "free_text"}]},
+        {"key": "techniques_effects", "label": "Techniques and effects", "order": 60, "fields": [{"key": "technique_notes", "label": "Technique notes", "order": 10, "control": "free_text"}]}
       ]
     }
   ]

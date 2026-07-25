@@ -24,6 +24,17 @@ def default_payloads():
     )
 
 
+def raw_field(schemas, node_key, field_key):
+    return next(
+        field
+        for node in schemas["nodes"]
+        if node["key"] == node_key
+        for section in node["sections"]
+        for field in section["fields"]
+        if field["key"] == field_key
+    )
+
+
 def test_loads_matching_versioned_schema_and_builtin_catalog():
     catalog = load_default_catalog()
 
@@ -71,6 +82,47 @@ def test_schema_defines_all_nodes_fields_groups_and_control_types():
     assert catalog.field("pose", "hand_position").catalog_scope == "side_aware"
     assert catalog.field("clothing", "garment").catalog_scope == "shared"
     assert catalog.options_for("identity", "gender", "flux")
+
+
+def test_schema_covers_every_approved_section_for_each_node():
+    catalog = load_default_catalog()
+
+    assert {
+        node: tuple(section.key for section in catalog.schemas_by_node[node].sections)
+        for node in catalog.schemas_by_node
+    } == {
+        "identity": ("core_identity", "body_structure", "appearance", "expression"),
+        "pose": ("overall_pose", "frame_orientation", "head_torso", "arms_hands", "legs_feet"),
+        "clothing": (
+            "state_transfer",
+            "upper_body",
+            "waist_lower_body",
+            "whole_outfit",
+            "materials_details",
+        ),
+        "environment": (
+            "scene_type",
+            "location",
+            "scene_contents",
+            "time_conditions",
+            "mood_character",
+        ),
+        "camera": (
+            "framing_distance",
+            "viewpoint_angle",
+            "lens_optics",
+            "focus_depth",
+            "composition_effects",
+        ),
+        "lighting": (
+            "environment_illumination",
+            "light_sources",
+            "primary_direction",
+            "color_temperature",
+            "quality_shadows",
+            "techniques_effects",
+        ),
+    }
 
 
 def test_options_filter_to_the_current_model_family():
@@ -136,7 +188,7 @@ def test_semantic_spectra_are_disabled_and_map_authored_phrases():
             "protected",
         ),
         (
-            lambda schemas, options: schemas["nodes"][3]["sections"][0]["fields"][1].update(
+            lambda schemas, options: raw_field(schemas, "environment", "atmosphere").update(
                 {"spectrum": [{"minimum": 0, "maximum": 1, "phrases": {"flux": "raw number"}}]}
             ),
             "qwen",
