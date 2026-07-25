@@ -9,6 +9,7 @@ from .nodes import (
     ArchPtLighting,
     ArchPtPose,
 )
+from .routes import register_routes
 
 
 NODE_CLASS_MAPPINGS = {
@@ -30,3 +31,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchPtLighting": "arch-pt-Lighting",
     "ArchPtCombine": "arch-pt-Combine",
 }
+
+
+register_routes()
