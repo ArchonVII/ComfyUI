@@ -702,7 +702,7 @@
       "label": "Bokeh",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "bokeh",
       "phrases": {
         "flux": "visible optical bokeh",
         "qwen": "visible optical bokeh"
@@ -714,7 +714,7 @@
       "label": "Lens flare",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "lens_flare",
       "phrases": {
         "flux": "a natural lens flare",
         "qwen": "a natural lens flare"
@@ -726,7 +726,7 @@
       "label": "Motion blur",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "motion_blur",
       "phrases": {
         "flux": "controlled subject motion blur in the still image",
         "qwen": "controlled subject motion blur in the still image"
@@ -738,7 +738,7 @@
       "label": "Chromatic aberration",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "chromatic_aberration",
       "phrases": {
         "flux": "subtle chromatic aberration at high-contrast edges",
         "qwen": "subtle chromatic aberration at high-contrast edges"
@@ -750,7 +750,7 @@
       "label": "Vignette",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "vignette",
       "phrases": {
         "flux": "a gentle optical vignette",
         "qwen": "a gentle optical vignette"
@@ -762,7 +762,7 @@
       "label": "Starburst",
       "node": "camera",
       "field": "optical_effects",
-      "group": "optical_effects",
+      "group": "starburst",
       "phrases": {
         "flux": "starburst highlights from the lens aperture",
         "qwen": "starburst highlights from the lens aperture"
@@ -1878,7 +1878,7 @@
       "label": "Layered",
       "node": "clothing",
       "field": "outfit_snippets",
-      "group": "outfit_snippets",
+      "group": "layered",
       "phrases": {
         "flux": "a thoughtfully layered outfit",
         "qwen": "a thoughtfully layered outfit"
@@ -1890,7 +1890,7 @@
       "label": "Monochrome",
       "node": "clothing",
       "field": "outfit_snippets",
-      "group": "outfit_snippets",
+      "group": "monochrome",
       "phrases": {
         "flux": "a monochrome outfit",
         "qwen": "a monochrome outfit"
@@ -1902,7 +1902,7 @@
       "label": "Color-blocked",
       "node": "clothing",
       "field": "outfit_snippets",
-      "group": "outfit_snippets",
+      "group": "color_blocked",
       "phrases": {
         "flux": "a color-blocked outfit",
         "qwen": "a color-blocked outfit"
@@ -1914,7 +1914,7 @@
       "label": "Coordinated",
       "node": "clothing",
       "field": "outfit_snippets",
-      "group": "outfit_snippets",
+      "group": "coordinated",
       "phrases": {
         "flux": "a carefully coordinated outfit",
         "qwen": "a carefully coordinated outfit"
@@ -1926,7 +1926,7 @@
       "label": "Eclectic mix",
       "node": "clothing",
       "field": "outfit_snippets",
-      "group": "outfit_snippets",
+      "group": "mismatched",
       "phrases": {
         "flux": "an eclectic mix of garments",
         "qwen": "an eclectic mix of garments"
@@ -2718,7 +2718,7 @@
       "label": "Symmetrical layout",
       "node": "environment",
       "field": "environment_snippets",
-      "group": "environment_snippets",
+      "group": "symmetrical_layout",
       "phrases": {
         "flux": "a symmetrically arranged setting",
         "qwen": "a symmetrically arranged setting"
@@ -2730,7 +2730,7 @@
       "label": "Layered depth",
       "node": "environment",
       "field": "environment_snippets",
-      "group": "environment_snippets",
+      "group": "layered_depth",
       "phrases": {
         "flux": "a setting with clear foreground, midground, and background layers",
         "qwen": "a setting with clear foreground, midground, and background layers"
@@ -2742,7 +2742,7 @@
       "label": "Intimate scale",
       "node": "environment",
       "field": "environment_snippets",
-      "group": "environment_snippets",
+      "group": "intimate_scale",
       "phrases": {
         "flux": "an intimate human-scale setting",
         "qwen": "an intimate human-scale setting"
@@ -2754,7 +2754,7 @@
       "label": "Monumental scale",
       "node": "environment",
       "field": "environment_snippets",
-      "group": "environment_snippets",
+      "group": "monumental_scale",
       "phrases": {
         "flux": "a monumental large-scale setting",
         "qwen": "a monumental large-scale setting"
@@ -2766,7 +2766,7 @@
       "label": "Organic layout",
       "node": "environment",
       "field": "environment_snippets",
-      "group": "environment_snippets",
+      "group": "organic_layout",
       "phrases": {
         "flux": "an organically arranged setting",
         "qwen": "an organically arranged setting"
@@ -3728,8 +3728,8 @@
       "field": "age_group",
       "group": "age_group",
       "phrases": {
-        "flux": "an adult age 18 or older",
-        "qwen": "an adult age 18 or older"
+        "flux": "a young adult age 18 to 24",
+        "qwen": "a young adult age 18 to 24"
       },
       "builtin": true
     },
@@ -5202,7 +5202,7 @@
       "label": "Rim light",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "rim_light",
       "phrases": {
         "flux": "a defined rim light outlining the subject",
         "qwen": "a defined rim light outlining the subject"
@@ -5214,7 +5214,7 @@
       "label": "Backlight",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "backlight",
       "phrases": {
         "flux": "strong backlighting behind the subject",
         "qwen": "strong backlighting behind the subject"
@@ -5226,7 +5226,7 @@
       "label": "Three-point lighting",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "three_point",
       "phrases": {
         "flux": "a classic three-point lighting setup",
         "qwen": "a classic three-point lighting setup"
@@ -5238,7 +5238,7 @@
       "label": "Rembrandt lighting",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "rembrandt",
       "phrases": {
         "flux": "a Rembrandt lighting pattern across the face",
         "qwen": "a Rembrandt lighting pattern across the face"
@@ -5250,7 +5250,7 @@
       "label": "Chiaroscuro",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "chiaroscuro",
       "phrases": {
         "flux": "dramatic chiaroscuro lighting",
         "qwen": "dramatic chiaroscuro lighting"
@@ -5262,7 +5262,7 @@
       "label": "Volumetric light",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "volumetric",
       "phrases": {
         "flux": "visible volumetric light through the scene",
         "qwen": "visible volumetric light through the scene"
@@ -5274,7 +5274,7 @@
       "label": "God rays",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "god_rays",
       "phrases": {
         "flux": "defined rays of light through the atmosphere",
         "qwen": "defined rays of light through the atmosphere"
@@ -5286,7 +5286,7 @@
       "label": "Caustics",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "caustics",
       "phrases": {
         "flux": "optical caustic patterns across surfaces",
         "qwen": "optical caustic patterns across surfaces"
@@ -5298,7 +5298,7 @@
       "label": "Bounced light",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "bounced",
       "phrases": {
         "flux": "soft bounced light shaping the subject",
         "qwen": "soft bounced light shaping the subject"
@@ -5310,7 +5310,7 @@
       "label": "Colored gels",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "colored_gels",
       "phrases": {
         "flux": "studio lights modified with colored gels",
         "qwen": "studio lights modified with colored gels"
@@ -5322,7 +5322,7 @@
       "label": "Silhouette",
       "node": "lighting",
       "field": "lighting_techniques",
-      "group": "lighting_techniques",
+      "group": "silhouette",
       "phrases": {
         "flux": "the subject rendered as a strong light-defined silhouette",
         "qwen": "the subject rendered as a strong light-defined silhouette"
@@ -6075,49 +6075,49 @@
     },
     {
       "id": "pose.facing_direction.three_quarter_left",
-      "label": "Three-quarter left",
+      "label": "Three-quarter left (subject's left)",
       "node": "pose",
       "field": "facing_direction",
       "group": "facing_direction",
       "phrases": {
-        "flux": "the subject faces three-quarter left",
-        "qwen": "the subject faces three-quarter left"
+        "flux": "the subject turns three-quarter toward the subject's anatomical left",
+        "qwen": "the subject turns three-quarter toward the subject's anatomical left"
       },
       "builtin": true
     },
     {
       "id": "pose.facing_direction.three_quarter_right",
-      "label": "Three-quarter right",
+      "label": "Three-quarter right (subject's right)",
       "node": "pose",
       "field": "facing_direction",
       "group": "facing_direction",
       "phrases": {
-        "flux": "the subject faces three-quarter right",
-        "qwen": "the subject faces three-quarter right"
+        "flux": "the subject turns three-quarter toward the subject's anatomical right",
+        "qwen": "the subject turns three-quarter toward the subject's anatomical right"
       },
       "builtin": true
     },
     {
       "id": "pose.facing_direction.profile_left",
-      "label": "Profile left",
+      "label": "Profile left (subject's left)",
       "node": "pose",
       "field": "facing_direction",
       "group": "facing_direction",
       "phrases": {
-        "flux": "the subject is shown in left profile",
-        "qwen": "the subject is shown in left profile"
+        "flux": "the subject faces in profile toward the subject's anatomical left",
+        "qwen": "the subject faces in profile toward the subject's anatomical left"
       },
       "builtin": true
     },
     {
       "id": "pose.facing_direction.profile_right",
-      "label": "Profile right",
+      "label": "Profile right (subject's right)",
       "node": "pose",
       "field": "facing_direction",
       "group": "facing_direction",
       "phrases": {
-        "flux": "the subject is shown in right profile",
-        "qwen": "the subject is shown in right profile"
+        "flux": "the subject faces in profile toward the subject's anatomical right",
+        "qwen": "the subject faces in profile toward the subject's anatomical right"
       },
       "builtin": true
     },
@@ -6642,7 +6642,7 @@
       "label": "Contrapposto",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "contrapposto",
       "phrases": {
         "flux": "a relaxed contrapposto pose",
         "qwen": "a relaxed contrapposto pose"
@@ -6654,7 +6654,7 @@
       "label": "Dynamic action",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "dynamic_action",
       "phrases": {
         "flux": "a dynamic action pose",
         "qwen": "a dynamic action pose"
@@ -6666,7 +6666,7 @@
       "label": "Relaxed",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "relaxed",
       "phrases": {
         "flux": "a relaxed natural pose",
         "qwen": "a relaxed natural pose"
@@ -6678,7 +6678,7 @@
       "label": "Formal",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "formal",
       "phrases": {
         "flux": "a composed formal pose",
         "qwen": "a composed formal pose"
@@ -6690,7 +6690,7 @@
       "label": "Twisting",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "twisting",
       "phrases": {
         "flux": "the body twisting through the pose",
         "qwen": "the body twisting through the pose"
@@ -6702,7 +6702,7 @@
       "label": "Leaning",
       "node": "pose",
       "field": "pose_snippets",
-      "group": "pose_snippets",
+      "group": "leaning",
       "phrases": {
         "flux": "the subject leaning naturally",
         "qwen": "the subject leaning naturally"

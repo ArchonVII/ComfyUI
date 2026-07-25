@@ -183,7 +183,7 @@
               "key": "hair_color",
               "label": "Hair color",
               "order": 50,
-              "control": "searchable_options",
+              "control": "buttons",
               "groups": [
                 "hair_color"
               ],
@@ -313,7 +313,12 @@
               "order": 20,
               "control": "searchable_options",
               "groups": [
-                "pose_snippets"
+                "contrapposto",
+                "dynamic_action",
+                "relaxed",
+                "formal",
+                "twisting",
+                "leaning"
               ],
               "catalog_scope": "shared"
             },
@@ -765,7 +770,11 @@
               "order": 20,
               "control": "searchable_options",
               "groups": [
-                "outfit_snippets"
+                "layered",
+                "monochrome",
+                "color_blocked",
+                "coordinated",
+                "mismatched"
               ],
               "catalog_scope": "shared"
             },
@@ -1184,7 +1193,11 @@
               "order": 60,
               "control": "searchable_options",
               "groups": [
-                "environment_snippets"
+                "symmetrical_layout",
+                "layered_depth",
+                "intimate_scale",
+                "monumental_scale",
+                "organic_layout"
               ],
               "catalog_scope": "shared"
             },
@@ -1422,7 +1435,12 @@
               "order": 20,
               "control": "searchable_options",
               "groups": [
-                "optical_effects"
+                "bokeh",
+                "lens_flare",
+                "motion_blur",
+                "chromatic_aberration",
+                "vignette",
+                "starburst"
               ],
               "catalog_scope": "shared"
             },
@@ -1979,7 +1997,17 @@
               "order": 10,
               "control": "searchable_options",
               "groups": [
-                "lighting_techniques"
+                "rim_light",
+                "backlight",
+                "three_point",
+                "rembrandt",
+                "chiaroscuro",
+                "volumetric",
+                "god_rays",
+                "caustics",
+                "bounced",
+                "colored_gels",
+                "silhouette"
               ],
               "catalog_scope": "shared"
             },

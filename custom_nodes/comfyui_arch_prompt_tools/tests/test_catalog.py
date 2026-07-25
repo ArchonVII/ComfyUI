@@ -213,10 +213,10 @@ EXACT_BUTTON_LABELS = {
     },
     ("pose", "facing_direction"): {
         "Front",
-        "Three-quarter left",
-        "Three-quarter right",
-        "Profile left",
-        "Profile right",
+        "Three-quarter left (subject's left)",
+        "Three-quarter right (subject's right)",
+        "Profile left (subject's left)",
+        "Profile right (subject's right)",
         "Back three-quarter",
         "Back",
     },
@@ -430,6 +430,54 @@ def test_each_clothing_modifier_survives_button_group_replacement_and_assembly()
     ]
 
 
+@pytest.mark.parametrize(
+    ("node", "field"),
+    [
+        ("pose", "pose_snippets"),
+        ("clothing", "outfit_snippets"),
+        ("environment", "environment_snippets"),
+        ("camera", "optical_effects"),
+        ("lighting", "lighting_techniques"),
+    ],
+)
+def test_multi_select_fields_preserve_distinct_options_through_replacement_and_assembly(
+    node, field
+):
+    catalog = load_default_catalog()
+    options = options_by_field(catalog, node, field)
+    selected = options[:2]
+    state = {"version": 1, "node": node, "model_family": "flux", "fields": {}}
+
+    assert len({option.group for option in options}) == len(options)
+    assert set(catalog.field(node, field).groups) == {
+        option.group for option in options
+    }
+    for index, option in enumerate(selected):
+        state = replace_group_select(
+            state,
+            {
+                "instance_id": f"{field}-{index}",
+                "source_option_id": option.id,
+                "label": option.label,
+                "node": option.node,
+                "field": option.field,
+                "group": option.group,
+                "text": option.phrases["flux"],
+                "model_family": "flux",
+                "lora_enabled": False,
+            },
+        )
+
+    result = assemble(catalog, state)
+    fragments = next(
+        item["fragments"] for item in result.bundle["fields"] if item["key"] == field
+    )
+
+    assert [fragment["label"] for fragment in fragments] == [
+        option.label for option in selected
+    ]
+
+
 def test_horizontal_view_has_exact_pov_and_over_the_shoulder_coverage():
     catalog = load_default_catalog()
     options = options_by_field(catalog, "camera", "horizontal_view")
@@ -492,6 +540,24 @@ def test_age_presets_are_unambiguously_adult_only():
     assert not {"child", "teen", "minor", "boy", "girl", "adolescent"} & set(text.split())
 
 
+def test_young_adult_preset_has_a_bounded_adult_age_range():
+    option = option_by_label(
+        load_default_catalog(), "identity", "age_group", "Young adult 18+"
+    )
+
+    assert all("young adult" in phrase.lower() for phrase in option.phrases.values())
+    assert all("18 to 24" in phrase.lower() for phrase in option.phrases.values())
+    assert all("or older" not in phrase.lower() for phrase in option.phrases.values())
+
+
+def test_hair_color_is_a_bounded_high_level_button_set():
+    catalog = load_default_catalog()
+    options = options_by_field(catalog, "identity", "hair_color")
+
+    assert catalog.field("identity", "hair_color").control == "buttons"
+    assert 3 <= len(options) <= 7
+
+
 def test_body_axis_has_all_eight_image_directions_with_explicit_head_and_feet_language():
     options = options_by_field(load_default_catalog(), "pose", "body_axis")
 
@@ -501,6 +567,28 @@ def test_body_axis_has_all_eight_image_directions_with_explicit_head_and_feet_la
         for phrase in option.phrases.values():
             lowered = phrase.lower()
             assert "head" in lowered and "feet" in lowered and "frame" in lowered
+
+
+def test_sided_facing_directions_use_subject_anatomical_left_and_right():
+    catalog = load_default_catalog()
+    sided = {
+        option.label: option
+        for option in options_by_field(catalog, "pose", "facing_direction")
+        if "left" in option.label.lower() or "right" in option.label.lower()
+    }
+
+    assert set(sided) == {
+        "Three-quarter left (subject's left)",
+        "Three-quarter right (subject's right)",
+        "Profile left (subject's left)",
+        "Profile right (subject's right)",
+    }
+    for label, option in sided.items():
+        side = "left" if "left" in label.lower() else "right"
+        assert all(
+            f"subject's anatomical {side}" in phrase.lower()
+            for phrase in option.phrases.values()
+        )
 
 
 @pytest.mark.parametrize(
