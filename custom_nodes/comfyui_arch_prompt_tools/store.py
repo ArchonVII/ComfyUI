@@ -19,6 +19,7 @@ from .catalog import Catalog, CatalogError
 
 
 STORE_VERSION = 1
+ID_GENERATION_ATTEMPTS = 8
 _USER_ID_PATTERN = re.compile(r"^user\.[A-Za-z0-9_-]+$")
 _RECORD_KEYS = frozenset(
     {
@@ -37,6 +38,7 @@ _RECORD_KEYS = frozenset(
 _CREATE_KEYS = _RECORD_KEYS - {"id"}
 _PATH_LOCKS_GUARD = threading.Lock()
 _PATH_LOCKS: dict[str, threading.RLock] = {}
+_DIRECTORY_FSYNC_SUPPORTED = os.name == "posix" and hasattr(os, "O_DIRECTORY")
 
 
 class OptionStoreError(ValueError):
@@ -142,9 +144,19 @@ class OptionStore:
             raise OptionValidationError("built-in options are protected")
         with _lock_for(self.path):
             records = list(self._read_unlocked())
-            option_id = self._new_id()
-            if option_id in self._protected_ids or any(item.id == option_id for item in records):
-                raise OptionValidationError("generated user option id already exists")
+            existing_ids = {item.id for item in records}
+            for _attempt in range(ID_GENERATION_ATTEMPTS):
+                option_id = self._new_id()
+                if (
+                    option_id not in self._protected_ids
+                    and option_id not in existing_ids
+                ):
+                    break
+            else:
+                raise OptionValidationError(
+                    "could not generate a unique user option id after "
+                    f"{ID_GENERATION_ATTEMPTS} attempts"
+                )
             record = self._validate_record({**value, "id": option_id})
             records.append(record)
             self._write_unlocked(records)
@@ -331,6 +343,7 @@ class OptionStore:
                 target.flush()
                 os.fsync(target.fileno())
             os.replace(temp_path, self.path)
+            _fsync_directory(self.path.parent)
             temp_path = None
         except (OSError, TypeError, ValueError) as error:
             raise OptionStoreDataError(
@@ -347,6 +360,27 @@ class OptionStore:
                     temp_path.unlink(missing_ok=True)
                 except OSError:
                     pass
+
+
+def _fsync_directory(directory: Path) -> None:
+    """Best-effort durability for the directory entry created by ``replace``."""
+    if not _DIRECTORY_FSYNC_SUPPORTED:
+        return
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(
+            directory,
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+        )
+        os.fsync(descriptor)
+    except (AttributeError, OSError, TypeError):
+        pass
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
 
 
 def _record_index(records: list[UserOption], option_id: str) -> int:

@@ -1,16 +1,15 @@
 import asyncio
+import concurrent.futures
+import importlib
 import json
+import logging
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from custom_nodes.comfyui_arch_prompt_tools.catalog import (
-    CatalogError,
-    CatalogValidationError,
-    load_catalog,
-)
+from custom_nodes.comfyui_arch_prompt_tools.catalog import CatalogError, load_catalog
 from custom_nodes.comfyui_arch_prompt_tools.routes import (
     ROUTE_PREFIX,
     create_option_payload,
@@ -160,6 +159,26 @@ class FakeRoutes:
         return self._decorator("DELETE", path)
 
 
+class FailingRoutes(FakeRoutes):
+    def __init__(self, fail_once_at):
+        super().__init__()
+        self.calls = 0
+        self.fail_once_at = fail_once_at
+        self.failed = False
+
+    def _decorator(self, method, path):
+        add = super()._decorator(method, path)
+
+        def maybe_fail(handler):
+            self.calls += 1
+            if not self.failed and self.calls == self.fail_once_at:
+                self.failed = True
+                raise RuntimeError("injected registration failure")
+            return add(handler)
+
+        return maybe_fail
+
+
 class FakeWeb:
     @staticmethod
     def json_response(payload, status=200):
@@ -208,6 +227,78 @@ def test_route_registration_is_idempotent_per_registry_and_has_the_explicit_api(
         ("PATCH", f"{ROUTE_PREFIX}/options/{{option_id}}"),
         ("DELETE", f"{ROUTE_PREFIX}/options/{{option_id}}"),
     }
+
+
+def test_actual_aiohttp_route_table_commits_exactly_five_definitions(store, catalog):
+    from aiohttp import web
+
+    routes = web.RouteTableDef()
+
+    assert register_routes(
+        SimpleNamespace(routes=routes),
+        web_module=web,
+        catalog_provider=lambda: catalog,
+        store_provider=lambda _catalog: store,
+    ) is True
+    assert [(item.method, item.path) for item in routes] == [
+        ("GET", f"{ROUTE_PREFIX}/schema"),
+        ("GET", f"{ROUTE_PREFIX}/options"),
+        ("POST", f"{ROUTE_PREFIX}/options"),
+        ("PATCH", f"{ROUTE_PREFIX}/options/{{option_id}}"),
+        ("DELETE", f"{ROUTE_PREFIX}/options/{{option_id}}"),
+    ]
+
+
+def test_route_registration_is_concurrency_safe_and_registers_exactly_once(store, catalog):
+    routes = FakeRoutes()
+    prompt_server = SimpleNamespace(routes=routes)
+
+    def register(_index):
+        return register_routes(
+            prompt_server,
+            web_module=FakeWeb,
+            catalog_provider=lambda: catalog,
+            store_provider=lambda _catalog: store,
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        results = tuple(executor.map(register, range(24)))
+
+    assert results.count(True) == 1
+    assert results.count(False) == 23
+    assert len(routes.handlers) == 5
+
+
+def test_mid_registration_failure_rolls_back_and_retry_succeeds_once(store, catalog):
+    routes = FailingRoutes(fail_once_at=3)
+    prompt_server = SimpleNamespace(routes=routes)
+    kwargs = {
+        "web_module": FakeWeb,
+        "catalog_provider": lambda: catalog,
+        "store_provider": lambda _catalog: store,
+    }
+
+    assert register_routes(prompt_server, **kwargs) is False
+    assert routes.handlers == {}
+    assert register_routes(prompt_server, **kwargs) is True
+    assert len(routes.handlers) == 5
+    assert register_routes(prompt_server, **kwargs) is False
+    assert len(routes.handlers) == 5
+
+
+def test_package_reload_survives_route_registration_failure(monkeypatch):
+    import custom_nodes.comfyui_arch_prompt_tools as package
+
+    routes = FailingRoutes(fail_once_at=2)
+    server_module = SimpleNamespace(
+        PromptServer=SimpleNamespace(instance=SimpleNamespace(routes=routes))
+    )
+    monkeypatch.setitem(sys.modules, "server", server_module)
+
+    reloaded = importlib.reload(package)
+
+    assert reloaded.NODE_CLASS_MAPPINGS
+    assert routes.handlers == {}
 
 
 def test_registered_handlers_return_useful_success_and_4xx_responses(store, catalog):
@@ -264,7 +355,9 @@ def test_registered_create_route_accepts_extreme_json_integer_without_internal_e
     assert response["payload"]["option"]["lora"]["seed"] == extreme
 
 
-def test_registered_handlers_report_corrupt_store_as_server_error(tmp_path, catalog):
+def test_registered_handlers_sanitize_and_log_corrupt_store_error(
+    tmp_path, catalog, caplog
+):
     path = tmp_path / "options.json"
     path.write_text("{bad", encoding="utf-8")
     corrupt = OptionStore(catalog, path)
@@ -276,29 +369,40 @@ def test_registered_handlers_report_corrupt_store_as_server_error(tmp_path, cata
         store_provider=lambda _catalog: corrupt,
     )
 
-    response = asyncio.run(
-        routes.handlers[("GET", f"{ROUTE_PREFIX}/options")](FakeRequest())
-    )
+    with caplog.at_level(
+        logging.ERROR, logger="custom_nodes.comfyui_arch_prompt_tools.routes"
+    ):
+        response = asyncio.run(
+            routes.handlers[("GET", f"{ROUTE_PREFIX}/options")](FakeRequest())
+        )
 
     assert response["status"] == 500
-    assert "invalid" in response["payload"]["error"].lower()
+    assert response["payload"] == {"error": "internal server error"}
+    assert str(path) not in json.dumps(response["payload"])
+    assert str(path) in caplog.text
 
 
-def test_registered_handlers_report_invalid_builtin_catalog_as_server_error():
+def test_registered_handlers_sanitize_and_log_unexpected_exception(caplog):
     routes = FakeRoutes()
+    secret = r"C:\private\options.json"
 
-    def invalid_catalog():
-        raise CatalogValidationError("built-in catalog is invalid")
+    def unexpected_error():
+        raise RuntimeError(f"unexpected failure at {secret}")
 
     register_routes(
         SimpleNamespace(routes=routes),
         web_module=FakeWeb,
-        catalog_provider=invalid_catalog,
+        catalog_provider=unexpected_error,
     )
 
-    response = asyncio.run(
-        routes.handlers[("GET", f"{ROUTE_PREFIX}/schema")](FakeRequest())
-    )
+    with caplog.at_level(
+        logging.ERROR, logger="custom_nodes.comfyui_arch_prompt_tools.routes"
+    ):
+        response = asyncio.run(
+            routes.handlers[("GET", f"{ROUTE_PREFIX}/schema")](FakeRequest())
+        )
 
     assert response["status"] == 500
-    assert response["payload"] == {"error": "built-in catalog is invalid"}
+    assert response["payload"] == {"error": "internal server error"}
+    assert secret not in json.dumps(response["payload"])
+    assert secret in caplog.text

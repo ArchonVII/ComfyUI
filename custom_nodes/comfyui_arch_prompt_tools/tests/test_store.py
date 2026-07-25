@@ -10,6 +10,7 @@ import pytest
 
 from custom_nodes.comfyui_arch_prompt_tools.catalog import load_catalog
 from custom_nodes.comfyui_arch_prompt_tools.store import (
+    ID_GENERATION_ATTEMPTS,
     STORE_VERSION,
     OptionNotFoundError,
     OptionStore,
@@ -75,6 +76,52 @@ def test_create_update_delete_are_explicit_and_keep_a_stable_opaque_id(tmp_path,
     assert [item.id for item in store.list_options()] == ["user.first", "user.second"]
     assert store.delete(first.id).id == first.id
     assert [item.id for item in store.list_options()] == ["user.second"]
+
+
+def test_generated_id_collision_retries_until_a_unique_id_is_found(tmp_path, catalog):
+    path = tmp_path / "options.json"
+    first = OptionStore(catalog, path, id_factory=lambda: "user.collision")
+    first.create(valid_option())
+    candidates = iter(("user.collision", "user.unique"))
+    second = OptionStore(catalog, path, id_factory=lambda: next(candidates))
+
+    created = second.create(valid_option(label="Second"))
+
+    assert created.id == "user.unique"
+    assert [item.id for item in second.list_options()] == [
+        "user.collision",
+        "user.unique",
+    ]
+
+
+def test_generated_id_collision_retries_are_bounded_and_fail_clearly(tmp_path, catalog):
+    path = tmp_path / "options.json"
+    OptionStore(catalog, path, id_factory=lambda: "user.existing").create(
+        valid_option()
+    )
+    calls = 0
+
+    def colliding_id():
+        nonlocal calls
+        calls += 1
+        return "user.existing"
+
+    store = OptionStore(catalog, path, id_factory=colliding_id)
+
+    with pytest.raises(OptionValidationError, match="unique.*attempts"):
+        store.create(valid_option(label="Never written"))
+    assert calls == ID_GENERATION_ATTEMPTS
+    assert [item.id for item in store.list_options()] == ["user.existing"]
+
+
+def test_generated_id_retries_include_protected_collisions(tmp_path, catalog):
+    candidates = iter(("user.protected", "user.allowed"))
+    store = OptionStore(
+        catalog, tmp_path / "options.json", id_factory=lambda: next(candidates)
+    )
+    store._protected_ids = frozenset({*store._protected_ids, "user.protected"})
+
+    assert store.create(valid_option()).id == "user.allowed"
 
 
 def test_records_are_immutable_and_do_not_share_nested_lora_state(tmp_path, catalog):
@@ -200,6 +247,41 @@ def test_store_writes_a_versioned_validated_envelope_and_uses_same_directory_ato
     assert observed["payload"]["version"] == STORE_VERSION
     assert observed["payload"]["options"][0]["id"] == "user.atomic"
     assert json.loads(path.read_text(encoding="utf-8")) == observed["payload"]
+
+
+def test_successful_replace_attempts_directory_fsync_after_target_exists(
+    tmp_path, catalog, monkeypatch
+):
+    path = tmp_path / "options.json"
+    observed = []
+
+    def recording_directory_fsync(directory):
+        observed.append((Path(directory), path.exists()))
+
+    monkeypatch.setattr(
+        "custom_nodes.comfyui_arch_prompt_tools.store._fsync_directory",
+        recording_directory_fsync,
+    )
+    OptionStore(catalog, path, id_factory=lambda: "user.durable").create(
+        valid_option()
+    )
+
+    assert observed == [(tmp_path, True)]
+
+
+def test_unsupported_directory_fsync_is_best_effort(tmp_path, monkeypatch):
+    from custom_nodes.comfyui_arch_prompt_tools import store as store_module
+
+    monkeypatch.setattr(store_module, "_DIRECTORY_FSYNC_SUPPORTED", True)
+    monkeypatch.setattr(
+        store_module.os,
+        "open",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            OSError("directory handles unsupported")
+        ),
+    )
+
+    store_module._fsync_directory(tmp_path)
 
 
 def test_failed_replace_preserves_prior_target_and_cleans_temporary_file(tmp_path, catalog, monkeypatch):

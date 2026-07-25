@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import sys
+import threading
 from typing import Any, Callable, Mapping
 
 from .catalog import Catalog, CatalogError, CatalogValidationError, OptionRecord
@@ -17,7 +19,9 @@ from .store import (
 
 
 ROUTE_PREFIX = "/arch-prompt-tools"
+_LOGGER = logging.getLogger(__name__)
 _REGISTERED_ROUTES: list[Any] = []
+_REGISTRATION_LOCK = threading.RLock()
 
 
 def schema_payload(catalog: Catalog) -> dict[str, Any]:
@@ -129,20 +133,19 @@ def register_routes(
     store_provider: Callable[[Catalog], OptionStore] | None = None,
 ) -> bool:
     """Register routes once when ComfyUI's PromptServer is already available."""
-    if prompt_server is None:
-        server_module = sys.modules.get("server")
-        prompt_server_cls = getattr(server_module, "PromptServer", None)
-        prompt_server = getattr(prompt_server_cls, "instance", None)
-    if prompt_server is None or getattr(prompt_server, "routes", None) is None:
-        return False
-    routes = prompt_server.routes
-    if any(registered is routes for registered in _REGISTERED_ROUTES):
-        return False
-    if web_module is None:
-        try:
-            from aiohttp import web as web_module
-        except ImportError:
+    try:
+        if prompt_server is None:
+            server_module = sys.modules.get("server")
+            prompt_server_cls = getattr(server_module, "PromptServer", None)
+            prompt_server = getattr(prompt_server_cls, "instance", None)
+        if prompt_server is None or getattr(prompt_server, "routes", None) is None:
             return False
+        routes = prompt_server.routes
+        if web_module is None:
+            from aiohttp import web as web_module
+    except Exception:
+        _LOGGER.exception("Arch PT route registration setup failed")
+        return False
     get_catalog = catalog_provider or _default_catalog
     get_store = store_provider or (lambda catalog: OptionStore(catalog))
 
@@ -203,13 +206,54 @@ def register_routes(
         except Exception as error:
             return _error_response(web_module, error)
 
-    routes.get(f"{ROUTE_PREFIX}/schema")(get_schema)
-    routes.get(f"{ROUTE_PREFIX}/options")(get_options)
-    routes.post(f"{ROUTE_PREFIX}/options")(post_option)
-    routes.patch(f"{ROUTE_PREFIX}/options/{{option_id}}")(patch_option)
-    routes.delete(f"{ROUTE_PREFIX}/options/{{option_id}}")(delete_option)
-    _REGISTERED_ROUTES.append(routes)
-    return True
+    definitions = (
+        ("get", f"{ROUTE_PREFIX}/schema", get_schema),
+        ("get", f"{ROUTE_PREFIX}/options", get_options),
+        ("post", f"{ROUTE_PREFIX}/options", post_option),
+        ("patch", f"{ROUTE_PREFIX}/options/{{option_id}}", patch_option),
+        ("delete", f"{ROUTE_PREFIX}/options/{{option_id}}", delete_option),
+    )
+    with _REGISTRATION_LOCK:
+        if any(registered is routes for registered in _REGISTERED_ROUTES):
+            return False
+        try:
+            _install_route_definitions(routes, definitions)
+        except Exception:
+            _LOGGER.exception("Arch PT route registration failed")
+            return False
+        _REGISTERED_ROUTES.append(routes)
+        return True
+
+
+def _install_route_definitions(
+    routes: Any,
+    definitions: tuple[tuple[str, str, Callable[..., Any]], ...],
+) -> None:
+    items = getattr(routes, "_items", None)
+    if isinstance(items, list):
+        staged = type(routes)()
+        for method, path, handler in definitions:
+            getattr(staged, method)(path)(handler)
+        staged_items = getattr(staged, "_items")
+        original_length = len(items)
+        try:
+            items.extend(staged_items)
+        except Exception:
+            del items[original_length:]
+            raise
+        return
+
+    handlers = getattr(routes, "handlers", None)
+    if not isinstance(handlers, dict):
+        raise TypeError("unsupported route registry")
+    snapshot = dict(handlers)
+    try:
+        for method, path, handler in definitions:
+            getattr(routes, method)(path)(handler)
+    except Exception:
+        handlers.clear()
+        handlers.update(snapshot)
+        raise
 
 
 def _default_catalog() -> Catalog:
@@ -303,4 +347,12 @@ def _error_response(web_module: Any, error: Exception):
         status = 400
     else:
         status = 500
-    return web_module.json_response({"error": str(error)}, status=status)
+    if status == 500:
+        _LOGGER.error(
+            "Arch PT route request failed",
+            exc_info=(type(error), error, error.__traceback__),
+        )
+        message = "internal server error"
+    else:
+        message = str(error)
+    return web_module.json_response({"error": message}, status=status)
