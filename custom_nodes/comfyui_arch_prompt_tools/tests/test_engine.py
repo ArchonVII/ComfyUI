@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_nodes.comfyui_arch_prompt_tools.catalog import load_catalog
+from custom_nodes.comfyui_arch_prompt_tools.catalog import catalog_from_data, load_catalog
 from custom_nodes.comfyui_arch_prompt_tools.engine import (
     StateValidationError,
     additive_select,
@@ -20,6 +20,13 @@ DATA_DIR = Path(__file__).parents[1] / "data"
 
 def catalog():
     return load_catalog(DATA_DIR / "schemas.json", DATA_DIR / "builtin_options.json")
+
+
+def catalog_with_frozen_lora():
+    schemas = json.loads((DATA_DIR / "schemas.json").read_text(encoding="utf-8"))
+    options = json.loads((DATA_DIR / "builtin_options.json").read_text(encoding="utf-8"))
+    options["options"][0]["lora"] = {"name": "portrait-style", "tags": ["portrait"]}
+    return catalog_from_data(schemas, options)
 
 
 def state(node="identity", model_family="flux", fields=None):
@@ -212,14 +219,52 @@ def test_collects_only_enabled_copied_lora_requests_with_origin_metadata():
     ]
 
 
+def test_frozen_catalog_lora_metadata_is_thawed_into_a_serializable_workflow_bundle():
+    source_option = catalog_with_frozen_lora().options[0]
+    result = assemble(
+        catalog(),
+        state(fields={"gender": {"fragments": [fragment(lora=source_option.lora, lora_enabled=True)]}}),
+    )
+
+    copied_lora = result.bundle["fields"][0]["fragments"][0]["lora"]
+    assert copied_lora == {"name": "portrait-style", "tags": ["portrait"]}
+    assert isinstance(copied_lora, dict)
+    assert json.loads(json.dumps(result.bundle)) == result.bundle
+
+
 @pytest.mark.parametrize(
     ("payload", "match"),
     [
         (state(node="unknown"), "unknown node"),
         (state(fields={"unknown": {}}), "unknown field"),
         ({"version": 2, "node": "identity", "model_family": "flux", "fields": {}}, "version"),
+        ({"version": True, "node": "identity", "model_family": "flux", "fields": {}}, "version"),
+        ({"version": 1.0, "node": "identity", "model_family": "flux", "fields": {}}, "version"),
     ],
 )
 def test_normalization_rejects_unknown_or_unsupported_state(payload, match):
     with pytest.raises(StateValidationError, match=match):
         normalize_state(payload, catalog())
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda payload: additive_select(payload, fragment("new")),
+        lambda payload: replace_group_select(payload, fragment("new")),
+        lambda payload: edit_fragment(payload, "one", "edited"),
+        lambda payload: remove_fragment(payload, "one"),
+    ],
+)
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"version": True, "node": "identity", "model_family": "flux", "fields": {}},
+        {"version": 1, "node": "identity", "model_family": "unsupported", "fields": {}},
+        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"specifics": 9}}},
+        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"fragments": [{}]}}},
+    ],
+)
+def test_mutation_helpers_reject_malformed_state_before_mutating(operation, payload):
+    with pytest.raises(StateValidationError):
+        operation(payload)

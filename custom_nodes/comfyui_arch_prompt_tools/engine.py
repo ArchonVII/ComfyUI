@@ -8,6 +8,7 @@ catalog option wording while assembling a prompt.
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -42,28 +43,16 @@ def default_state(node: str = "identity", model_family: str = DEFAULT_MODEL_FAMI
 
 def normalize_state(raw_state: str | Mapping[str, Any], catalog: Catalog) -> dict[str, Any]:
     """Parse and validate a JSON/mapping node state without changing its copies."""
-    state = _parse_state(raw_state)
-    if state.get("version") != STATE_VERSION:
-        raise StateValidationError(f"unsupported state version: {state.get('version')!r}")
-    node = _required_string(state, "node")
+    state = _normalize_state_structure(raw_state)
+    node = state["node"]
     if node not in catalog.schemas_by_node:
         raise StateValidationError(f"unknown node: {node}")
-    model_family = _model_family(_required_string(state, "model_family"))
-    raw_fields = state.get("fields")
-    if not isinstance(raw_fields, Mapping):
-        raise StateValidationError("fields must be an object")
-
-    fields: dict[str, dict[str, Any]] = {}
-    instance_ids: set[str] = set()
-    for field_key, raw_field in raw_fields.items():
-        if not isinstance(field_key, str):
-            raise StateValidationError("field keys must be strings")
+    for field_key in state["fields"]:
         try:
             catalog.field(node, field_key)
         except CatalogError as error:
             raise StateValidationError(str(error)) from error
-        fields[field_key] = _normalize_field(raw_field, node, field_key, instance_ids)
-    return {"version": STATE_VERSION, "node": node, "model_family": model_family, "fields": fields}
+    return state
 
 
 def additive_select(state: Mapping[str, Any], copied_fragment: Mapping[str, Any]) -> dict[str, Any]:
@@ -99,8 +88,7 @@ def edit_fragment(state: Mapping[str, Any], instance_id: str, text: str) -> dict
     """Edit one workflow copy; it cannot edit the catalog source option."""
     if not isinstance(instance_id, str) or not instance_id:
         raise StateValidationError("instance_id must be a non-empty string")
-    if not isinstance(text, str):
-        raise StateValidationError("fragment text must be a string")
+    text = _normalized_text(text, "fragment text")
     result = _state_copy(state)
     for field in result.get("fields", {}).values():
         for fragment in field.get("fragments", []):
@@ -191,6 +179,27 @@ def _parse_state(raw_state: str | Mapping[str, Any]) -> Mapping[str, Any]:
     return raw_state
 
 
+def _normalize_state_structure(raw_state: str | Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize every invariant mutation helpers can enforce without a catalog."""
+    state = _parse_state(raw_state)
+    version = state.get("version")
+    if type(version) is not int or version != STATE_VERSION:
+        raise StateValidationError(f"unsupported state version: {version!r}")
+    node = _required_string(state, "node")
+    model_family = _model_family(_required_string(state, "model_family"))
+    raw_fields = state.get("fields")
+    if not isinstance(raw_fields, Mapping):
+        raise StateValidationError("fields must be an object")
+
+    fields: dict[str, dict[str, Any]] = {}
+    instance_ids: set[str] = set()
+    for field_key, raw_field in raw_fields.items():
+        if not isinstance(field_key, str) or not field_key.strip():
+            raise StateValidationError("field keys must be non-empty strings")
+        fields[field_key] = _normalize_field(raw_field, node, field_key, instance_ids)
+    return {"version": STATE_VERSION, "node": node, "model_family": model_family, "fields": fields}
+
+
 def _normalize_field(raw_field: Any, node: str, field_key: str, instance_ids: set[str]) -> dict[str, Any]:
     if not isinstance(raw_field, Mapping):
         raise StateValidationError(f"field {field_key} must be an object")
@@ -273,12 +282,7 @@ def _dedupe_text(values: list[str]) -> list[str]:
 
 
 def _state_copy(state: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(state, Mapping):
-        raise StateValidationError("state must be an object")
-    result = _json_copy(state)
-    if not isinstance(result.get("fields"), dict):
-        raise StateValidationError("fields must be an object")
-    return result
+    return _normalize_state_structure(state)
 
 
 def _assert_fragment_belongs_to_state(state: Mapping[str, Any], fragment: Mapping[str, Any]) -> None:
@@ -322,7 +326,17 @@ def _boolean(value: Any, name: str) -> bool:
 
 
 def _json_copy(value: Any) -> Any:
-    try:
-        return json.loads(json.dumps(value))
-    except (TypeError, ValueError) as error:
-        raise StateValidationError("state must contain JSON-serializable data") from error
+    if isinstance(value, Mapping):
+        result: dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise StateValidationError("state object keys must be strings")
+            result[key] = _json_copy(item)
+        return result
+    if isinstance(value, (list, tuple)):
+        return [_json_copy(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        raise StateValidationError("state must contain finite JSON numbers")
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise StateValidationError("state must contain JSON-serializable data")
