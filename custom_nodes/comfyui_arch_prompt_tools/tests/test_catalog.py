@@ -51,6 +51,16 @@ def test_loads_matching_versioned_schema_and_builtin_catalog():
     }
 
 
+def test_load_catalog_converts_non_utf8_data_to_a_validation_error(tmp_path):
+    schema_path = tmp_path / "schemas.json"
+    options_path = tmp_path / "builtin_options.json"
+    schema_path.write_bytes(b"\xff")
+    options_path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(CatalogValidationError, match="could not decode catalog file"):
+        load_catalog(schema_path, options_path)
+
+
 def test_builtin_option_ids_are_stable_unique_and_protected():
     catalog = load_default_catalog()
     option_ids = [option.id for option in catalog.options]

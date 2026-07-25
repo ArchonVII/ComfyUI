@@ -8,20 +8,50 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Any, Mapping
 
-from .catalog import load_catalog
-from .engine import BUNDLE_VERSION, DEFAULT_MODEL_FAMILY, SUPPORTED_MODEL_FAMILIES, assemble, default_state, normalize_state
+from .catalog import Catalog, load_catalog
+from .engine import BUNDLE_VERSION, DEFAULT_MODEL_FAMILY, SUPPORTED_MODEL_FAMILIES, StateValidationError, assemble, default_state, normalize_state
 
 
 _DATA_DIRECTORY = Path(__file__).with_name("data")
 _WHITESPACE = re.compile(r"\s+")
 _FOCUSED_NODE_KEYS = ("identity", "pose", "clothing", "environment", "camera", "lighting")
+_CATALOG_LOCK = threading.RLock()
+_DEFAULT_CATALOG_CACHE: tuple[tuple[tuple[int, int], tuple[int, int]], Catalog] | None = None
 
 
-def _catalog():
-    return load_catalog(_DATA_DIRECTORY / "schemas.json", _DATA_DIRECTORY / "builtin_options.json")
+def _catalog_fingerprint() -> tuple[tuple[int, int], tuple[int, int]]:
+    return (
+        _file_fingerprint(_DATA_DIRECTORY / "schemas.json"),
+        _file_fingerprint(_DATA_DIRECTORY / "builtin_options.json"),
+    )
+
+
+def _file_fingerprint(path: Path) -> tuple[int, int]:
+    stat = path.stat()
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+def _catalog() -> Catalog:
+    """Return a validated default catalog until either source file changes."""
+    global _DEFAULT_CATALOG_CACHE
+    with _CATALOG_LOCK:
+        fingerprint = _catalog_fingerprint()
+        if _DEFAULT_CATALOG_CACHE is not None and _DEFAULT_CATALOG_CACHE[0] == fingerprint:
+            return _DEFAULT_CATALOG_CACHE[1]
+        catalog = load_catalog(_DATA_DIRECTORY / "schemas.json", _DATA_DIRECTORY / "builtin_options.json")
+        _DEFAULT_CATALOG_CACHE = (fingerprint, catalog)
+        return catalog
+
+
+def _reset_catalog_cache() -> None:
+    """Clear the default-catalog cache for tests and controlled reloads."""
+    global _DEFAULT_CATALOG_CACHE
+    with _CATALOG_LOCK:
+        _DEFAULT_CATALOG_CACHE = None
 
 
 def _blank_state_json(node_key: str) -> str:
@@ -182,18 +212,72 @@ def _validate_bundle(bundle: Any, expected_node: str) -> None:
         raise ValueError(f"{expected_node} bundle lora_requests must be a list")
     if not isinstance(bundle.get("metadata"), Mapping):
         raise ValueError(f"{expected_node} bundle metadata must be an object")
-    for field in bundle["fields"]:
+    catalog = _catalog()
+    expected_fields = _expected_field_metadata(catalog, expected_node)
+    if len(bundle["fields"]) != len(expected_fields):
+        raise ValueError(f"{expected_node} bundle fields must use the canonical schema order")
+    for field, expected in zip(bundle["fields"], expected_fields):
         if not isinstance(field, Mapping):
             raise ValueError(f"{expected_node} bundle field must be an object")
+        if set(field) != {*expected, "fragments", "specifics"} or any(field[key] != value for key, value in expected.items()):
+            raise ValueError(f"{expected_node} bundle field metadata must match the canonical schema order")
         if not isinstance(field.get("fragments"), list) or not isinstance(field.get("specifics"), str):
             raise ValueError(f"{expected_node} bundle field shape is invalid")
         for fragment in field["fragments"]:
             if not isinstance(fragment, Mapping) or not isinstance(fragment.get("text"), str):
                 raise ValueError(f"{expected_node} bundle fragment shape is invalid")
-    for request in bundle["lora_requests"]:
-        if not isinstance(request, Mapping):
-            raise ValueError(f"{expected_node} bundle lora request must be an object")
+    state = {
+        "version": BUNDLE_VERSION,
+        "node": expected_node,
+        "model_family": bundle["model_family"],
+        "fields": {
+            field["key"]: {"fragments": field["fragments"], "specifics": field["specifics"]}
+            for field in bundle["fields"]
+        },
+    }
+    try:
+        expected_result = assemble(catalog, state)
+    except StateValidationError as error:
+        raise ValueError(f"{expected_node} bundle fragment is invalid: {error}") from error
+    if bundle["fields"] != expected_result.bundle["fields"]:
+        raise ValueError(f"{expected_node} bundle fields must use canonical fragment snapshots")
+    if bundle["prompt"] != expected_result.prompt:
+        raise ValueError(f"{expected_node} bundle prompt must match canonical field text")
+    _validate_metadata(bundle["metadata"], expected_result.metadata, expected_node)
+    _validate_lora_requests(bundle["lora_requests"], expected_result.bundle["lora_requests"], expected_node)
     _json_dump(bundle)
+
+
+def _expected_field_metadata(catalog: Catalog, node_key: str) -> list[dict[str, Any]]:
+    schema = catalog.schemas_by_node[node_key]
+    return [
+        {
+            "section": section.key,
+            "section_label": section.label,
+            "section_order": section.order,
+            "key": field.key,
+            "label": field.label,
+            "order": field.order,
+            "control": field.control,
+        }
+        for section in schema.sections
+        for field in section.fields
+    ]
+
+
+def _validate_metadata(metadata: Mapping[str, Any], expected: Mapping[str, Any], node_key: str) -> None:
+    if any(metadata.get(key) != value for key, value in expected.items()):
+        raise ValueError(f"{node_key} bundle metadata must match the node family and schema")
+
+
+def _validate_lora_requests(actual: list[Any], expected: list[dict[str, Any]], node_key: str) -> None:
+    for request in actual:
+        if not isinstance(request, Mapping):
+            raise ValueError(f"{node_key} bundle lora request must be an object")
+        if set(request) != {"lora", "origin"} or not isinstance(request.get("lora"), Mapping) or not isinstance(request.get("origin"), Mapping):
+            raise ValueError(f"{node_key} bundle lora request shape is invalid")
+    if actual != expected:
+        raise ValueError(f"{node_key} bundle lora requests must match enabled fragment associations")
 
 
 def _bundle_text_fragments(bundle: Mapping[str, Any]) -> list[str]:

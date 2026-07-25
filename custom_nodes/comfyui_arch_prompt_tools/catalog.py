@@ -154,6 +154,8 @@ def _read_json(path: str | Path) -> Mapping[str, Any]:
             return _mapping(json.load(source), f"JSON file {path}")
     except OSError as error:
         raise CatalogValidationError(f"could not read catalog file: {path}") from error
+    except UnicodeError as error:
+        raise CatalogValidationError(f"could not decode catalog file: {path}") from error
     except json.JSONDecodeError as error:
         raise CatalogValidationError(f"invalid JSON in catalog file: {path}") from error
 

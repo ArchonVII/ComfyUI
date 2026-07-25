@@ -1,10 +1,14 @@
-import builtins
-import importlib
+import copy
 import json
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
+from custom_nodes.comfyui_arch_prompt_tools.catalog import CatalogValidationError
 from custom_nodes.comfyui_arch_prompt_tools.engine import default_state
+from custom_nodes.comfyui_arch_prompt_tools import nodes as nodes_module
 from custom_nodes.comfyui_arch_prompt_tools.nodes import (
     ArchPtCamera,
     ArchPtClothing,
@@ -36,28 +40,36 @@ def make_state(node, *, model_family="flux", field="notes", text=""):
     return json.dumps({"version": 1, "node": node, "model_family": model_family, "fields": fields})
 
 
-def make_bundle(node, text, *, lora_requests=None):
-    return {
-        "version": 1,
-        "node": node,
+TEXT_FIELD_BY_NODE = {
+    "identity": "body_notes",
+    "pose": "pose_notes",
+    "clothing": "transfer_notes",
+    "environment": "scene_notes",
+    "camera": "angle_notes",
+    "lighting": "illumination_notes",
+}
+
+
+def make_bundle(node, text):
+    node_class = next(node_class for node_class, node_key, _ in FOCUSED_NODES.values() if node_key == node)
+    return node_class().build("flux", make_state(node, field=TEXT_FIELD_BY_NODE[node], text=text))[1]
+
+
+def identity_bundle_with_lora(*, text="woman", lora=None, instance_id="fragment-1"):
+    copied = {
+        "instance_id": instance_id,
+        "source_option_id": "identity.gender.feminine",
+        "label": "Feminine",
+        "node": "identity",
+        "field": "gender",
+        "group": "gender",
+        "text": text,
         "model_family": "flux",
-        "prompt": text,
-        "fields": [
-            {
-                "section": "section",
-                "section_label": "Section",
-                "section_order": 10,
-                "key": "notes",
-                "label": "Notes",
-                "order": 10,
-                "control": "free_text",
-                "fragments": [],
-                "specifics": text,
-            }
-        ],
-        "lora_requests": lora_requests or [],
-        "metadata": {"node": node, "label": node.title()},
+        "lora_enabled": True,
+        "lora": lora or {"name": "portrait", "strength": 0.8},
     }
+    state = {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"fragments": [copied]}}}
+    return ArchPtIdentity().build("flux", json.dumps(state))[1]
 
 
 def test_exactly_the_seven_arch_pt_node_mappings_and_display_names_are_exported():
@@ -209,6 +221,47 @@ def test_combiner_rejects_wrong_version_node_and_invalid_bundle_shapes():
         ArchPtCombine().combine(", ", True, identity={**make_bundle("identity", "ok"), "fields": "invalid"})
 
 
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    [
+        (lambda bundle: bundle["fields"].__setitem__(0, {**bundle["fields"][0], "key": "unknown"}), "field"),
+        (lambda bundle: bundle["fields"].reverse(), "field"),
+        (lambda bundle: bundle["fields"].__setitem__(1, copy.deepcopy(bundle["fields"][0])), "field"),
+        (lambda bundle: bundle["fields"][0].update({"section": "wrong"}), "field"),
+        (lambda bundle: bundle["fields"][0].update({"label": "Wrong"}), "field"),
+        (lambda bundle: bundle["fields"][0].update({"control": "free_text"}), "field"),
+        (lambda bundle: bundle.update({"prompt": "tampered prompt"}), "prompt"),
+        (lambda bundle: bundle["metadata"].update({"node": "pose"}), "metadata"),
+        (lambda bundle: bundle["metadata"].update({"model_family": "qwen"}), "metadata"),
+        (lambda bundle: bundle["metadata"].update({"sections": []}), "metadata"),
+    ],
+)
+def test_combiner_rejects_noncanonical_bundle_fields_prompt_and_metadata(mutation, match):
+    bundle = make_bundle("identity", "subject")
+    mutation(bundle)
+
+    with pytest.raises(ValueError, match=match):
+        ArchPtCombine().combine(", ", True, identity=bundle)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    [
+        (lambda bundle: bundle["fields"][0]["fragments"][0].update({"node": "pose"}), "fragment"),
+        (lambda bundle: bundle["fields"][0]["fragments"][0].update({"field": "body_notes"}), "fragment"),
+        (lambda bundle: bundle["fields"][0]["fragments"][0].update({"model_family": "unsupported"}), "fragment"),
+        (lambda bundle: bundle.update({"lora_requests": [{"arbitrary": "request"}]}), "lora request"),
+        (lambda bundle: bundle["lora_requests"][0]["origin"].update({"instance_id": "not-the-fragment"}), "lora request"),
+    ],
+)
+def test_combiner_rejects_mismatched_fragments_and_unverified_lora_requests(mutation, match):
+    bundle = identity_bundle_with_lora()
+    mutation(bundle)
+
+    with pytest.raises(ValueError, match=match):
+        ArchPtCombine().combine(", ", True, identity=bundle)
+
+
 @pytest.mark.parametrize("invalid_bundle", ["not a bundle", ["not", "a", "bundle"]])
 def test_combiner_rejects_non_object_bundle_inputs_with_a_clear_error(invalid_bundle):
     with pytest.raises(ValueError, match="identity bundle must be an object"):
@@ -216,27 +269,22 @@ def test_combiner_rejects_non_object_bundle_inputs_with_a_clear_error(invalid_bu
 
 
 def test_combiner_preserves_per_node_metadata_and_dedupes_only_identical_lora_records():
-    request = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "one"}}
-    distinct = {"lora": {"name": "portrait", "strength": 1.0}, "origin": {"node": "identity", "instance_id": "one"}}
-    identity = make_bundle("identity", "subject", lora_requests=[request, request, distinct])
+    identity = identity_bundle_with_lora()
+    request = identity["lora_requests"][0]
 
     _, metadata_json, loras_json = ArchPtCombine().combine(", ", True, identity=identity)
 
     metadata = json.loads(metadata_json)
     loras = json.loads(loras_json)
     assert metadata == {"bundles": [{"metadata": identity["metadata"], "model_family": "flux", "node": "identity"}], "version": 1}
-    assert loras == [request, distinct]
+    assert loras == [request]
     assert metadata_json == json.dumps(metadata, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     assert loras_json == json.dumps(loras, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
 def test_combiner_unicode_json_is_literal_and_byte_deterministic():
-    request = {
-        "lora": {"name": "café style", "strength": 0.8},
-        "origin": {"node": "identity", "instance_id": "髪", "label": "光"},
-    }
-    identity = make_bundle("identity", "portrait with 髪", lora_requests=[request])
-    identity["metadata"] = {"label": "café", "detail": "光"}
+    identity = identity_bundle_with_lora(text="portrait with 髪", instance_id="髪", lora={"name": "café 光", "strength": 0.8})
+    identity["metadata"]["note"] = "café 光"
 
     first = ArchPtCombine().combine(", ", True, identity=identity)
     second = ArchPtCombine().combine(", ", True, identity=identity)
@@ -252,31 +300,104 @@ def test_combiner_unicode_json_is_literal_and_byte_deterministic():
 def test_combiner_retains_distinct_lora_origins_but_dedupes_exact_records():
     first_origin = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "one"}}
     second_origin = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "two"}}
-    identity = make_bundle("identity", "subject", lora_requests=[first_origin, first_origin, second_origin])
 
-    _, _, loras_json = ArchPtCombine().combine(", ", True, identity=identity)
-
-    assert json.loads(loras_json) == [first_origin, second_origin]
+    assert nodes_module._dedupe_records([first_origin, first_origin, second_origin]) == [first_origin, second_origin]
 
 
-def test_nodes_import_does_not_import_legacy_prompt_packages(monkeypatch):
-    legacy_modules = (
-        "custom_nodes.comfyui_prompt_library",
-        "custom_nodes.comfyui_reverse_prompter",
-        "custom_nodes.comfyui_civitai_prompt_import",
-        "custom_nodes.comfyui_smart_model_loader",
+def test_fresh_nodes_import_avoids_legacy_packages_and_catalog_file_reads():
+    workspace = Path(__file__).parents[3]
+    program = '''
+import builtins
+import pathlib
+
+legacy = {
+    "custom_nodes.comfyui_prompt_library",
+    "custom_nodes.comfyui_reverse_prompter",
+    "custom_nodes.comfyui_civitai_prompt_import",
+    "custom_nodes.comfyui_smart_model_loader",
+}
+original_import = builtins.__import__
+original_open = pathlib.Path.open
+
+def guarded_import(name, *args, **kwargs):
+    if any(name == package or name.startswith(package + ".") for package in legacy):
+        raise AssertionError("legacy prompt import: " + name)
+    return original_import(name, *args, **kwargs)
+
+def guarded_open(path, *args, **kwargs):
+    if path.name in {"schemas.json", "builtin_options.json"}:
+        raise AssertionError("catalog data read during import")
+    return original_open(path, *args, **kwargs)
+
+builtins.__import__ = guarded_import
+pathlib.Path.open = guarded_open
+import custom_nodes.comfyui_arch_prompt_tools.nodes
+'''
+
+    result = subprocess.run([sys.executable, "-c", program], cwd=workspace, capture_output=True, text=True)
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.fixture
+def isolated_catalog_data(tmp_path, monkeypatch):
+    source_data = Path(__file__).parents[1] / "data"
+    for filename in ("schemas.json", "builtin_options.json"):
+        (tmp_path / filename).write_bytes((source_data / filename).read_bytes())
+    monkeypatch.setattr(nodes_module, "_DATA_DIRECTORY", tmp_path)
+    nodes_module._reset_catalog_cache()
+    yield tmp_path
+    nodes_module._reset_catalog_cache()
+
+
+def test_default_catalog_cache_reuses_one_load_for_six_focused_builds(isolated_catalog_data, monkeypatch):
+    calls = 0
+    original_load_catalog = nodes_module.load_catalog
+
+    def counted_load_catalog(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original_load_catalog(*args, **kwargs)
+
+    monkeypatch.setattr(nodes_module, "load_catalog", counted_load_catalog)
+    for _, node_key, _ in FOCUSED_NODES.values():
+        if node_key is None:
+            continue
+        node_class = next(node_class for node_class, candidate, _ in FOCUSED_NODES.values() if candidate == node_key)
+        node_class().build("flux", make_state(node_key))
+
+    assert calls == 1
+
+
+def test_default_catalog_cache_invalidates_when_either_data_file_changes(isolated_catalog_data, monkeypatch):
+    calls = 0
+    original_load_catalog = nodes_module.load_catalog
+
+    def counted_load_catalog(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original_load_catalog(*args, **kwargs)
+
+    monkeypatch.setattr(nodes_module, "load_catalog", counted_load_catalog)
+    ArchPtIdentity().build("flux", make_state("identity"))
+    for filename in ("schemas.json", "builtin_options.json"):
+        path = isolated_catalog_data / filename
+        path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+        ArchPtIdentity().build("flux", make_state("identity"))
+
+    assert calls == 3
+
+
+def test_invalid_catalog_reload_preserves_prior_cache_and_surfaces_its_error(isolated_catalog_data):
+    original = nodes_module._catalog()
+    (isolated_catalog_data / "schemas.json").write_text(
+        '{"version":"1.0","families":["flux"],"nodes":"invalid"}', encoding="utf-8"
     )
-    original_import = builtins.__import__
 
-    def guarded_import(name, *args, **kwargs):
-        if any(name == legacy or name.startswith(f"{legacy}.") for legacy in legacy_modules):
-            raise AssertionError(f"nodes must not import legacy prompt package: {name}")
-        return original_import(name, *args, **kwargs)
+    with pytest.raises(CatalogValidationError, match="nodes must be a list"):
+        nodes_module._catalog()
 
-    monkeypatch.setattr(builtins, "__import__", guarded_import)
-    module = importlib.import_module("custom_nodes.comfyui_arch_prompt_tools.nodes")
-
-    importlib.reload(module)
+    assert nodes_module._DEFAULT_CATALOG_CACHE[1] is original
 
 
 def test_combiner_ignores_empty_optional_bundles_and_is_deterministic():
