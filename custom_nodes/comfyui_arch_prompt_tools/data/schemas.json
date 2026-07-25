@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "families": ["flux", "qwen"],
+  "nodes": [
+    {
+      "key": "identity",
+      "label": "Identity",
+      "sections": [
+        {
+          "key": "subject",
+          "label": "Subject",
+          "order": 10,
+          "fields": [
+            {"key": "gender", "label": "Gender", "order": 10, "control": "buttons", "groups": ["gender"], "catalog_scope": "shared"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "pose",
+      "label": "Pose",
+      "sections": [
+        {
+          "key": "hands",
+          "label": "Hands",
+          "order": 10,
+          "fields": [
+            {"key": "hand_position", "label": "Hand position", "order": 10, "control": "searchable_options", "groups": ["hand_position"], "catalog_scope": "side_aware"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "clothing",
+      "label": "Clothing",
+      "sections": [
+        {
+          "key": "wardrobe",
+          "label": "Wardrobe",
+          "order": 10,
+          "fields": [
+            {"key": "garment", "label": "Garment", "order": 10, "control": "searchable_options", "groups": ["garment"], "catalog_scope": "shared"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "environment",
+      "label": "Environment",
+      "sections": [
+        {
+          "key": "scene",
+          "label": "Scene",
+          "order": 10,
+          "fields": [
+            {"key": "weather", "label": "Weather", "order": 10, "control": "searchable_options", "groups": ["weather"], "catalog_scope": "shared"},
+            {
+              "key": "atmosphere",
+              "label": "Atmosphere",
+              "order": 20,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}},
+                {"minimum": 0.34, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}},
+                {"minimum": 0.67, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "camera",
+      "label": "Camera",
+      "sections": [
+        {
+          "key": "framing",
+          "label": "Framing",
+          "order": 10,
+          "fields": [
+            {"key": "view", "label": "View", "order": 10, "control": "searchable_options", "groups": ["view"], "catalog_scope": "shared"},
+            {"key": "notes", "label": "Notes", "order": 20, "control": "free_text"}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "lighting",
+      "label": "Lighting",
+      "sections": [
+        {
+          "key": "light_setup",
+          "label": "Light setup",
+          "order": 10,
+          "fields": [
+            {"key": "direction", "label": "Direction", "order": 10, "control": "buttons", "groups": ["direction"], "catalog_scope": "shared"}
+          ]
+        }
+      ]
+    }
+  ]
+}

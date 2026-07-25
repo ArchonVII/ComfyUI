@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "options": [
+    {"id": "identity.gender.feminine", "label": "Feminine", "node": "identity", "field": "gender", "group": "gender", "phrases": {"flux": "woman", "qwen": "female subject"}, "builtin": true},
+    {"id": "identity.gender.masculine", "label": "Masculine", "node": "identity", "field": "gender", "group": "gender", "phrases": {"flux": "man", "qwen": "male subject"}, "builtin": true},
+    {"id": "pose.hand_position.left_raised", "label": "Left raised", "node": "pose", "field": "hand_position", "group": "hand_position", "phrases": {"flux": "left hand raised", "qwen": "raised left hand"}, "builtin": true},
+    {"id": "clothing.garment.jacket", "label": "Jacket", "node": "clothing", "field": "garment", "group": "garment", "phrases": {"flux": "wearing a jacket", "qwen": "jacket outfit"}, "builtin": true},
+    {"id": "environment.weather.misty", "label": "Misty", "node": "environment", "field": "weather", "group": "weather", "phrases": {"flux": "misty weather"}, "builtin": true},
+    {"id": "environment.weather.rainy", "label": "Rainy", "node": "environment", "field": "weather", "group": "weather", "phrases": {"qwen": "rainy weather"}, "builtin": true},
+    {"id": "camera.view.close_up", "label": "Close-up", "node": "camera", "field": "view", "group": "view", "phrases": {"flux": "close-up portrait", "qwen": "close-up framing"}, "builtin": true},
+    {"id": "lighting.direction.side", "label": "Side light", "node": "lighting", "field": "direction", "group": "direction", "phrases": {"flux": "side lighting", "qwen": "side light"}, "builtin": true}
+  ]
+}
