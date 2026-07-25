@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 from typing import Any, Mapping
 
-from .catalog import Catalog, load_catalog
+from .catalog import Catalog, CatalogValidationError, load_catalog
 from .engine import BUNDLE_VERSION, DEFAULT_MODEL_FAMILY, SUPPORTED_MODEL_FAMILIES, StateValidationError, assemble, default_state, normalize_state
 
 
@@ -20,6 +20,7 @@ _DATA_DIRECTORY = Path(__file__).with_name("data")
 _WHITESPACE = re.compile(r"\s+")
 _FOCUSED_NODE_KEYS = ("identity", "pose", "clothing", "environment", "camera", "lighting")
 _CATALOG_LOCK = threading.RLock()
+_CATALOG_LOAD_ATTEMPTS = 2
 _DEFAULT_CATALOG_CACHE: tuple[tuple[tuple[int, int], tuple[int, int]], Catalog] | None = None
 
 
@@ -39,12 +40,25 @@ def _catalog() -> Catalog:
     """Return a validated default catalog until either source file changes."""
     global _DEFAULT_CATALOG_CACHE
     with _CATALOG_LOCK:
-        fingerprint = _catalog_fingerprint()
-        if _DEFAULT_CATALOG_CACHE is not None and _DEFAULT_CATALOG_CACHE[0] == fingerprint:
-            return _DEFAULT_CATALOG_CACHE[1]
-        catalog = load_catalog(_DATA_DIRECTORY / "schemas.json", _DATA_DIRECTORY / "builtin_options.json")
-        _DEFAULT_CATALOG_CACHE = (fingerprint, catalog)
-        return catalog
+        for _ in range(_CATALOG_LOAD_ATTEMPTS):
+            fingerprint = _safe_catalog_fingerprint()
+            if _DEFAULT_CATALOG_CACHE is not None and _DEFAULT_CATALOG_CACHE[0] == fingerprint:
+                return _DEFAULT_CATALOG_CACHE[1]
+            try:
+                catalog = load_catalog(_DATA_DIRECTORY / "schemas.json", _DATA_DIRECTORY / "builtin_options.json")
+            except OSError as error:
+                raise CatalogValidationError("could not access default catalog files") from error
+            if _safe_catalog_fingerprint() == fingerprint:
+                _DEFAULT_CATALOG_CACHE = (fingerprint, catalog)
+                return catalog
+        raise CatalogValidationError("default catalog files changed while loading")
+
+
+def _safe_catalog_fingerprint() -> tuple[tuple[int, int], tuple[int, int]]:
+    try:
+        return _catalog_fingerprint()
+    except OSError as error:
+        raise CatalogValidationError("could not access default catalog files") from error
 
 
 def _reset_catalog_cache() -> None:

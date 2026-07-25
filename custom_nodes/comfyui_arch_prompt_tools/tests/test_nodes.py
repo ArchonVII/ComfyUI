@@ -304,6 +304,22 @@ def test_combiner_retains_distinct_lora_origins_but_dedupes_exact_records():
     assert nodes_module._dedupe_records([first_origin, first_origin, second_origin]) == [first_origin, second_origin]
 
 
+def test_combiner_retains_distinct_enabled_lora_origins_through_its_public_interface():
+    first = identity_bundle_with_lora(instance_id="first")
+    second_fragment = copy.deepcopy(first["fields"][0]["fragments"][0])
+    second_fragment["instance_id"] = "second"
+    first["fields"][0]["fragments"].append(second_fragment)
+    second_request = copy.deepcopy(first["lora_requests"][0])
+    second_request["origin"]["instance_id"] = "second"
+    first["lora_requests"].append(second_request)
+    first["prompt"] = "woman"
+
+    _, _, loras_json = ArchPtCombine().combine(", ", True, identity=first)
+
+    assert json.loads(loras_json) == first["lora_requests"]
+    assert [request["origin"]["instance_id"] for request in json.loads(loras_json)] == ["first", "second"]
+
+
 def test_fresh_nodes_import_avoids_legacy_packages_and_catalog_file_reads():
     workspace = Path(__file__).parents[3]
     program = '''
@@ -398,6 +414,59 @@ def test_invalid_catalog_reload_preserves_prior_cache_and_surfaces_its_error(iso
         nodes_module._catalog()
 
     assert nodes_module._DEFAULT_CATALOG_CACHE[1] is original
+
+
+def test_cold_catalog_cache_wraps_missing_files_as_catalog_validation_errors(tmp_path, monkeypatch):
+    monkeypatch.setattr(nodes_module, "_DATA_DIRECTORY", tmp_path)
+    nodes_module._reset_catalog_cache()
+
+    with pytest.raises(CatalogValidationError, match="could not access default catalog"):
+        nodes_module._catalog()
+
+
+def test_warm_catalog_cache_does_not_serve_stale_data_when_stat_fails(isolated_catalog_data, monkeypatch):
+    original = nodes_module._catalog()
+
+    def denied_fingerprint():
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(nodes_module, "_catalog_fingerprint", denied_fingerprint)
+    with pytest.raises(CatalogValidationError, match="could not access default catalog"):
+        nodes_module._catalog()
+
+    assert nodes_module._DEFAULT_CATALOG_CACHE[1] is original
+
+
+def test_warm_catalog_cache_wraps_load_permission_errors_without_serving_stale_data(isolated_catalog_data, monkeypatch):
+    original = nodes_module._catalog()
+    original_fingerprint = nodes_module._catalog_fingerprint()
+    changed_fingerprint = ((original_fingerprint[0][0] + 1, original_fingerprint[0][1]), original_fingerprint[1])
+    monkeypatch.setattr(nodes_module, "_catalog_fingerprint", lambda: changed_fingerprint)
+
+    def denied_load(*args, **kwargs):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(nodes_module, "load_catalog", denied_load)
+    with pytest.raises(CatalogValidationError, match="could not access default catalog"):
+        nodes_module._catalog()
+
+    assert nodes_module._DEFAULT_CATALOG_CACHE[1] is original
+
+
+def test_catalog_cache_retries_when_files_change_during_load(isolated_catalog_data, monkeypatch):
+    old_fingerprint = ((1, 1), (1, 1))
+    new_fingerprint = ((2, 1), (2, 1))
+    fingerprints = iter((old_fingerprint, new_fingerprint, new_fingerprint, new_fingerprint))
+    loaded_catalogs = [object(), object()]
+    nodes_module._reset_catalog_cache()
+    monkeypatch.setattr(nodes_module, "_catalog_fingerprint", lambda: next(fingerprints))
+    monkeypatch.setattr(nodes_module, "load_catalog", lambda *args, **kwargs: loaded_catalogs.pop(0))
+
+    catalog = nodes_module._catalog()
+
+    assert catalog is not None
+    assert nodes_module._DEFAULT_CATALOG_CACHE == (new_fingerprint, catalog)
+    assert loaded_catalogs == []
 
 
 def test_combiner_ignores_empty_optional_bundles_and_is_deterministic():
