@@ -1,48 +1,1199 @@
 {
   "version": "1.0",
-  "families": ["flux", "qwen"],
+  "families": [
+    "flux",
+    "qwen"
+  ],
   "nodes": [
     {
       "key": "identity",
       "label": "Identity",
       "sections": [
-        {"key": "core_identity", "label": "Core identity", "order": 10, "fields": [{"key": "gender", "label": "Gender", "order": 10, "control": "buttons", "groups": ["gender"], "catalog_scope": "shared"}]},
-        {"key": "body_structure", "label": "Body structure", "order": 20, "fields": [{"key": "body_notes", "label": "Body notes", "order": 10, "control": "free_text"}]},
-        {"key": "appearance", "label": "Appearance", "order": 30, "fields": [{"key": "appearance_notes", "label": "Appearance notes", "order": 10, "control": "free_text"}]},
-        {"key": "expression", "label": "Expression", "order": 40, "fields": [{"key": "expression_notes", "label": "Expression notes", "order": 10, "control": "free_text"}]}
+        {
+          "key": "core_identity",
+          "label": "Core identity",
+          "order": 10,
+          "fields": [
+            {
+              "key": "subject_type",
+              "label": "Subject type",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "subject_type"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "age_group",
+              "label": "Age group",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "age_group"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "exact_age",
+              "label": "Exact age",
+              "order": 30,
+              "control": "free_text"
+            },
+            {
+              "key": "identity_specifics",
+              "label": "Identity specifics",
+              "order": 40,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "body_structure",
+          "label": "Body structure",
+          "order": 20,
+          "fields": [
+            {
+              "key": "body_type",
+              "label": "Body type",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "body_type"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "height",
+              "label": "Height",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "height"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "weight_build",
+              "label": "Weight build",
+              "order": 30,
+              "control": "buttons",
+              "groups": [
+                "weight_build"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "chest_breasts",
+              "label": "Chest / breasts",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "chest_breasts"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hips_butt",
+              "label": "Hips / butt",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "hips_butt"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "waist",
+              "label": "Waist",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "waist"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "body_snippets",
+              "label": "Body snippets",
+              "order": 70,
+              "control": "searchable_options",
+              "groups": [
+                "proportions",
+                "frame",
+                "definition",
+                "contour"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "body_specifics",
+              "label": "Body specifics",
+              "order": 80,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "appearance",
+          "label": "Appearance",
+          "order": 30,
+          "fields": [
+            {
+              "key": "skin_tone",
+              "label": "Skin tone",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "skin_tone"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "skin_details",
+              "label": "Skin details",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "skin_details"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hair_length",
+              "label": "Hair length",
+              "order": 30,
+              "control": "buttons",
+              "groups": [
+                "hair_length"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hair_texture",
+              "label": "Hair texture",
+              "order": 40,
+              "control": "buttons",
+              "groups": [
+                "hair_texture"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hair_color",
+              "label": "Hair color",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "hair_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hair_style",
+              "label": "Hair style",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "hair_style"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hair_specifics",
+              "label": "Hair specifics",
+              "order": 70,
+              "control": "free_text"
+            },
+            {
+              "key": "eye_color",
+              "label": "Eye color",
+              "order": 80,
+              "control": "searchable_options",
+              "groups": [
+                "eye_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "eye_shape",
+              "label": "Eye shape",
+              "order": 90,
+              "control": "searchable_options",
+              "groups": [
+                "eye_shape"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "facial_features",
+              "label": "Facial features",
+              "order": 100,
+              "control": "searchable_options",
+              "groups": [
+                "facial_features"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "appearance_specifics",
+              "label": "Appearance specifics",
+              "order": 110,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "expression",
+          "label": "Expression",
+          "order": 40,
+          "fields": [
+            {
+              "key": "expression",
+              "label": "Expression",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "expression"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "mouth",
+              "label": "Mouth",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "mouth"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "gaze",
+              "label": "Gaze",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "gaze"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "expression_specifics",
+              "label": "Expression specifics",
+              "order": 40,
+              "control": "free_text"
+            }
+          ]
+        }
       ]
     },
     {
       "key": "pose",
       "label": "Pose",
       "sections": [
-        {"key": "overall_pose", "label": "Overall pose", "order": 10, "fields": [{"key": "pose_notes", "label": "Pose notes", "order": 10, "control": "free_text"}]},
-        {"key": "frame_orientation", "label": "Frame orientation", "order": 20, "fields": [{"key": "orientation_notes", "label": "Orientation notes", "order": 10, "control": "free_text"}]},
-        {"key": "head_torso", "label": "Head and torso", "order": 30, "fields": [{"key": "head_torso_notes", "label": "Head and torso notes", "order": 10, "control": "free_text"}]},
-        {"key": "arms_hands", "label": "Arms and hands", "order": 40, "fields": [{"key": "hand_position", "label": "Hand position", "order": 10, "control": "searchable_options", "groups": ["hand_position"], "catalog_scope": "side_aware"}]},
-        {"key": "legs_feet", "label": "Legs and feet", "order": 50, "fields": [{"key": "legs_feet_notes", "label": "Legs and feet notes", "order": 10, "control": "free_text"}]}
+        {
+          "key": "overall_pose",
+          "label": "Overall pose",
+          "order": 10,
+          "fields": [
+            {
+              "key": "base_pose",
+              "label": "Base pose",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "base_pose"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "pose_snippets",
+              "label": "Pose snippets",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "pose_snippets"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "action_specifics",
+              "label": "Action specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "frame_orientation",
+          "label": "Frame orientation",
+          "order": 20,
+          "fields": [
+            {
+              "key": "body_axis",
+              "label": "Body axis in frame",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "body_axis"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "facing_direction",
+              "label": "Facing direction",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "facing_direction"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "depth_orientation",
+              "label": "Depth orientation",
+              "order": 30,
+              "control": "buttons",
+              "groups": [
+                "depth_orientation"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "orientation_specifics",
+              "label": "Orientation specifics",
+              "order": 40,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "head_torso",
+          "label": "Head and torso",
+          "order": 30,
+          "fields": [
+            {
+              "key": "head_position",
+              "label": "Head position",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "head_position"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "neck",
+              "label": "Neck",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "neck"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "shoulders",
+              "label": "Shoulders",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "shoulders"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "torso_spine",
+              "label": "Torso spine",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "torso_spine"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hips_pelvis",
+              "label": "Hips pelvis",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "hips_pelvis"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "head_torso_specifics",
+              "label": "Head and torso specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "arms_hands",
+          "label": "Arms and hands",
+          "order": 40,
+          "fields": [
+            {
+              "key": "left_arm",
+              "label": "Left arm",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "left_arm"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "right_arm",
+              "label": "Right arm",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "right_arm"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "left_hand",
+              "label": "Left hand",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "left_hand"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "right_hand",
+              "label": "Right hand",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "right_hand"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "arms_hands_specifics",
+              "label": "Arms and hands specifics",
+              "order": 50,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "legs_feet",
+          "label": "Legs and feet",
+          "order": 50,
+          "fields": [
+            {
+              "key": "left_leg",
+              "label": "Left leg",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "left_leg"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "right_leg",
+              "label": "Right leg",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "right_leg"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "left_foot",
+              "label": "Left foot",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "left_foot"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "right_foot",
+              "label": "Right foot",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "right_foot"
+              ],
+              "catalog_scope": "side_aware"
+            },
+            {
+              "key": "balance_contact",
+              "label": "Balance contact",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "balance_contact"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "legs_feet_specifics",
+              "label": "Legs and feet specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        }
       ]
     },
     {
       "key": "clothing",
       "label": "Clothing",
       "sections": [
-        {"key": "state_transfer", "label": "State transfer", "order": 10, "fields": [{"key": "transfer_notes", "label": "Transfer notes", "order": 10, "control": "free_text"}]},
-        {"key": "upper_body", "label": "Upper body", "order": 20, "fields": [{"key": "garment", "label": "Garment", "order": 10, "control": "searchable_options", "groups": ["garment"], "catalog_scope": "shared"}]},
-        {"key": "waist_lower_body", "label": "Waist and lower body", "order": 30, "fields": [{"key": "lower_body_notes", "label": "Lower body notes", "order": 10, "control": "free_text"}]},
-        {"key": "whole_outfit", "label": "Whole outfit", "order": 40, "fields": [{"key": "outfit_notes", "label": "Outfit notes", "order": 10, "control": "free_text"}]},
-        {"key": "materials_details", "label": "Materials and details", "order": 50, "fields": [{"key": "material_notes", "label": "Material notes", "order": 10, "control": "free_text"}]}
+        {
+          "key": "state_transfer",
+          "label": "State and transfer",
+          "order": 10,
+          "fields": [
+            {
+              "key": "clothing_state",
+              "label": "Clothing state",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "clothing_state"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "clothing_modifiers",
+              "label": "Clothing modifiers",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "coverage_reduction",
+                "undress_state",
+                "underwear_visibility",
+                "fastening_state"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "state_specifics",
+              "label": "State specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "upper_body",
+          "label": "Upper body",
+          "order": 20,
+          "fields": [
+            {
+              "key": "headwear",
+              "label": "Headwear",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "headwear"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "facewear",
+              "label": "Facewear",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "facewear"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "neckwear",
+              "label": "Neckwear",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "neckwear"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "bra",
+              "label": "Bra",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "bra"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "top",
+              "label": "Top",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "top"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "outerwear",
+              "label": "Outerwear",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "outerwear"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "sleeves",
+              "label": "Sleeves",
+              "order": 70,
+              "control": "searchable_options",
+              "groups": [
+                "sleeves"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "gloves",
+              "label": "Gloves",
+              "order": 80,
+              "control": "searchable_options",
+              "groups": [
+                "gloves"
+              ],
+              "catalog_scope": "shared"
+            }
+          ]
+        },
+        {
+          "key": "waist_lower_body",
+          "label": "Waist and lower body",
+          "order": 30,
+          "fields": [
+            {
+              "key": "waist",
+              "label": "Waist",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "waist"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "belt",
+              "label": "Belt",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "belt"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "underwear",
+              "label": "Underwear",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "underwear"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "bottom",
+              "label": "Bottom",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "bottom"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "hosiery",
+              "label": "Hosiery",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "hosiery"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "footwear",
+              "label": "Footwear",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "footwear"
+              ],
+              "catalog_scope": "shared"
+            }
+          ]
+        },
+        {
+          "key": "whole_outfit",
+          "label": "Whole outfit",
+          "order": 40,
+          "fields": [
+            {
+              "key": "outfit_type",
+              "label": "Outfit type",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "outfit_type"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "outfit_snippets",
+              "label": "Outfit snippets",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "outfit_snippets"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "outfit_specifics",
+              "label": "Outfit specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "materials_details",
+          "label": "Materials and details",
+          "order": 50,
+          "fields": [
+            {
+              "key": "dominant_color",
+              "label": "Dominant color",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "dominant_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "secondary_color",
+              "label": "Secondary color",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "secondary_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "material"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "pattern",
+              "label": "Pattern",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "pattern"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "fit",
+              "label": "Fit",
+              "order": 50,
+              "control": "buttons",
+              "groups": [
+                "fit"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "condition",
+              "label": "Condition",
+              "order": 60,
+              "control": "buttons",
+              "groups": [
+                "condition"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "jewelry",
+              "label": "Jewelry",
+              "order": 70,
+              "control": "searchable_options",
+              "groups": [
+                "jewelry"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "bags_accessories",
+              "label": "Bags and accessories",
+              "order": 80,
+              "control": "searchable_options",
+              "groups": [
+                "bags_accessories"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "clothing_specifics",
+              "label": "Clothing specifics",
+              "order": 90,
+              "control": "free_text"
+            }
+          ]
+        }
       ]
     },
     {
       "key": "environment",
       "label": "Environment",
       "sections": [
-        {"key": "scene_type", "label": "Scene type", "order": 10, "fields": [{"key": "scene_notes", "label": "Scene notes", "order": 10, "control": "free_text"}]},
-        {"key": "location", "label": "Location", "order": 20, "fields": [{"key": "location_notes", "label": "Location notes", "order": 10, "control": "free_text"}]},
-        {"key": "scene_contents", "label": "Scene contents", "order": 30, "fields": [{"key": "contents_notes", "label": "Contents notes", "order": 10, "control": "free_text"}]},
-        {"key": "time_conditions", "label": "Time and conditions", "order": 40, "fields": [{"key": "weather", "label": "Weather", "order": 10, "control": "searchable_options", "groups": ["weather"], "catalog_scope": "shared"}]},
-        {"key": "mood_character", "label": "Mood and character", "order": 50, "fields": [{"key": "atmosphere", "label": "Atmosphere", "order": 10, "control": "semantic_spectrum", "enabled_by_default": false, "spectrum": [{"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}}, {"minimum": 0.33, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}}, {"minimum": 0.66, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}]}]
+        {
+          "key": "scene_type",
+          "label": "Scene type",
+          "order": 10,
+          "fields": [
+            {
+              "key": "scene_type",
+              "label": "Scene type",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "scene_type"
+              ],
+              "catalog_scope": "shared"
+            }
+          ]
+        },
+        {
+          "key": "location",
+          "label": "Location",
+          "order": 20,
+          "fields": [
+            {
+              "key": "location_type",
+              "label": "Location type",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "location_type"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "named_setting",
+              "label": "Named setting",
+              "order": 20,
+              "control": "free_text"
+            },
+            {
+              "key": "architecture",
+              "label": "Architecture",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "architecture"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "terrain",
+              "label": "Terrain",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "terrain"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "natural_features",
+              "label": "Natural features",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "natural_features"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "location_specifics",
+              "label": "Location specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "scene_contents",
+          "label": "Scene contents",
+          "order": 30,
+          "fields": [
+            {
+              "key": "foreground",
+              "label": "Foreground",
+              "order": 10,
+              "control": "free_text"
+            },
+            {
+              "key": "midground",
+              "label": "Midground",
+              "order": 20,
+              "control": "free_text"
+            },
+            {
+              "key": "background",
+              "label": "Background",
+              "order": 30,
+              "control": "free_text"
+            },
+            {
+              "key": "furniture",
+              "label": "Furniture",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "furniture"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "props",
+              "label": "Props",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "props"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "plants_nature",
+              "label": "Plants and nature",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "plants_nature"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "crowd_level",
+              "label": "Crowd level",
+              "order": 70,
+              "control": "buttons",
+              "groups": [
+                "crowd_level"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "scene_density",
+              "label": "Scene density",
+              "order": 80,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "an open, sparsely furnished scene",
+                    "qwen": "an open scene with sparse contents"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "a lightly populated scene",
+                    "qwen": "a scene with a few well-spaced contents"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "a detailed, moderately populated scene",
+                    "qwen": "a detailed scene with balanced contents"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "a richly populated, dense scene",
+                    "qwen": "a dense scene filled with layered contents"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "contents_specifics",
+              "label": "Contents specifics",
+              "order": 90,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "time_conditions",
+          "label": "Time and conditions",
+          "order": 40,
+          "fields": [
+            {
+              "key": "time_of_day",
+              "label": "Time of day",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "time_of_day"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "season",
+              "label": "Season",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "season"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "weather",
+              "label": "Weather",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "weather"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "atmospheric_conditions",
+              "label": "Atmospheric conditions",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "atmospheric_conditions"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "surface_condition",
+              "label": "Surface condition",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "surface_condition"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "conditions_specifics",
+              "label": "Conditions specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "mood_character",
+          "label": "Mood and character",
+          "order": 50,
+          "fields": [
+            {
+              "key": "mood",
+              "label": "Mood",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "mood"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "color_palette",
+              "label": "Color palette",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "color_palette"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "environment_condition",
+              "label": "Environment condition",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "environment_condition"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "period",
+              "label": "Period",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "period"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "regional_character",
+              "label": "Regional character",
+              "order": 50,
+              "control": "free_text"
+            },
+            {
+              "key": "environment_snippets",
+              "label": "Environment snippets",
+              "order": 60,
+              "control": "searchable_options",
+              "groups": [
+                "environment_snippets"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "environment_specifics",
+              "label": "Environment specifics",
+              "order": 70,
+              "control": "free_text"
+            }
+          ]
         }
       ]
     },
@@ -50,23 +1201,795 @@
       "key": "camera",
       "label": "Camera",
       "sections": [
-        {"key": "framing_distance", "label": "Framing and distance", "order": 10, "fields": [{"key": "view", "label": "View", "order": 10, "control": "searchable_options", "groups": ["view"], "catalog_scope": "shared"}]},
-        {"key": "viewpoint_angle", "label": "Viewpoint and angle", "order": 20, "fields": [{"key": "angle_notes", "label": "Angle notes", "order": 10, "control": "free_text"}]},
-        {"key": "lens_optics", "label": "Lens and optics", "order": 30, "fields": [{"key": "lens_notes", "label": "Lens notes", "order": 10, "control": "free_text"}]},
-        {"key": "focus_depth", "label": "Focus and depth", "order": 40, "fields": [{"key": "focus_notes", "label": "Focus notes", "order": 10, "control": "free_text"}]},
-        {"key": "composition_effects", "label": "Composition and effects", "order": 50, "fields": [{"key": "notes", "label": "Notes", "order": 10, "control": "free_text"}]}
+        {
+          "key": "framing_distance",
+          "label": "Framing and distance",
+          "order": 10,
+          "fields": [
+            {
+              "key": "framing",
+              "label": "Framing",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "framing"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "subject_framing",
+              "label": "Subject framing",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "subject_framing"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "framing_specifics",
+              "label": "Framing specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "viewpoint_angle",
+          "label": "Viewpoint and angle",
+          "order": 20,
+          "fields": [
+            {
+              "key": "camera_angle",
+              "label": "Camera angle",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "camera_angle"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "horizontal_view",
+              "label": "Horizontal view",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "horizontal_view"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "viewpoint_specifics",
+              "label": "Viewpoint specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "lens_optics",
+          "label": "Lens and optics",
+          "order": 30,
+          "fields": [
+            {
+              "key": "focal_length",
+              "label": "Focal length",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "focal_length"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "lens_type",
+              "label": "Lens type",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "lens_type"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "aperture_character",
+              "label": "Aperture character",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "aperture_character"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "distortion",
+              "label": "Distortion",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "distortion"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "compression",
+              "label": "Compression",
+              "order": 50,
+              "control": "searchable_options",
+              "groups": [
+                "compression"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "lens_specifics",
+              "label": "Lens specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "focus_depth",
+          "label": "Focus and depth",
+          "order": 40,
+          "fields": [
+            {
+              "key": "focus_target",
+              "label": "Focus target",
+              "order": 10,
+              "control": "free_text"
+            },
+            {
+              "key": "depth_of_field",
+              "label": "Depth of field",
+              "order": 20,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "deep depth of field with near and distant details in focus",
+                    "qwen": "keep near and distant details in clear focus"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "moderately deep depth of field",
+                    "qwen": "use moderately deep focus across the scene"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "shallow depth of field around the focus target",
+                    "qwen": "use shallow focus around the specified target"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "very shallow depth of field with a narrow focus plane",
+                    "qwen": "use a very narrow plane of focus on the target"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "focus_mode",
+              "label": "Focus mode",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "focus_mode"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "focus_specifics",
+              "label": "Focus specifics",
+              "order": 40,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "composition_effects",
+          "label": "Composition and effects",
+          "order": 50,
+          "fields": [
+            {
+              "key": "composition",
+              "label": "Composition",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "composition"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "optical_effects",
+              "label": "Optical effects",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "optical_effects"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "camera_specifics",
+              "label": "Camera specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        }
       ]
     },
     {
       "key": "lighting",
       "label": "Lighting",
       "sections": [
-        {"key": "environment_illumination", "label": "Environment illumination", "order": 10, "fields": [{"key": "illumination_notes", "label": "Illumination notes", "order": 10, "control": "free_text"}]},
-        {"key": "light_sources", "label": "Light sources", "order": 20, "fields": [{"key": "source_notes", "label": "Source notes", "order": 10, "control": "free_text"}]},
-        {"key": "primary_direction", "label": "Primary direction", "order": 30, "fields": [{"key": "direction", "label": "Direction", "order": 10, "control": "buttons", "groups": ["direction"], "catalog_scope": "shared"}]},
-        {"key": "color_temperature", "label": "Color temperature", "order": 40, "fields": [{"key": "temperature_notes", "label": "Temperature notes", "order": 10, "control": "free_text"}]},
-        {"key": "quality_shadows", "label": "Quality and shadows", "order": 50, "fields": [{"key": "shadow_notes", "label": "Shadow notes", "order": 10, "control": "free_text"}]},
-        {"key": "techniques_effects", "label": "Techniques and effects", "order": 60, "fields": [{"key": "technique_notes", "label": "Technique notes", "order": 10, "control": "free_text"}]}
+        {
+          "key": "environment_illumination",
+          "label": "Environment illumination",
+          "order": 10,
+          "fields": [
+            {
+              "key": "environment_brightness",
+              "label": "Environment brightness",
+              "order": 10,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "a dim environment",
+                    "qwen": "make the environment dim"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "a gently bright environment",
+                    "qwen": "make the environment gently bright"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "a bright environment",
+                    "qwen": "make the environment bright"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "an intensely bright environment",
+                    "qwen": "make the environment intensely bright"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "exposure_character",
+              "label": "Exposure character",
+              "order": 20,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "a low-key exposure",
+                    "qwen": "use a low-key exposure"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "a restrained exposure",
+                    "qwen": "use a restrained exposure"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "a balanced exposure",
+                    "qwen": "use a balanced exposure"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "a high-key exposure",
+                    "qwen": "use a high-key exposure"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "lighting_contrast",
+              "label": "Lighting contrast",
+              "order": 30,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "very low lighting contrast",
+                    "qwen": "use very low lighting contrast"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "soft lighting contrast",
+                    "qwen": "use soft lighting contrast"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "strong lighting contrast",
+                    "qwen": "use strong lighting contrast"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "very strong lighting contrast",
+                    "qwen": "use very strong lighting contrast"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "light_sources",
+          "label": "Light sources",
+          "order": 20,
+          "fields": [
+            {
+              "key": "source_count",
+              "label": "Source count",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "source_count"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "primary_light",
+              "label": "Primary light",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "primary_light"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "fill_light",
+              "label": "Fill light",
+              "order": 30,
+              "control": "searchable_options",
+              "groups": [
+                "fill_light"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "practical_lights",
+              "label": "Practical lights",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "practical_lights"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "source_nature",
+              "label": "Source nature",
+              "order": 50,
+              "control": "buttons",
+              "groups": [
+                "source_nature"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "source_specifics",
+              "label": "Source specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "primary_direction",
+          "label": "Primary direction",
+          "order": 30,
+          "fields": [
+            {
+              "key": "primary_direction",
+              "label": "Primary direction",
+              "order": 10,
+              "control": "buttons",
+              "groups": [
+                "primary_direction"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "light_elevation",
+              "label": "Light elevation",
+              "order": 20,
+              "control": "buttons",
+              "groups": [
+                "light_elevation"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "direction_specifics",
+              "label": "Direction specifics",
+              "order": 30,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "color_temperature",
+          "label": "Color temperature",
+          "order": 40,
+          "fields": [
+            {
+              "key": "primary_color",
+              "label": "Primary color",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "primary_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "fill_color",
+              "label": "Fill color",
+              "order": 20,
+              "control": "searchable_options",
+              "groups": [
+                "fill_color"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "color_temperature",
+              "label": "Color temperature",
+              "order": 30,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "very warm amber light",
+                    "qwen": "make the overall light very warm and amber"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "warm light",
+                    "qwen": "make the overall light warm"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "neutral white light",
+                    "qwen": "make the overall light neutral white"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "cool blue light",
+                    "qwen": "make the overall light cool blue"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "mixed_temperature",
+              "label": "Mixed temperature",
+              "order": 40,
+              "control": "searchable_options",
+              "groups": [
+                "mixed_temperature"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "color_specifics",
+              "label": "Color specifics",
+              "order": 50,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "quality_shadows",
+          "label": "Quality and shadows",
+          "order": 50,
+          "fields": [
+            {
+              "key": "light_softness",
+              "label": "Light softness",
+              "order": 10,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "crisp, concentrated light",
+                    "qwen": "make the light crisp and concentrated"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "firm light with slight diffusion",
+                    "qwen": "give the light slight diffusion"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "soft diffused light",
+                    "qwen": "make the light softly diffused"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "very soft enveloping light",
+                    "qwen": "make the light very soft and enveloping"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "shadow_hardness",
+              "label": "Shadow hardness",
+              "order": 20,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "very soft-edged shadows",
+                    "qwen": "make shadow edges very soft"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "soft-edged shadows",
+                    "qwen": "make shadow edges soft"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "defined shadows",
+                    "qwen": "make shadow edges defined"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "hard-edged shadows",
+                    "qwen": "make shadow edges hard and crisp"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "shadow_depth",
+              "label": "Shadow depth",
+              "order": 30,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "light, open shadows",
+                    "qwen": "keep the shadows light and open"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "gentle shadow depth",
+                    "qwen": "give the shadows gentle depth"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "deep shadows",
+                    "qwen": "make the shadows deep"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "very deep, weighty shadows",
+                    "qwen": "make the shadows very deep and weighty"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "falloff",
+              "label": "Falloff",
+              "order": 40,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "slow, even light falloff",
+                    "qwen": "use slow and even light falloff"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "gradual light falloff",
+                    "qwen": "use gradual light falloff"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "noticeable light falloff",
+                    "qwen": "use noticeable light falloff"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "rapid light falloff",
+                    "qwen": "use rapid light falloff"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "contrast_ratio",
+              "label": "Contrast ratio",
+              "order": 50,
+              "control": "semantic_spectrum",
+              "enabled_by_default": false,
+              "spectrum": [
+                {
+                  "minimum": 0.0,
+                  "maximum": 0.25,
+                  "phrases": {
+                    "flux": "a nearly even key-to-fill ratio",
+                    "qwen": "use a nearly even key-to-fill ratio"
+                  }
+                },
+                {
+                  "minimum": 0.25,
+                  "maximum": 0.5,
+                  "phrases": {
+                    "flux": "a gentle key-to-fill ratio",
+                    "qwen": "use a gentle key-to-fill ratio"
+                  }
+                },
+                {
+                  "minimum": 0.5,
+                  "maximum": 0.75,
+                  "phrases": {
+                    "flux": "a strong key-to-fill ratio",
+                    "qwen": "use a strong key-to-fill ratio"
+                  }
+                },
+                {
+                  "minimum": 0.75,
+                  "maximum": 1.0,
+                  "phrases": {
+                    "flux": "a dramatic key-to-fill ratio",
+                    "qwen": "use a dramatic key-to-fill ratio"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "quality_specifics",
+              "label": "Quality specifics",
+              "order": 60,
+              "control": "free_text"
+            }
+          ]
+        },
+        {
+          "key": "techniques_effects",
+          "label": "Techniques and effects",
+          "order": 60,
+          "fields": [
+            {
+              "key": "lighting_techniques",
+              "label": "Lighting techniques",
+              "order": 10,
+              "control": "searchable_options",
+              "groups": [
+                "lighting_techniques"
+              ],
+              "catalog_scope": "shared"
+            },
+            {
+              "key": "lighting_specifics",
+              "label": "Lighting specifics",
+              "order": 20,
+              "control": "free_text"
+            }
+          ]
+        }
       ]
     }
   ]

@@ -41,12 +41,12 @@ def make_state(node, *, model_family="flux", field="notes", text=""):
 
 
 TEXT_FIELD_BY_NODE = {
-    "identity": "body_notes",
-    "pose": "pose_notes",
-    "clothing": "transfer_notes",
-    "environment": "scene_notes",
-    "camera": "angle_notes",
-    "lighting": "illumination_notes",
+    "identity": "identity_specifics",
+    "pose": "action_specifics",
+    "clothing": "state_specifics",
+    "environment": "named_setting",
+    "camera": "framing_specifics",
+    "lighting": "source_specifics",
 }
 
 
@@ -58,17 +58,17 @@ def make_bundle(node, text):
 def identity_bundle_with_lora(*, text="woman", lora=None, instance_id="fragment-1"):
     copied = {
         "instance_id": instance_id,
-        "source_option_id": "identity.gender.feminine",
-        "label": "Feminine",
+        "source_option_id": "identity.subject_type.single_person",
+        "label": "Single person",
         "node": "identity",
-        "field": "gender",
-        "group": "gender",
+        "field": "subject_type",
+        "group": "subject_type",
         "text": text,
         "model_family": "flux",
         "lora_enabled": True,
         "lora": lora or {"name": "portrait", "strength": 0.8},
     }
-    state = {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"fragments": [copied]}}}
+    state = {"version": 1, "node": "identity", "model_family": "flux", "fields": {"subject_type": {"fragments": [copied]}}}
     return ArchPtIdentity().build("flux", json.dumps(state))[1]
 
 
@@ -134,12 +134,12 @@ def test_blank_focused_node_outputs_empty_prompt_and_serializable_bundle():
 
 def test_focused_node_uses_the_copied_engine_state_to_assemble_a_prompt():
     copied = {
-        "instance_id": "copied-gender",
-        "source_option_id": "identity.gender.feminine",
-        "label": "Feminine",
+        "instance_id": "copied-subject",
+        "source_option_id": "identity.subject_type.single_person",
+        "label": "Single person",
         "node": "identity",
-        "field": "gender",
-        "group": "gender",
+        "field": "subject_type",
+        "group": "subject_type",
         "text": "woman",
         "model_family": "flux",
         "lora_enabled": False,
@@ -148,7 +148,7 @@ def test_focused_node_uses_the_copied_engine_state_to_assemble_a_prompt():
         "version": 1,
         "node": "identity",
         "model_family": "flux",
-        "fields": {"gender": {"fragments": [copied], "specifics": "portrait subject"}},
+        "fields": {"subject_type": {"fragments": [copied], "specifics": "portrait subject"}},
     }
 
     prompt, bundle = ArchPtIdentity().build("flux", json.dumps(state))
@@ -159,17 +159,17 @@ def test_focused_node_uses_the_copied_engine_state_to_assemble_a_prompt():
 
 def test_model_selector_changes_only_top_level_family_not_copied_fragment_snapshots_or_text():
     copied = {
-        "instance_id": "copied-gender",
-        "source_option_id": "identity.gender.feminine",
-        "label": "Feminine",
+        "instance_id": "copied-subject",
+        "source_option_id": "identity.subject_type.single_person",
+        "label": "Single person",
         "node": "identity",
-        "field": "gender",
-        "group": "gender",
+        "field": "subject_type",
+        "group": "subject_type",
         "text": "original copied wording",
         "model_family": "qwen",
         "lora_enabled": False,
     }
-    state = {"version": 1, "node": "identity", "model_family": "qwen", "fields": {"gender": {"fragments": [copied]}}}
+    state = {"version": 1, "node": "identity", "model_family": "qwen", "fields": {"subject_type": {"fragments": [copied]}}}
 
     prompt, bundle = ArchPtIdentity().build("flux", json.dumps(state))
 
@@ -248,7 +248,7 @@ def test_combiner_rejects_noncanonical_bundle_fields_prompt_and_metadata(mutatio
     ("mutation", "match"),
     [
         (lambda bundle: bundle["fields"][0]["fragments"][0].update({"node": "pose"}), "fragment"),
-        (lambda bundle: bundle["fields"][0]["fragments"][0].update({"field": "body_notes"}), "fragment"),
+        (lambda bundle: bundle["fields"][0]["fragments"][0].update({"field": "body_type"}), "fragment"),
         (lambda bundle: bundle["fields"][0]["fragments"][0].update({"model_family": "unsupported"}), "fragment"),
         (lambda bundle: bundle.update({"lora_requests": [{"arbitrary": "request"}]}), "lora request"),
         (lambda bundle: bundle["lora_requests"][0]["origin"].update({"instance_id": "not-the-fragment"}), "lora request"),

@@ -42,11 +42,11 @@ def fragment(
     instance_id="fragment-1",
     *,
     node="identity",
-    field="gender",
-    group="gender",
+    field="subject_type",
+    group="subject_type",
     text="woman",
     model_family="flux",
-    source_option_id="identity.gender.feminine",
+    source_option_id="identity.subject_type.single_person",
     lora=None,
     lora_enabled=False,
 ):
@@ -83,41 +83,64 @@ def test_assembly_uses_approved_schema_section_and_field_order():
         catalog(),
         state(
             fields={
-                "expression_notes": {"specifics": "smiling"},
-                "gender": {"fragments": [fragment(text="woman")]},
-                "body_notes": {"specifics": "tall"},
+                "expression_specifics": {"specifics": "smiling"},
+                "subject_type": {"fragments": [fragment(text="woman")]},
+                "body_specifics": {"specifics": "tall"},
             }
         ),
     )
 
     assert result.prompt == "woman, tall, smiling"
     assert [item["key"] for item in result.bundle["fields"]] == [
-        "gender",
-        "body_notes",
-        "appearance_notes",
-        "expression_notes",
+        "subject_type",
+        "age_group",
+        "exact_age",
+        "identity_specifics",
+        "body_type",
+        "height",
+        "weight_build",
+        "chest_breasts",
+        "hips_butt",
+        "waist",
+        "body_snippets",
+        "body_specifics",
+        "skin_tone",
+        "skin_details",
+        "hair_length",
+        "hair_texture",
+        "hair_color",
+        "hair_style",
+        "hair_specifics",
+        "eye_color",
+        "eye_shape",
+        "facial_features",
+        "appearance_specifics",
+        "expression",
+        "mouth",
+        "gaze",
+        "expression_specifics",
     ]
     assert [item["section"] for item in result.bundle["fields"]] == [
-        "core_identity",
-        "body_structure",
-        "appearance",
-        "expression",
+        *(["core_identity"] * 4),
+        *(["body_structure"] * 8),
+        *(["appearance"] * 11),
+        *(["expression"] * 4),
     ]
 
 
 def test_additive_selection_appends_copied_fragment_and_preserves_specifics():
-    initial = state(fields={"gender": {"specifics": "portrait subject"}})
+    initial = state(fields={"subject_type": {"specifics": "portrait subject"}})
     updated = additive_select(initial, fragment("one"))
     updated = additive_select(updated, fragment("two", text="freckles", group="details"))
 
-    assert [item["instance_id"] for item in updated["fields"]["gender"]["fragments"]] == ["one", "two"]
-    assert updated["fields"]["gender"]["specifics"] == "portrait subject"
+    assert [item["instance_id"] for item in updated["fields"]["subject_type"]["fragments"]] == ["one", "two"]
+    assert updated["fields"]["subject_type"]["specifics"] == "portrait subject"
 
 
 def test_exclusive_selection_replaces_only_matching_field_and_group():
     initial = state(
         fields={
-            "gender": {
+            "subject_type": {
                 "fragments": [
                     fragment("old", text="woman"),
                     fragment("detail", text="freckles", group="details"),
@@ -129,27 +152,27 @@ def test_exclusive_selection_replaces_only_matching_field_and_group():
 
     updated = replace_group_select(initial, fragment("new", text="man"))
 
-    assert [item["instance_id"] for item in updated["fields"]["gender"]["fragments"]] == ["detail", "new"]
-    assert updated["fields"]["gender"]["specifics"] == "manual note"
+    assert [item["instance_id"] for item in updated["fields"]["subject_type"]["fragments"]] == ["detail", "new"]
+    assert updated["fields"]["subject_type"]["specifics"] == "manual note"
 
 
 def test_editing_and_removing_affect_only_the_workflow_copy_instance():
     initial = state(
         fields={
-            "gender": {"fragments": [fragment("one", text="woman"), fragment("two", text="freckles", group="details")]}
+            "subject_type": {"fragments": [fragment("one", text="woman"), fragment("two", text="freckles", group="details")]}
         }
     )
     edited = edit_fragment(initial, "one", "heroine")
     removed = remove_fragment(edited, "two")
 
-    assert [item["text"] for item in edited["fields"]["gender"]["fragments"]] == ["heroine", "freckles"]
-    assert [item["instance_id"] for item in removed["fields"]["gender"]["fragments"]] == ["one"]
-    assert initial["fields"]["gender"]["fragments"][0]["text"] == "woman"
+    assert [item["text"] for item in edited["fields"]["subject_type"]["fragments"]] == ["heroine", "freckles"]
+    assert [item["instance_id"] for item in removed["fields"]["subject_type"]["fragments"]] == ["one"]
+    assert initial["fields"]["subject_type"]["fragments"][0]["text"] == "woman"
 
 
 def test_copied_fragment_and_model_family_snapshot_are_never_rewritten_from_catalog():
     copied = fragment(text="original copied wording", model_family="qwen")
-    result = assemble(catalog(), state(model_family="flux", fields={"gender": {"fragments": [copied]}}))
+    result = assemble(catalog(), state(model_family="flux", fields={"subject_type": {"fragments": [copied]}}))
 
     assert result.prompt == "original copied wording"
     assert result.bundle["fields"][0]["fragments"][0]["model_family"] == "qwen"
@@ -159,13 +182,13 @@ def test_copied_fragment_and_model_family_snapshot_are_never_rewritten_from_cata
 def test_semantic_slider_copy_is_assembled_as_ordinary_copied_text():
     slider_copy = fragment(
         node="environment",
-        field="atmosphere",
-        group="atmosphere",
+        field="scene_density",
+        group="scene_density",
         text="dramatic atmosphere",
-        source_option_id="environment.atmosphere.slider.0.9",
+        source_option_id="environment.scene_density.slider.0.9",
     )
 
-    result = assemble(catalog(), state(node="environment", fields={"atmosphere": {"fragments": [slider_copy]}}))
+    result = assemble(catalog(), state(node="environment", fields={"scene_density": {"fragments": [slider_copy]}}))
 
     assert result.prompt == "dramatic atmosphere"
 
@@ -175,7 +198,7 @@ def test_assembly_dedupes_only_exact_case_insensitive_normalized_text():
         catalog(),
         state(
             fields={
-                "gender": {
+                "subject_type": {
                     "fragments": [fragment("one", text="  Woman   with  hat "), fragment("two", text="woman with hat", group="details")],
                     "specifics": "woman with a hat",
                 }
@@ -194,7 +217,7 @@ def test_collects_only_enabled_copied_lora_requests_with_origin_metadata():
         catalog(),
         state(
             fields={
-                "gender": {
+                "subject_type": {
                     "fragments": [
                         fragment("enabled", lora=lora, lora_enabled=True),
                         fragment("disabled", text="freckles", group="details", lora=lora, lora_enabled=False),
@@ -210,10 +233,10 @@ def test_collects_only_enabled_copied_lora_requests_with_origin_metadata():
             "lora": lora,
             "origin": {
                 "instance_id": "enabled",
-                "source_option_id": "identity.gender.feminine",
+                "source_option_id": "identity.subject_type.single_person",
                 "node": "identity",
-                "field": "gender",
-                "group": "gender",
+                "field": "subject_type",
+                "group": "subject_type",
             },
         }
     ]
@@ -223,7 +246,7 @@ def test_frozen_catalog_lora_metadata_is_thawed_into_a_serializable_workflow_bun
     source_option = catalog_with_frozen_lora().options[0]
     result = assemble(
         catalog(),
-        state(fields={"gender": {"fragments": [fragment(lora=source_option.lora, lora_enabled=True)]}}),
+        state(fields={"subject_type": {"fragments": [fragment(lora=source_option.lora, lora_enabled=True)]}}),
     )
 
     copied_lora = result.bundle["fields"][0]["fragments"][0]["lora"]
@@ -261,8 +284,8 @@ def test_normalization_rejects_unknown_or_unsupported_state(payload, match):
     [
         {"version": True, "node": "identity", "model_family": "flux", "fields": {}},
         {"version": 1, "node": "identity", "model_family": "unsupported", "fields": {}},
-        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"specifics": 9}}},
-        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"gender": {"fragments": [{}]}}},
+        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"subject_type": {"specifics": 9}}},
+        {"version": 1, "node": "identity", "model_family": "flux", "fields": {"subject_type": {"fragments": [{}]}}},
     ],
 )
 def test_mutation_helpers_reject_malformed_state_before_mutating(operation, payload):
