@@ -243,6 +243,27 @@ def test_registered_handlers_return_useful_success_and_4xx_responses(store, cata
     assert missing["status"] == 404
 
 
+def test_registered_create_route_accepts_extreme_json_integer_without_internal_error(
+    store, catalog
+):
+    routes = FakeRoutes()
+    register_routes(
+        SimpleNamespace(routes=routes),
+        web_module=FakeWeb,
+        catalog_provider=lambda: catalog,
+        store_provider=lambda _catalog: store,
+    )
+    post = routes.handlers[("POST", f"{ROUTE_PREFIX}/options")]
+    extreme = 10**400
+
+    response = asyncio.run(
+        post(FakeRequest(body=valid_option(lora={"seed": extreme})))
+    )
+
+    assert response["status"] == 201
+    assert response["payload"]["option"]["lora"]["seed"] == extreme
+
+
 def test_registered_handlers_report_corrupt_store_as_server_error(tmp_path, catalog):
     path = tmp_path / "options.json"
     path.write_text("{bad", encoding="utf-8")

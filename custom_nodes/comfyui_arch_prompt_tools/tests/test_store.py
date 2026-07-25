@@ -2,6 +2,7 @@ import concurrent.futures
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
 
@@ -216,6 +217,53 @@ def test_failed_replace_preserves_prior_target_and_cleans_temporary_file(tmp_pat
         store.create(valid_option())
     assert path.read_bytes() == before
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_failed_fdopen_closes_raw_descriptor_and_removes_temporary_file(
+    tmp_path, catalog, monkeypatch
+):
+    path = tmp_path / "options.json"
+    observed = {}
+    real_mkstemp = tempfile.mkstemp
+
+    def recording_mkstemp(*args, **kwargs):
+        descriptor, temp_name = real_mkstemp(*args, **kwargs)
+        observed["descriptor"] = descriptor
+        observed["temp_path"] = Path(temp_name)
+        return descriptor, temp_name
+
+    def failed_fdopen(_descriptor, *_args, **_kwargs):
+        raise OSError("fdopen failed")
+
+    monkeypatch.setattr(
+        "custom_nodes.comfyui_arch_prompt_tools.store.tempfile.mkstemp",
+        recording_mkstemp,
+    )
+    monkeypatch.setattr(
+        "custom_nodes.comfyui_arch_prompt_tools.store.os.fdopen", failed_fdopen
+    )
+    store = OptionStore(catalog, path, id_factory=lambda: "user.fdopen-failure")
+
+    with pytest.raises(OptionStoreDataError, match="write"):
+        store.create(valid_option())
+
+    with pytest.raises(OSError):
+        os.fstat(observed["descriptor"])
+    assert not observed["temp_path"].exists()
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_extreme_lora_integer_round_trips_without_float_overflow(tmp_path, catalog):
+    extreme = 10**400
+    store = OptionStore(
+        catalog, tmp_path / "options.json", id_factory=lambda: "user.extreme-int"
+    )
+
+    created = store.create(valid_option(lora={"seed": extreme}))
+    reloaded = OptionStore(catalog, store.path).list_options()[0]
+
+    assert created.lora["seed"] == extreme
+    assert reloaded.lora["seed"] == extreme
 
 
 def test_process_wide_per_path_lock_prevents_lost_updates_across_store_instances(tmp_path, catalog):

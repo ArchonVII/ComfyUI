@@ -310,13 +310,16 @@ class OptionStore:
             "options": [record.to_dict() for record in records],
         }
         temp_path: Path | None = None
+        descriptor: int | None = None
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             descriptor, temp_name = tempfile.mkstemp(
                 prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent
             )
             temp_path = Path(temp_name)
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as target:
+            target = os.fdopen(descriptor, "w", encoding="utf-8", newline="\n")
+            descriptor = None
+            with target:
                 json.dump(
                     envelope,
                     target,
@@ -334,6 +337,11 @@ class OptionStore:
                 f"could not write user options file: {self.path}"
             ) from error
         finally:
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
             if temp_path is not None:
                 try:
                     temp_path.unlink(missing_ok=True)
@@ -386,8 +394,10 @@ def _freeze_lora(value: Any, *, key: str | None = None) -> Any:
         if key in {"strength", "weight"}:
             raise OptionValidationError(f"lora {key} must be a number, not a boolean")
         return value
-    if isinstance(value, (int, float)):
-        if not math.isfinite(float(value)):
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
             raise OptionValidationError("lora numbers must be finite")
         return value
     raise OptionValidationError("lora metadata must contain only JSON values")
