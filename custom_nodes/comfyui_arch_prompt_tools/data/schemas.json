@@ -574,10 +574,11 @@
               "order": 20,
               "control": "buttons",
               "groups": [
-                "coverage_reduction",
-                "undress_state",
-                "underwear_visibility",
-                "fastening_state"
+                "topless",
+                "bottomless",
+                "partially_undressed",
+                "underwear_visible",
+                "open_unfastened"
               ],
               "catalog_scope": "shared"
             },

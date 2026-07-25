@@ -614,6 +614,30 @@
       "builtin": true
     },
     {
+      "id": "camera.horizontal_view.point_of_view",
+      "label": "POV",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "a first-person point-of-view photograph",
+        "qwen": "compose the image as a first-person point-of-view photograph"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.over_the_shoulder",
+      "label": "Over-the-shoulder",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "an over-the-shoulder photographic viewpoint",
+        "qwen": "compose the image from an over-the-shoulder photographic viewpoint"
+      },
+      "builtin": true
+    },
+    {
       "id": "camera.lens_type.rectilinear",
       "label": "Rectilinear",
       "node": "camera",
@@ -1038,7 +1062,7 @@
       "label": "Topless",
       "node": "clothing",
       "field": "clothing_modifiers",
-      "group": "coverage_reduction",
+      "group": "topless",
       "phrases": {
         "flux": "the adult subject is topless",
         "qwen": "the adult subject is topless"
@@ -1050,7 +1074,7 @@
       "label": "Bottomless",
       "node": "clothing",
       "field": "clothing_modifiers",
-      "group": "coverage_reduction",
+      "group": "bottomless",
       "phrases": {
         "flux": "the adult subject is bottomless",
         "qwen": "the adult subject is bottomless"
@@ -1062,7 +1086,7 @@
       "label": "Partially undressed",
       "node": "clothing",
       "field": "clothing_modifiers",
-      "group": "undress_state",
+      "group": "partially_undressed",
       "phrases": {
         "flux": "the adult subject is partially undressed",
         "qwen": "the adult subject is partially undressed"
@@ -1074,7 +1098,7 @@
       "label": "Underwear visible",
       "node": "clothing",
       "field": "clothing_modifiers",
-      "group": "underwear_visibility",
+      "group": "underwear_visible",
       "phrases": {
         "flux": "the adult subject's underwear is visible",
         "qwen": "the adult subject's underwear is visible"
@@ -1086,7 +1110,7 @@
       "label": "Open / unfastened",
       "node": "clothing",
       "field": "clothing_modifiers",
-      "group": "fastening_state",
+      "group": "open_unfastened",
       "phrases": {
         "flux": "the adult subject's clothing is open or unfastened",
         "qwen": "the adult subject's clothing is open or unfastened"
@@ -5487,121 +5511,121 @@
     },
     {
       "id": "lighting.primary_direction.front",
-      "label": "Front",
+      "label": "Front (camera side)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from directly in front of the subject",
-        "qwen": "the primary light comes from directly in front of the subject"
+        "flux": "the primary light comes from the camera-side front of the image frame",
+        "qwen": "the primary light comes from the camera-side front of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.front_left",
-      "label": "Front-left",
+      "label": "Front-left (frame left)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's front-left",
-        "qwen": "the primary light comes from the subject's front-left"
+        "flux": "the primary light comes from the camera-side front-left of the image frame",
+        "qwen": "the primary light comes from the camera-side front-left of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.front_right",
-      "label": "Front-right",
+      "label": "Front-right (frame right)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's front-right",
-        "qwen": "the primary light comes from the subject's front-right"
+        "flux": "the primary light comes from the camera-side front-right of the image frame",
+        "qwen": "the primary light comes from the camera-side front-right of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.side_left",
-      "label": "Side-left",
+      "label": "Side-left (frame left)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's left side",
-        "qwen": "the primary light comes from the subject's left side"
+        "flux": "the primary light comes from the left edge of the image frame",
+        "qwen": "the primary light comes from the left edge of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.side_right",
-      "label": "Side-right",
+      "label": "Side-right (frame right)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's right side",
-        "qwen": "the primary light comes from the subject's right side"
+        "flux": "the primary light comes from the right edge of the image frame",
+        "qwen": "the primary light comes from the right edge of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.back",
-      "label": "Back",
+      "label": "Back (far side)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from directly behind the subject",
-        "qwen": "the primary light comes from directly behind the subject"
+        "flux": "the primary light comes from the far-side back of the image frame",
+        "qwen": "the primary light comes from the far-side back of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.back_left",
-      "label": "Back-left",
+      "label": "Back-left (frame left)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's back-left",
-        "qwen": "the primary light comes from the subject's back-left"
+        "flux": "the primary light comes from the far-side back-left of the image frame",
+        "qwen": "the primary light comes from the far-side back-left of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.back_right",
-      "label": "Back-right",
+      "label": "Back-right (frame right)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from the subject's back-right",
-        "qwen": "the primary light comes from the subject's back-right"
+        "flux": "the primary light comes from the far-side back-right of the image frame",
+        "qwen": "the primary light comes from the far-side back-right of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.above",
-      "label": "Above",
+      "label": "Above (frame top)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from above the subject",
-        "qwen": "the primary light comes from above the subject"
+        "flux": "the primary light comes from above the top edge of the image frame",
+        "qwen": "the primary light comes from above the top edge of the image frame"
       },
       "builtin": true
     },
     {
       "id": "lighting.primary_direction.below",
-      "label": "Below",
+      "label": "Below (frame bottom)",
       "node": "lighting",
       "field": "primary_direction",
       "group": "primary_direction",
       "phrases": {
-        "flux": "the primary light comes from below the subject",
-        "qwen": "the primary light comes from below the subject"
+        "flux": "the primary light comes from below the bottom edge of the image frame",
+        "qwen": "the primary light comes from below the bottom edge of the image frame"
       },
       "builtin": true
     },

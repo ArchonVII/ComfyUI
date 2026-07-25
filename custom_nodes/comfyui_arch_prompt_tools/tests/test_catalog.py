@@ -9,6 +9,7 @@ from custom_nodes.comfyui_arch_prompt_tools.catalog import (
     catalog_from_data,
     load_catalog,
 )
+from custom_nodes.comfyui_arch_prompt_tools.engine import assemble, replace_group_select
 
 
 DATA_DIR = Path(__file__).parents[1] / "data"
@@ -248,16 +249,16 @@ EXACT_BUTTON_LABELS = {
     ("lighting", "source_count"): {"One", "Two", "Three", "Multiple"},
     ("lighting", "source_nature"): {"Natural", "Artificial", "Mixed"},
     ("lighting", "primary_direction"): {
-        "Front",
-        "Front-left",
-        "Front-right",
-        "Side-left",
-        "Side-right",
-        "Back",
-        "Back-left",
-        "Back-right",
-        "Above",
-        "Below",
+        "Front (camera side)",
+        "Front-left (frame left)",
+        "Front-right (frame right)",
+        "Side-left (frame left)",
+        "Side-right (frame right)",
+        "Back (far side)",
+        "Back-left (frame left)",
+        "Back-right (frame right)",
+        "Above (frame top)",
+        "Below (frame bottom)",
     },
     ("lighting", "light_elevation"): {"Low", "Level", "High"},
 }
@@ -375,21 +376,97 @@ def test_bounded_button_sets_have_approved_counts_and_exact_sets():
                     assert 3 <= len(labels) <= 7
 
 
-def test_explicit_additive_fields_partition_options_into_useful_groups():
+def test_body_snippets_partition_additive_options_into_useful_groups():
     catalog = load_default_catalog()
+    field_record = catalog.field("identity", "body_snippets")
+    options = options_by_field(catalog, "identity", "body_snippets")
 
-    for node, field in (
-        ("identity", "body_snippets"),
-        ("clothing", "clothing_modifiers"),
-    ):
-        field_record = catalog.field(node, field)
-        options = options_by_field(catalog, node, field)
-        assert len(field_record.groups) >= 4
-        assert {option.group for option in options} == set(field_record.groups)
-        assert any(
-            sum(option.group == group for option in options) > 1
-            for group in field_record.groups
+    assert len(field_record.groups) >= 4
+    assert {option.group for option in options} == set(field_record.groups)
+    assert any(
+        sum(option.group == group for option in options) > 1
+        for group in field_record.groups
+    )
+
+
+def test_each_clothing_modifier_survives_button_group_replacement_and_assembly():
+    catalog = load_default_catalog()
+    options = options_by_field(catalog, "clothing", "clothing_modifiers")
+    state = {"version": 1, "node": "clothing", "model_family": "flux", "fields": {}}
+
+    assert len({option.group for option in options}) == len(options) == 5
+    assert set(catalog.field("clothing", "clothing_modifiers").groups) == {
+        option.group for option in options
+    }
+    for index, option in enumerate(options):
+        state = replace_group_select(
+            state,
+            {
+                "instance_id": f"modifier-{index}",
+                "source_option_id": option.id,
+                "label": option.label,
+                "node": option.node,
+                "field": option.field,
+                "group": option.group,
+                "text": option.phrases["flux"],
+                "model_family": "flux",
+                "lora_enabled": False,
+            },
         )
+
+    result = assemble(catalog, state)
+
+    fragments = next(
+        field["fragments"]
+        for field in result.bundle["fields"]
+        if field["key"] == "clothing_modifiers"
+    )
+    assert [fragment["label"] for fragment in fragments] == [
+        "Topless",
+        "Bottomless",
+        "Partially undressed",
+        "Underwear visible",
+        "Open / unfastened",
+    ]
+
+
+def test_horizontal_view_has_exact_pov_and_over_the_shoulder_coverage():
+    catalog = load_default_catalog()
+    options = options_by_field(catalog, "camera", "horizontal_view")
+
+    assert {option.label for option in options} == {
+        "Straight-on",
+        "Left oblique",
+        "Right oblique",
+        "Side-on",
+        "Rear oblique",
+        "POV",
+        "Over-the-shoulder",
+    }
+    assert all(
+        "point-of-view" in phrase.lower()
+        for phrase in option_by_label(catalog, "camera", "horizontal_view", "POV").phrases.values()
+    )
+    assert all(
+        "over-the-shoulder" in phrase.lower()
+        for phrase in option_by_label(
+            catalog, "camera", "horizontal_view", "Over-the-shoulder"
+        ).phrases.values()
+    )
+
+
+def test_primary_light_directions_are_explicitly_image_frame_relative():
+    catalog = load_default_catalog()
+    options = options_by_field(catalog, "lighting", "primary_direction")
+
+    assert len(options) == 10
+    assert {option.label for option in options} == EXACT_BUTTON_LABELS[
+        ("lighting", "primary_direction")
+    ]
+    for option in options:
+        for phrase in option.phrases.values():
+            assert "image frame" in phrase.lower()
+            assert "subject's" not in phrase.lower()
 
 
 def test_builtin_option_ids_are_unique_provenant_and_protected():
