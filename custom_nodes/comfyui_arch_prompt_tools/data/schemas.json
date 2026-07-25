@@ -42,7 +42,7 @@
         {"key": "location", "label": "Location", "order": 20, "fields": [{"key": "location_notes", "label": "Location notes", "order": 10, "control": "free_text"}]},
         {"key": "scene_contents", "label": "Scene contents", "order": 30, "fields": [{"key": "contents_notes", "label": "Contents notes", "order": 10, "control": "free_text"}]},
         {"key": "time_conditions", "label": "Time and conditions", "order": 40, "fields": [{"key": "weather", "label": "Weather", "order": 10, "control": "searchable_options", "groups": ["weather"], "catalog_scope": "shared"}]},
-        {"key": "mood_character", "label": "Mood and character", "order": 50, "fields": [{"key": "atmosphere", "label": "Atmosphere", "order": 10, "control": "semantic_spectrum", "enabled_by_default": false, "spectrum": [{"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}}, {"minimum": 0.34, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}}, {"minimum": 0.67, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}]}]
+        {"key": "mood_character", "label": "Mood and character", "order": 50, "fields": [{"key": "atmosphere", "label": "Atmosphere", "order": 10, "control": "semantic_spectrum", "enabled_by_default": false, "spectrum": [{"minimum": 0.0, "maximum": 0.33, "phrases": {"flux": "calm atmosphere", "qwen": "calm mood"}}, {"minimum": 0.33, "maximum": 0.66, "phrases": {"flux": "tense atmosphere", "qwen": "tense mood"}}, {"minimum": 0.66, "maximum": 1.0, "phrases": {"flux": "dramatic atmosphere", "qwen": "dramatic mood"}}]}]
         }
       ]
     },

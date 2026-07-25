@@ -1,4 +1,8 @@
-"""Pure loaders and immutable records for arch prompt-builder catalog data."""
+"""Pure loaders and immutable records for arch prompt-builder catalog data.
+
+Semantic spectra use a [minimum, maximum) policy; only the final stop includes
+its maximum.  Adjacent stops therefore share a boundary without overlapping.
+"""
 
 from __future__ import annotations
 
@@ -18,9 +22,14 @@ CONTROL_TYPES = frozenset(
 )
 CATALOG_SCOPES = frozenset({"shared", "side_aware"})
 OPTION_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:\.[a-z0-9_]+){2,}$")
+SPECTRUM_DOMAIN = (0.0, 1.0)
 
 
-class CatalogValidationError(ValueError):
+class CatalogError(ValueError):
+    """Base error for catalog lookup and validation failures."""
+
+
+class CatalogValidationError(CatalogError):
     """Raised when catalog JSON cannot satisfy the prompt-builder contract."""
 
 
@@ -41,6 +50,27 @@ class FieldRecord:
     catalog_scope: str | None = None
     enabled_by_default: bool = True
     spectrum: tuple[SpectrumStop, ...] = ()
+
+    def spectrum_phrase_for(self, value: float, family: str) -> str:
+        """Return the authored phrase for a value using the documented policy."""
+        if self.control != "semantic_spectrum":
+            raise CatalogError(f"field {self.key} is not a semantic spectrum")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise CatalogError("spectrum value must be a number")
+        numeric_value = float(value)
+        minimum, maximum = SPECTRUM_DOMAIN
+        if not minimum <= numeric_value <= maximum:
+            raise CatalogError("spectrum value is outside the supported domain")
+        for index, stop in enumerate(self.spectrum):
+            is_final_stop = index == len(self.spectrum) - 1
+            if stop.minimum <= numeric_value < stop.maximum or (
+                is_final_stop and numeric_value == stop.maximum
+            ):
+                try:
+                    return stop.phrases[family]
+                except KeyError as error:
+                    raise CatalogError(f"unknown model family: {family}") from error
+        raise CatalogError("spectrum value does not map to a stop")
 
 
 @dataclass(frozen=True)
@@ -83,14 +113,17 @@ class Catalog:
     _options_by_node_field_family: Mapping[tuple[str, str, str], tuple[OptionRecord, ...]]
 
     def field(self, node: str, field: str) -> FieldRecord:
+        if node not in self.schemas_by_node:
+            raise CatalogError(f"unknown node: {node}")
         try:
             return self._fields[(node, field)]
         except KeyError as error:
-            raise CatalogValidationError(f"unknown field: {node}.{field}") from error
+            raise CatalogError(f"unknown field: {node}.{field}") from error
 
     def options_for(self, node: str, field: str, family: str) -> tuple[OptionRecord, ...]:
+        self.field(node, field)
         if family not in self.families:
-            raise CatalogValidationError(f"unknown model family: {family}")
+            raise CatalogError(f"unknown model family: {family}")
         return self._options_by_node_field_family.get((node, field, family), ())
 
 
@@ -159,6 +192,9 @@ def _parse_schemas(raw_nodes: Any, families: tuple[str, ...]) -> tuple[dict[str,
                     raise CatalogValidationError(f"field keys must be unique in {node_key}: {field.key}")
                 fields[key] = field
                 parsed_fields.append(field)
+            if len({field.order for field in parsed_fields}) != len(parsed_fields):
+                raise CatalogValidationError(f"field order values must be unique in {node_key}.{section_key}")
+            parsed_fields.sort(key=lambda field: field.order)
             sections.append(
                 SectionRecord(
                     key=section_key,
@@ -167,6 +203,9 @@ def _parse_schemas(raw_nodes: Any, families: tuple[str, ...]) -> tuple[dict[str,
                     fields=tuple(parsed_fields),
                 )
             )
+        if len({section.order for section in sections}) != len(sections):
+            raise CatalogValidationError(f"section order values must be unique in {node_key}")
+        sections.sort(key=lambda section: section.order)
         nodes[node_key] = NodeSchema(
             key=node_key,
             label=_string(node.get("label"), "node label"),
@@ -221,10 +260,22 @@ def _parse_spectrum(raw_stops: Any, families: tuple[str, ...]) -> tuple[Spectrum
         stop = _mapping(raw_stop, "spectrum stop")
         minimum = _number(stop.get("minimum"), "spectrum minimum")
         maximum = _number(stop.get("maximum"), "spectrum maximum")
-        if not 0 <= minimum <= maximum <= 1:
+        domain_minimum, domain_maximum = SPECTRUM_DOMAIN
+        if not domain_minimum <= minimum < maximum <= domain_maximum:
             raise CatalogValidationError("spectrum ranges must stay between 0 and 1")
         phrases = _phrases(stop.get("phrases"), families, "spectrum phrase", require_all=True)
         stops.append(SpectrumStop(minimum, maximum, phrases))
+    if stops:
+        domain_minimum, domain_maximum = SPECTRUM_DOMAIN
+        for previous, current in zip(stops, stops[1:]):
+            if current.minimum < previous.minimum:
+                raise CatalogValidationError("semantic spectrum stops must be ordered")
+            if current.minimum < previous.maximum:
+                raise CatalogValidationError("semantic spectrum stops must not overlap")
+            if current.minimum > previous.maximum:
+                raise CatalogValidationError("semantic spectrum stops must not have a gap")
+        if stops[0].minimum != domain_minimum or stops[-1].maximum != domain_maximum:
+            raise CatalogValidationError("semantic spectrum stops must cover the supported domain")
     return tuple(stops)
 
 
@@ -248,6 +299,11 @@ def _parse_options(raw_options: Any, families: tuple[str, ...], fields: Mapping[
             if node not in APPROVED_NODE_KEYS:
                 raise CatalogValidationError(f"unknown node: {node}")
             raise CatalogValidationError(f"unknown field: {node}.{field_key}")
+        id_node, id_field, _ = option_id.split(".", 2)
+        if (id_node, id_field) != (node, field_key):
+            raise CatalogValidationError(
+                f"option id namespace must match declared node and field: {option_id}"
+            )
         group = _string(option.get("group"), "option group")
         if group not in field.groups:
             raise CatalogValidationError(f"unknown group: {node}.{field_key}.{group}")
