@@ -1,3 +1,5 @@
+import builtins
+import importlib
 import json
 
 import pytest
@@ -207,6 +209,12 @@ def test_combiner_rejects_wrong_version_node_and_invalid_bundle_shapes():
         ArchPtCombine().combine(", ", True, identity={**make_bundle("identity", "ok"), "fields": "invalid"})
 
 
+@pytest.mark.parametrize("invalid_bundle", ["not a bundle", ["not", "a", "bundle"]])
+def test_combiner_rejects_non_object_bundle_inputs_with_a_clear_error(invalid_bundle):
+    with pytest.raises(ValueError, match="identity bundle must be an object"):
+        ArchPtCombine().combine(", ", True, identity=invalid_bundle)
+
+
 def test_combiner_preserves_per_node_metadata_and_dedupes_only_identical_lora_records():
     request = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "one"}}
     distinct = {"lora": {"name": "portrait", "strength": 1.0}, "origin": {"node": "identity", "instance_id": "one"}}
@@ -220,6 +228,55 @@ def test_combiner_preserves_per_node_metadata_and_dedupes_only_identical_lora_re
     assert loras == [request, distinct]
     assert metadata_json == json.dumps(metadata, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     assert loras_json == json.dumps(loras, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def test_combiner_unicode_json_is_literal_and_byte_deterministic():
+    request = {
+        "lora": {"name": "café style", "strength": 0.8},
+        "origin": {"node": "identity", "instance_id": "髪", "label": "光"},
+    }
+    identity = make_bundle("identity", "portrait with 髪", lora_requests=[request])
+    identity["metadata"] = {"label": "café", "detail": "光"}
+
+    first = ArchPtCombine().combine(", ", True, identity=identity)
+    second = ArchPtCombine().combine(", ", True, identity=identity)
+
+    assert "café" in first[1]
+    assert "髪" in first[2]
+    assert "光" in first[1]
+    assert "\\u" not in first[1]
+    assert "\\u" not in first[2]
+    assert second[1:] == first[1:]
+
+
+def test_combiner_retains_distinct_lora_origins_but_dedupes_exact_records():
+    first_origin = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "one"}}
+    second_origin = {"lora": {"name": "portrait", "strength": 0.8}, "origin": {"node": "identity", "instance_id": "two"}}
+    identity = make_bundle("identity", "subject", lora_requests=[first_origin, first_origin, second_origin])
+
+    _, _, loras_json = ArchPtCombine().combine(", ", True, identity=identity)
+
+    assert json.loads(loras_json) == [first_origin, second_origin]
+
+
+def test_nodes_import_does_not_import_legacy_prompt_packages(monkeypatch):
+    legacy_modules = (
+        "custom_nodes.comfyui_prompt_library",
+        "custom_nodes.comfyui_reverse_prompter",
+        "custom_nodes.comfyui_civitai_prompt_import",
+        "custom_nodes.comfyui_smart_model_loader",
+    )
+    original_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if any(name == legacy or name.startswith(f"{legacy}.") for legacy in legacy_modules):
+            raise AssertionError(f"nodes must not import legacy prompt package: {name}")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    module = importlib.import_module("custom_nodes.comfyui_arch_prompt_tools.nodes")
+
+    importlib.reload(module)
 
 
 def test_combiner_ignores_empty_optional_bundles_and_is_deterministic():
