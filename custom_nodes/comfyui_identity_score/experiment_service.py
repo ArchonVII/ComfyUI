@@ -121,6 +121,7 @@ class ExperimentService:
             validate_api_workflow(payload["workflow"])
         self._validate_catalog_selection(checkpoints, loras)
         runs = plan_runs(mode=mode, checkpoints=checkpoints, seeds=seeds, loras=loras, stages=stages, refine_settings=payload.get("refine_settings"))
+        self._require_capacity(self.estimate(None, run_count=len(runs)))
         settings = dict(payload.get("settings", {}))
         experiment = self.store.create_experiment(name=name, mode=mode, settings=settings)
         stored_runs = [self.store.create_run(experiment["id"], run) for run in runs]
@@ -142,31 +143,61 @@ class ExperimentService:
         loras = [tuple(item) for item in payload.get("loras", ())]
         self._validate_catalog_selection(checkpoints, loras)
         planned = plan_runs(mode=experiment["mode"], checkpoints=checkpoints, seeds=list(payload.get("seeds", ())), loras=loras, stages=list(payload.get("stages", ())), refine_settings=payload.get("refine_settings"))
+        self._require_capacity(self.estimate(experiment_id, run_count=len(planned)))
         return [self.store.create_run(experiment_id, run) for run in planned]
 
     promote = plan_stage
 
-    def estimate(self, experiment_id: str, *, run_count: int, fallback_seconds: float = 60.0, fallback_bytes: int = 8_000_000) -> dict[str, Any]:
+    def estimate(self, experiment_id: str | None, *, run_count: int, fallback_seconds: float = 60.0, fallback_bytes: int = 8_000_000) -> dict[str, Any]:
         if isinstance(run_count, bool) or not isinstance(run_count, int) or run_count < 0:
             raise ValueError("run_count must be a non-negative integer")
+        if isinstance(fallback_seconds, bool) or not isinstance(fallback_seconds, (int, float)) or fallback_seconds < 0:
+            raise ValueError("fallback_seconds must be a non-negative number")
+        if isinstance(fallback_bytes, bool) or not isinstance(fallback_bytes, int) or fallback_bytes < 0:
+            raise ValueError("fallback_bytes must be a non-negative integer")
         completed: list[float] = []
-        try:
-            runs = self.store.list_runs(experiment_id)
-        except KeyError:
+        output_sizes: list[int] = []
+        if experiment_id is None:
             runs = []
+        else:
+            runs = self.store.list_runs(experiment_id)
         for run in runs:
+            if run["state"] != "completed":
+                continue
             runtime = (run.get("identity_report") or {}).get("runtime_seconds")
             if isinstance(runtime, (int, float)) and not isinstance(runtime, bool) and runtime >= 0:
                 completed.append(float(runtime))
+            output_path = run.get("output_path")
+            if isinstance(output_path, str):
+                candidate = self.output_directory / output_path
+                try:
+                    if candidate.is_file():
+                        output_sizes.append(candidate.stat().st_size)
+                except OSError:
+                    pass
         if completed:
             completed.sort()
             seconds = completed[len(completed) // 2] if len(completed) % 2 else (completed[len(completed) // 2 - 1] + completed[len(completed) // 2]) / 2
             source = "completed_run_median"
         else:
             seconds, source = float(fallback_seconds), "fallback"
+        if output_sizes:
+            output_sizes.sort()
+            bytes_per_run = output_sizes[len(output_sizes) // 2] if len(output_sizes) % 2 else (output_sizes[len(output_sizes) // 2 - 1] + output_sizes[len(output_sizes) // 2]) // 2
+            disk_source = "completed_output_median"
+        else:
+            bytes_per_run, disk_source = fallback_bytes, "fallback"
+        self.output_directory.mkdir(parents=True, exist_ok=True)
         usage = shutil.disk_usage(self.output_directory)
         free_bytes = usage.free if hasattr(usage, "free") else usage[2]
-        return {"run_count": run_count, "seconds_per_run": seconds, "estimated_seconds": seconds * run_count, "time_source": source, "bytes_per_run": fallback_bytes, "estimated_bytes": fallback_bytes * run_count, "free_bytes": free_bytes}
+        estimated_bytes = bytes_per_run * run_count
+        can_launch = estimated_bytes <= free_bytes
+        return {"run_count": run_count, "seconds_per_run": seconds, "estimated_seconds": seconds * run_count, "time_source": source, "bytes_per_run": bytes_per_run, "estimated_bytes": estimated_bytes, "disk_source": disk_source, "free_bytes": free_bytes, "can_launch": can_launch, "status": "ok" if can_launch else "insufficient_space"}
+
+    @staticmethod
+    def _require_capacity(estimate: Mapping[str, Any]) -> None:
+        if not estimate["can_launch"]:
+            raise ValueError("insufficient output disk space for planned runs")
 
     def list_results(self, experiment_id: str) -> list[dict[str, Any]]:
         return [run for run in self.store.list_runs(experiment_id) if run["state"] == "completed"]
@@ -175,9 +206,8 @@ class ExperimentService:
         fields = {key: payload[key] for key in ("rating", "favorite", "notes") if key in payload}
         return self.store.update_review(run_id, **fields)
 
-    def resume_stale(self, experiment_id: str, *, stale_after_seconds: float) -> list[dict[str, Any]]:
-        resumed = self.store.resume_stale_runs(stale_after_seconds=stale_after_seconds)
-        return [run for run in resumed if run["experiment_id"] == experiment_id]
+    def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+        return self.store.resume_stale_runs(experiment_id=experiment_id, stale_after_seconds=stale_after_seconds, active_run_ids=active_run_ids)
 
     def archive(self, experiment_id: str) -> dict[str, Any]:
         return self.store.archive_experiment(experiment_id)
@@ -193,25 +223,33 @@ class ExperimentService:
         return target
 
     def record_run(self, *, experiment_id: str, run_id: str, generated_image: Any, report: dict[str, Any], prompt: Any = None, extra_pnginfo: Any = None, runtime_seconds: float | None = None) -> dict[str, Any]:
-        run = self.store.get_run(run_id)
-        if run["experiment_id"] != experiment_id:
-            raise ValueError("run does not belong to experiment")
-        if run["state"] == "queued":
-            self.store.transition_run(run_id, "running")
-        elif run["state"] == "planned":
-            self.store.transition_run(run_id, "queued")
-            self.store.transition_run(run_id, "running")
-        elif run["state"] != "running":
-            raise ValueError("run is not recordable")
         relative = f"identity_lab/results/{run_id}.png"
         output = self.output_directory / relative
+        temporary = output.with_name(output.name + ".tmp")
         output.parent.mkdir(parents=True, exist_ok=True)
-        self._save_png(generated_image, output, prompt=prompt, extra_pnginfo=extra_pnginfo)
+        try:
+            self._save_png(generated_image, temporary, prompt=prompt, extra_pnginfo=extra_pnginfo)
+            temporary.replace(output)
+        except BaseException as exc:
+            temporary.unlink(missing_ok=True)
+            try:
+                self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"image save failed: {type(exc).__name__}: {exc}")
+            except (KeyError, ValueError):
+                pass
+            raise
         report["experiment_id"] = experiment_id
         report["run_id"] = run_id
         report["result_path"] = relative
         report["runtime_seconds"] = float(runtime_seconds if runtime_seconds is not None else report.get("runtime_seconds", 0.0))
-        return self.store.complete_run(run_id, output_path=relative, identity_report=report)
+        try:
+            return self.store.complete_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative, identity_report=report)
+        except BaseException as exc:
+            output.unlink(missing_ok=True)
+            try:
+                self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"record completion failed: {type(exc).__name__}: {exc}")
+            except (KeyError, ValueError):
+                pass
+            raise
 
     @staticmethod
     def _save_png(image: Any, path: Path, *, prompt: Any, extra_pnginfo: Any) -> None:

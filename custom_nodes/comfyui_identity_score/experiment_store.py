@@ -135,7 +135,13 @@ class ExperimentStore:
                 raise ValueError("run state changed concurrently")
             return self._fetch_run(connection, run_id)
 
-    def resume_stale_runs(self, *, stale_after_seconds: float) -> list[dict[str, Any]]:
+    def resume_stale_runs(
+        self,
+        *,
+        stale_after_seconds: float,
+        experiment_id: str | None = None,
+        active_run_ids: set[str] | frozenset[str] = frozenset(),
+    ) -> list[dict[str, Any]]:
         if (
             isinstance(stale_after_seconds, bool)
             or not isinstance(stale_after_seconds, (int, float))
@@ -143,13 +149,28 @@ class ExperimentStore:
             or stale_after_seconds < 0
         ):
             raise ValueError("stale_after_seconds must be a finite non-negative number")
+        if experiment_id is not None and (not isinstance(experiment_id, str) or not experiment_id):
+            raise ValueError("experiment_id must be a non-empty string")
+        if not isinstance(active_run_ids, (set, frozenset)) or not all(isinstance(run_id, str) and run_id for run_id in active_run_ids):
+            raise ValueError("active_run_ids must be a set of non-empty strings")
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
         cutoff_text = cutoff.isoformat(timespec="microseconds").replace("+00:00", "Z")
         now = _utc_now()
         with self._connection() as connection:
+            if experiment_id is not None:
+                self._fetch_experiment(connection, experiment_id)
+            clauses = ["state IN ('queued', 'running')", "updated_at <= ?"]
+            values: list[Any] = [cutoff_text]
+            if experiment_id is not None:
+                clauses.append("experiment_id = ?")
+                values.append(experiment_id)
+            if active_run_ids:
+                placeholders = ", ".join("?" for _ in active_run_ids)
+                clauses.append(f"id NOT IN ({placeholders})")
+                values.extend(sorted(active_run_ids))
             rows = connection.execute(
-                "SELECT id, state, updated_at FROM runs WHERE state IN ('queued', 'running') AND updated_at <= ? ORDER BY updated_at, id",
-                (cutoff_text,),
+                "SELECT id, state, updated_at FROM runs WHERE " + " AND ".join(clauses) + " ORDER BY updated_at, id",
+                values,
             ).fetchall()
             resumed: list[dict[str, Any]] = []
             for row in rows:
@@ -163,6 +184,61 @@ class ExperimentStore:
                 if updated.rowcount == 1:
                     resumed.append(self._fetch_run(connection, row["id"]))
             return resumed
+
+    def complete_recorded_run(
+        self,
+        *,
+        experiment_id: str,
+        run_id: str,
+        output_path: str,
+        identity_report: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Atomically complete exactly one active recorded run without state hops."""
+        normalized_path = _relative_output_path(output_path)
+        report_json = _encode_json(dict(identity_report), label="identity report", reject_embeddings=True)
+        with self._connection() as connection:
+            self._fetch_experiment(connection, experiment_id)
+            run = self._fetch_run(connection, run_id)
+            if run["experiment_id"] != experiment_id:
+                raise ValueError("run does not belong to experiment")
+            if run["state"] not in {"planned", "queued", "running"}:
+                raise ValueError(f"run is not recordable from state: {run['state']}")
+            now = _utc_now()
+            updated = connection.execute(
+                """
+                UPDATE runs
+                SET state = 'completed', output_path = ?, identity_report_json = ?, updated_at = ?, completed_at = ?
+                WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
+                    AND output_path IS NULL AND identity_report_json IS NULL
+                """,
+                (normalized_path, report_json, now, now, run_id, experiment_id, run["state"], run["updated_at"]),
+            )
+            if updated.rowcount != 1:
+                raise ValueError("run state changed concurrently")
+            return self._fetch_run(connection, run_id)
+
+    def fail_recorded_run(self, *, experiment_id: str, run_id: str, error: str) -> dict[str, Any]:
+        if not isinstance(error, str) or not error.strip():
+            raise ValueError("error must be a non-empty string")
+        report_json = _encode_json({"error": error.strip()[:500], "rankable": False}, label="failure report", reject_embeddings=True)
+        with self._connection() as connection:
+            self._fetch_experiment(connection, experiment_id)
+            run = self._fetch_run(connection, run_id)
+            if run["experiment_id"] != experiment_id:
+                raise ValueError("run does not belong to experiment")
+            if run["state"] not in {"planned", "queued", "running"}:
+                raise ValueError(f"run is not fail-able from state: {run['state']}")
+            now = _utc_now()
+            updated = connection.execute(
+                """
+                UPDATE runs SET state = 'failed', identity_report_json = ?, updated_at = ?
+                WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
+                """,
+                (report_json, now, run_id, experiment_id, run["state"], run["updated_at"]),
+            )
+            if updated.rowcount != 1:
+                raise ValueError("run state changed concurrently")
+            return self._fetch_run(connection, run_id)
 
     def complete_run(self, run_id: str, *, output_path: str, identity_report: Mapping[str, Any]) -> dict[str, Any]:
         normalized_path = _relative_output_path(output_path)

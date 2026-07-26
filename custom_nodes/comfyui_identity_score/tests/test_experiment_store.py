@@ -154,6 +154,41 @@ def test_store_resumes_stale_queued_and_running_runs_to_planned_without_touching
     assert store.resume_stale_runs(stale_after_seconds=60) == []
 
 
+def test_store_resumes_only_the_requested_experiment_and_never_confirmed_active_runs(store, planned_run):
+    first = store.create_experiment(name="First scope", mode="face_swap")
+    second = store.create_experiment(name="Second scope", mode="face_swap")
+    first_run = store.create_run(first["id"], planned_run)
+    active_run = store.create_run(first["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0])
+    other_run = store.create_run(second["id"], planned_run)
+    for run in (first_run, active_run, other_run):
+        store.transition_run(run["id"], "queued")
+    with sqlite3.connect(store.path) as connection:
+        connection.execute("UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE state = 'queued'")
+
+    resumed = store.resume_stale_runs(
+        experiment_id=first["id"], stale_after_seconds=0, active_run_ids={active_run["id"]}
+    )
+
+    assert [run["id"] for run in resumed] == [first_run["id"]]
+    assert store.get_run(active_run["id"])["state"] == "queued"
+    assert store.get_run(other_run["id"])["state"] == "queued"
+
+
+def test_store_completes_and_fails_an_exact_queued_run_without_intermediate_transitions(store, planned_run):
+    experiment = store.create_experiment(name="Exact", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    store.transition_run(run["id"], "queued")
+
+    completed = store.complete_recorded_run(
+        experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/result.png", identity_report={"rankable": False}
+    )
+
+    assert completed["state"] == "completed"
+    failed = store.create_run(experiment["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0])
+    store.transition_run(failed["id"], "queued")
+    assert store.fail_recorded_run(experiment_id=experiment["id"], run_id=failed["id"], error="image write failed")["state"] == "failed"
+
+
 def test_store_completion_data_is_immutable_and_output_paths_are_relative(store, planned_run):
     experiment = store.create_experiment(name="Completion", mode="face_swap")
     run = store.create_run(experiment["id"], planned_run)

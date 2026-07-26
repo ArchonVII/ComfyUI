@@ -97,9 +97,16 @@ def test_estimates_use_completed_medians_or_labeled_fallback_and_current_free_ou
     assert known["seconds_per_run"] == 12.0
     assert known["time_source"] == "completed_run_median"
     assert known["free_bytes"] == 750
-    fallback = service.estimate("missing", run_count=2, fallback_seconds=9)
+    fallback = service.estimate(None, run_count=2, fallback_seconds=9)
     assert fallback["seconds_per_run"] == 9
     assert fallback["time_source"] == "fallback"
+
+
+def test_estimate_requires_a_real_experiment_when_an_id_is_supplied(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+
+    with pytest.raises(KeyError, match="not found"):
+        service.estimate("missing", run_count=1)
 
 
 def test_service_lifecycle_reviews_resume_archive_results_and_safe_output_file(tmp_path):
@@ -144,3 +151,48 @@ def test_record_run_writes_local_png_metadata_and_completes_a_non_rankable_run(t
     assert completed["state"] == "completed"
     assert completed["identity_report"]["rankable"] is False
     assert completed["identity_report"]["runtime_seconds"] == 3.5
+
+
+def test_estimate_uses_recent_completed_output_median_and_blocks_insufficient_storage_before_create(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "sizes", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    run = created["runs"][0]
+    output = Path(service.output_directory) / "identity_lab/results/sized.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"x" * 321)
+    service.store.transition_run(run["id"], "queued")
+    service.store.transition_run(run["id"], "running")
+    service.store.complete_run(run["id"], output_path="identity_lab/results/sized.png", identity_report={"runtime_seconds": 4})
+    monkeypatch.setattr(shutil, "disk_usage", lambda _path: (1000, 950, 50))
+
+    estimate = service.estimate(created["experiment"]["id"], run_count=1)
+    assert estimate["bytes_per_run"] == 321
+    assert estimate["disk_source"] == "completed_output_median"
+    assert estimate["can_launch"] is False
+    with pytest.raises(ValueError, match="insufficient"):
+        service.create_experiment({
+            "name": "blocked", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [8], "stages": ["baseline"],
+        })
+    assert all(item["name"] != "blocked" for item in service.list_experiments(include_archived=True))
+
+
+def test_record_run_cleans_files_and_marks_exact_run_failed_when_saving_or_completion_fails(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "failures", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7, 8], "stages": ["baseline"],
+    })
+    experiment_id = created["experiment"]["id"]
+    save_run, db_run = created["runs"]
+    monkeypatch.setattr(service, "_save_png", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("disk full")))
+    with pytest.raises(OSError, match="disk full"):
+        service.record_run(experiment_id=experiment_id, run_id=save_run["id"], generated_image=np.zeros((2, 2, 3)), report={})
+    assert service.store.get_run(save_run["id"])["state"] == "failed"
+
+    monkeypatch.undo()
+    monkeypatch.setattr(service.store, "complete_recorded_run", lambda **_kwargs: (_ for _ in ()).throw(ValueError("database failure")))
+    with pytest.raises(ValueError, match="database failure"):
+        service.record_run(experiment_id=experiment_id, run_id=db_run["id"], generated_image=np.zeros((2, 2, 3)), report={})
+    assert service.store.get_run(db_run["id"])["state"] == "failed"
+    assert not (Path(service.output_directory) / f"identity_lab/results/{db_run['id']}.png").exists()
