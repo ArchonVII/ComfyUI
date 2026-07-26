@@ -228,9 +228,9 @@ class ExperimentService:
         output = self.output_directory / relative
         self.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative)
         temporary = output.with_name(f".{output.name}.{uuid4().hex}.tmp")
-        output.parent.mkdir(parents=True, exist_ok=True)
         created_output = False
         try:
+            output.parent.mkdir(parents=True, exist_ok=True)
             self._save_png(generated_image, temporary, prompt=prompt, extra_pnginfo=extra_pnginfo)
             descriptor = os.open(output, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.close(descriptor)

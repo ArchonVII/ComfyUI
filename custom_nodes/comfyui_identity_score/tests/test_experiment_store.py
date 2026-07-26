@@ -200,6 +200,23 @@ def test_store_claims_one_exact_result_path_before_file_writes_and_rejects_compe
         store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/result.png")
 
 
+def test_stale_running_claim_is_released_for_a_retry(store, planned_run):
+    experiment = store.create_experiment(name="Interrupted claim", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    claimed = store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/result.png")
+
+    assert claimed["state"] == "running"
+    assert claimed["started_at"] is not None
+    with sqlite3.connect(store.path) as connection:
+        connection.execute("UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run["id"],))
+    resumed = store.resume_stale_runs(experiment_id=experiment["id"], stale_after_seconds=0)
+
+    assert resumed[0]["state"] == "planned"
+    assert resumed[0]["started_at"] is None
+    assert resumed[0]["output_path"] is None
+    assert store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/retry.png")["state"] == "running"
+
+
 def test_store_completion_data_is_immutable_and_output_paths_are_relative(store, planned_run):
     experiment = store.create_experiment(name="Completion", mode="face_swap")
     run = store.create_run(experiment["id"], planned_run)

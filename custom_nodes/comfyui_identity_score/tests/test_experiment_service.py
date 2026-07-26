@@ -230,3 +230,41 @@ def test_record_run_conflict_never_deletes_a_preexisting_result_file(tmp_path):
 
     assert output.read_bytes() == b"someone-else-result"
     assert service.store.get_run(run_id)["state"] == "failed"
+
+
+def test_interrupted_claim_resumes_and_successfully_retries_recording(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "interrupted", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    service.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=f"identity_lab/results/{run_id}.png")
+    with service.store._connection() as connection:
+        connection.execute("UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run_id,))
+
+    service.resume_stale(experiment_id, stale_after_seconds=0)
+    completed = service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+
+    assert completed["state"] == "completed"
+    assert (Path(service.output_directory) / completed["output_path"]).is_file()
+
+
+def test_record_run_marks_claim_failed_when_result_directory_setup_raises(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "mkdir failure", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    results_directory = Path(service.output_directory) / "identity_lab/results"
+    original_mkdir = Path.mkdir
+
+    def fail_results_mkdir(path, *args, **kwargs):
+        if path == results_directory:
+            raise OSError("cannot create results directory")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_results_mkdir)
+    with pytest.raises(OSError, match="cannot create"):
+        service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+
+    assert service.store.get_run(run_id)["state"] == "failed"

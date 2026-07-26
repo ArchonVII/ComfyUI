@@ -176,7 +176,7 @@ class ExperimentStore:
             for row in rows:
                 updated = connection.execute(
                     """
-                    UPDATE runs SET state = 'planned', updated_at = ?, started_at = NULL
+                    UPDATE runs SET state = 'planned', output_path = NULL, updated_at = ?, started_at = NULL
                     WHERE id = ? AND state = ? AND updated_at = ?
                     """,
                     (now, row["id"], row["state"], row["updated_at"]),
@@ -230,11 +230,11 @@ class ExperimentStore:
             now = _utc_now()
             updated = connection.execute(
                 """
-                UPDATE runs SET output_path = ?, updated_at = ?
+                UPDATE runs SET state = 'running', output_path = ?, updated_at = ?, started_at = COALESCE(started_at, ?)
                 WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
                     AND output_path IS NULL AND identity_report_json IS NULL
                 """,
-                (normalized_path, now, run_id, experiment_id, run["state"], run["updated_at"]),
+                (normalized_path, now, now, run_id, experiment_id, run["state"], run["updated_at"]),
             )
             if updated.rowcount != 1:
                 raise ValueError("run is not recordable")
