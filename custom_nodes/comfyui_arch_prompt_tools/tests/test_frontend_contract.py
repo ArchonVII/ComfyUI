@@ -9,6 +9,7 @@ import pytest
 PACKAGE_DIR = Path(__file__).parents[1]
 FRONTEND = PACKAGE_DIR / "web" / "arch_prompt_tools.js"
 INIT = PACKAGE_DIR / "__init__.py"
+SCHEMAS = json.loads((PACKAGE_DIR / "data" / "schemas.json").read_text(encoding="utf-8"))
 
 
 def frontend_source() -> str:
@@ -62,6 +63,8 @@ def test_frontend_contract_includes_schema_controls_and_accessibility():
     assert "aria-label" in source
     assert "Additional specifics" in source
     assert "Retry" in source
+    assert '"quick_buttons"' not in source
+    assert "controlKind(field.control)" in source
 
 
 def test_frontend_supports_copied_chip_crud_user_option_crud_and_lora_state():
@@ -128,8 +131,35 @@ def test_dom_free_state_core_behavior(tmp_path):
 
     script = (
         _core_source()
+        + f"\nconst REAL_SCHEMA = {json.dumps(SCHEMAS, ensure_ascii=False)};\n"
         + r"""
 import assert from "node:assert/strict";
+
+function realField(nodeKey, fieldKey) {
+  const node = REAL_SCHEMA.nodes.find((item) => item.key === nodeKey);
+  return node.sections.flatMap((section) => section.fields).find((field) => field.key === fieldKey);
+}
+for (const [nodeKey, fieldKey] of [
+  ["identity", "age_group"],
+  ["identity", "height"],
+  ["identity", "hair_color"],
+  ["pose", "base_pose"],
+]) {
+  const field = realField(nodeKey, fieldKey);
+  assert.equal(field.control, "buttons");
+  assert.equal(controlKind(field.control), "buttons");
+}
+assert.equal(controlKind(realField("identity", "identity_specifics").control), "text");
+assert.equal(controlKind(realField("identity", "body_snippets").control), "searchable");
+assert.equal(controlKind(realField("environment", "scene_density").control), "spectrum");
+assert.equal(focusedNodeKey("ArchPtIdentity"), "identity");
+assert.equal(focusedNodeKey("ArchPtLighting"), "lighting");
+assert.equal(focusedNodeKey("ArchPtCombine"), null);
+assert.equal(focusedNodeKey("UnrelatedNode"), null);
+assert.equal(
+  optionsQuery("identity", "qwen", "hair color"),
+  "node=identity&model_family=qwen&field=hair%20color",
+);
 
 const base = createEmptyState("identity", "flux");
 assert.equal(serializeState(base), '{"version":1,"node":"identity","model_family":"flux","fields":{}}');
@@ -192,6 +222,48 @@ const scars = {
 state = toggleOption(state, freckles, "flux", "copy-3");
 state = toggleOption(state, scars, "flux", "copy-4");
 assert.deepEqual(state.fields.body_snippets.fragments.map((item) => item.text), ["freckles", "visible scars"]);
+
+const buttonState = toggleOption(createEmptyState("identity", "flux"), brown, "flux", "button-copy");
+const buttonModels = buttonChoiceModels([brown], buttonState, "flux");
+assert.deepEqual(buttonModels, [{
+  id: brown.id,
+  label: "Brown",
+  phrase: "brown hair",
+  selected: true,
+  lora_associated: false,
+}]);
+const fakeDocument = {
+  createElement(tag) {
+    return {
+      tagName: tag.toUpperCase(),
+      attributes: {},
+      listeners: {},
+      setAttribute(name, value) { this.attributes[name] = String(value); },
+      addEventListener(name, listener) { this.listeners[name] = listener; },
+    };
+  },
+};
+let clickedButton = null;
+let clickedState = buttonState;
+const renderedButtons = createChoiceButtons(fakeDocument, buttonModels, (id) => {
+  clickedButton = id;
+  clickedState = toggleOption(clickedState, brown, "flux", "unused-click-id");
+});
+assert.equal(renderedButtons[0].tagName, "BUTTON");
+assert.equal(renderedButtons[0].textContent, "Brown");
+assert.equal(renderedButtons[0].attributes["aria-pressed"], "true");
+renderedButtons[0].listeners.click({preventDefault() {}, stopPropagation() {}});
+assert.equal(clickedButton, brown.id);
+assert.equal(clickedState.fields.hair_color.fragments.length, 0);
+
+let emptyEdit = toggleOption(createEmptyState("identity", "flux"), freckles, "flux", "empty-copy");
+emptyEdit = toggleOption(emptyEdit, scars, "flux", "kept-copy");
+emptyEdit = editFragmentText(emptyEdit, "empty-copy", "   ");
+const emptyRoundTrip = restoreState(serializeState(emptyEdit), "identity");
+assert.equal(emptyRoundTrip.ok, true);
+assert.equal(emptyRoundTrip.state.fields.body_snippets.fragments.length, 2);
+assert.equal(emptyRoundTrip.state.fields.body_snippets.fragments[0].text, "");
+assert.equal(emptyRoundTrip.state.fields.body_snippets.fragments[1].text, "visible scars");
 
 state = editFragmentText(state, "copy-3", "  light   freckles  ");
 assert.equal(state.fields.body_snippets.fragments[0].text, "light freckles");
@@ -256,6 +328,20 @@ for (const [raw, expected] of [
   assert.match(restored.error, new RegExp(expected));
   assert.equal(restored.state, null);
 }
+const invalidRaw = '{"version":2,"node":"identity","model_family":"flux","fields":{}}';
+const invalidDecision = editorRestoreDecision(invalidRaw, "identity", "flux");
+assert.equal(invalidDecision.ok, false);
+assert.equal(invalidDecision.allow_reset, true);
+assert.equal(invalidDecision.state, null);
+assert.equal(invalidRaw, '{"version":2,"node":"identity","model_family":"flux","fields":{}}');
+const mismatchDecision = editorRestoreDecision(
+  '{"version":1,"node":"identity","model_family":"flux","fields":{}}',
+  "identity",
+  "qwen",
+);
+assert.equal(mismatchDecision.ok, false);
+assert.equal(mismatchDecision.allow_reset, true);
+assert.equal(mismatchDecision.state, null);
 
 const payload = buildUserOptionPayload({
   label: " Phone pose ",
@@ -278,6 +364,20 @@ assert.deepEqual(payload, {
   lora: {name: "phone"},
   lora_enabled: true,
 });
+const createRequest = buildOptionMutation("create", null, payload, payload.field);
+assert.equal(createRequest.method, "POST");
+assert.equal(createRequest.path, "/arch-prompt-tools/options");
+assert.deepEqual(createRequest.payload, payload);
+assert.equal(createRequest.refresh_field, "left_hand");
+const updateRequest = buildOptionMutation("update", "user.phone/pose", payload, payload.field);
+assert.equal(updateRequest.method, "PATCH");
+assert.equal(updateRequest.path, "/arch-prompt-tools/options/user.phone%2Fpose");
+assert.equal(updateRequest.refresh_field, "left_hand");
+const deleteRequest = buildOptionMutation("delete", "user.phone/pose", null, "left_hand");
+assert.equal(deleteRequest.method, "DELETE");
+assert.equal(deleteRequest.path, "/arch-prompt-tools/options/user.phone%2Fpose");
+assert.equal(deleteRequest.payload, null);
+assert.equal(deleteRequest.refresh_field, "left_hand");
 """
     )
     test_file = tmp_path / "frontend_core_test.mjs"

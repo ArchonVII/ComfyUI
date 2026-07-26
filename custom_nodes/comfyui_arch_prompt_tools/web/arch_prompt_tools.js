@@ -1,7 +1,10 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
-const API_ROOT = "/arch-prompt-tools";
+let schemaPromise = null;
+
+// ARCH_PT_CORE_START
+const FAMILY_SET = new Set(["flux", "qwen"]);
 const FOCUSED_NODES = Object.freeze({
   "ArchPtIdentity": "identity",
   "ArchPtPose": "pose",
@@ -10,10 +13,18 @@ const FOCUSED_NODES = Object.freeze({
   "ArchPtCamera": "camera",
   "ArchPtLighting": "lighting",
 });
-let schemaPromise = null;
 
-// ARCH_PT_CORE_START
-const FAMILY_SET = new Set(["flux", "qwen"]);
+function focusedNodeKey(nodeType) {
+  return FOCUSED_NODES[nodeType] || null;
+}
+
+function controlKind(control) {
+  if (control === "buttons") return "buttons";
+  if (control === "searchable_options") return "searchable";
+  if (control === "semantic_spectrum") return "spectrum";
+  if (control === "free_text") return "text";
+  throw new Error(`unsupported schema control: ${control}`);
+}
 
 function normalizeText(value) {
   if (typeof value !== "string") throw new Error("text must be a string");
@@ -81,12 +92,14 @@ function validateFragment(fragment, node, field, seen) {
     "node",
     "field",
     "group",
-    "text",
     "model_family",
   ]) {
     if (typeof fragment[key] !== "string" || !fragment[key].trim()) {
       throw new Error(`fragment ${key} must be a non-empty string`);
     }
+  }
+  if (typeof fragment.text !== "string") {
+    throw new Error("fragment text must be a string");
   }
   if (fragment.node !== node || fragment.field !== field) {
     throw new Error("fragment node and field must match restored state");
@@ -142,6 +155,32 @@ function restoreState(raw, expectedNode) {
   }
 }
 
+function editorRestoreDecision(raw, expectedNode, selectedFamily) {
+  const restored = restoreState(raw, expectedNode);
+  if (!restored.ok) {
+    return {
+      ok: false,
+      state: null,
+      error: restored.error,
+      allow_reset: true,
+    };
+  }
+  if (restored.state.model_family !== selectedFamily) {
+    return {
+      ok: false,
+      state: null,
+      error: `saved state uses ${restored.state.model_family}, but the model selector uses ${selectedFamily}`,
+      allow_reset: true,
+    };
+  }
+  return {
+    ok: true,
+    state: restored.state,
+    error: "",
+    allow_reset: false,
+  };
+}
+
 function stateCopy(state) {
   return canonicalState(jsonCopy(state));
 }
@@ -184,6 +223,41 @@ function optionFragment(option, modelFamily, instanceId) {
     fragment.lora = jsonCopy(option.lora);
   }
   return canonicalFragment(fragment);
+}
+
+function buttonChoiceModels(options, state, modelFamily) {
+  return options.map((option) => ({
+    id: option.id,
+    label: option.label,
+    phrase: optionPhrase(option, modelFamily),
+    selected: Boolean(
+      state.fields?.[option.field]?.fragments?.some(
+        (fragment) =>
+          fragment.source_option_id === option.id &&
+          fragment.group === option.group,
+      ),
+    ),
+    lora_associated: Boolean(option.lora),
+  }));
+}
+
+function createChoiceButtons(documentRef, models, onSelect) {
+  return models.map((model) => {
+    const button = documentRef.createElement("button");
+    button.type = "button";
+    button.textContent = model.lora_associated
+      ? `${model.label} · LoRA`
+      : model.label;
+    button.title = `${model.label}: ${model.phrase}`;
+    button.setAttribute("aria-label", button.title);
+    button.setAttribute("aria-pressed", String(model.selected));
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect(model.id);
+    });
+    return button;
+  });
 }
 
 function toggleOption(state, option, modelFamily, instanceId) {
@@ -363,6 +437,38 @@ function buildUserOptionPayload(input) {
   }
   return payload;
 }
+
+function optionsQuery(nodeKey, modelFamily, fieldKey = "") {
+  const fieldFilter = fieldKey
+    ? `&field=${encodeURIComponent(fieldKey)}`
+    : "";
+  return (
+    `node=${encodeURIComponent(nodeKey)}` +
+    `&model_family=${encodeURIComponent(modelFamily)}` +
+    fieldFilter
+  );
+}
+
+function buildOptionMutation(action, optionId, payload, fieldKey) {
+  const suffix =
+    action === "create" ? "" : `/${encodeURIComponent(optionId || "")}`;
+  const methods = { create: "POST", update: "PATCH", delete: "DELETE" };
+  const method = methods[action];
+  if (!method) throw new Error(`unsupported option action: ${action}`);
+  if (action !== "create" && !optionId) throw new Error("option id is required");
+  if (action !== "delete" && (!payload || typeof payload !== "object")) {
+    throw new Error("option payload is required");
+  }
+  if (typeof fieldKey !== "string" || !fieldKey) {
+    throw new Error("affected field is required");
+  }
+  return {
+    method,
+    path: `/arch-prompt-tools/options${suffix}`,
+    payload: action === "delete" ? null : payload,
+    refresh_field: fieldKey,
+  };
+}
 // ARCH_PT_CORE_END
 
 function findWidget(node, name) {
@@ -469,11 +575,7 @@ async function loadSchema() {
 
 async function loadOptions(nodeKey, modelFamily, fieldKey = "") {
   const optionsRoute = "/arch-prompt-tools/options";
-  const fieldFilter = fieldKey ? `&field=${encodeURIComponent(fieldKey)}` : "";
-  const query =
-    `node=${encodeURIComponent(nodeKey)}` +
-    `&model_family=${encodeURIComponent(modelFamily)}` +
-    fieldFilter;
+  const query = optionsQuery(nodeKey, modelFamily, fieldKey);
   const payload = await requestJson(`${optionsRoute}?${query}`);
   return Array.isArray(payload.options) ? payload.options : [];
 }
@@ -626,14 +728,18 @@ function selectOption(context, option) {
   }
 }
 
-function renderQuickButtons(context, field, target) {
+function renderButtonOptions(context, field, target) {
   const row = makeElement("div", "", "arch-pt-row");
-  for (const option of context.options.get(field.key) || []) {
-    const button = makeButton(option.label, `${option.label}: ${optionPhrase(option, context.family)}`, () =>
-      selectOption(context, option),
-    );
-    button.setAttribute("aria-pressed", String(optionSelected(context, option)));
-    if (option.lora) button.textContent = `${option.label} · LoRA`;
+  const options = context.options.get(field.key) || [];
+  const buttons = createChoiceButtons(
+    document,
+    buttonChoiceModels(options, context.state, context.family),
+    (optionId) => {
+      const option = options.find((item) => item.id === optionId);
+      if (option) selectOption(context, option);
+    },
+  );
+  for (const button of buttons) {
     row.append(button);
   }
   if (!row.childNodes.length) row.append(makeElement("span", "No choices saved for this field.", "arch-pt-note"));
@@ -707,14 +813,18 @@ function showOptionEditor(context, field, target, sourceOption = null) {
           lora: parsedLora,
           lora_enabled: loraEnabled.checked,
         });
-        const method = editingUser ? "PATCH" : "POST";
-        const suffix = editingUser ? `/${encodeURIComponent(sourceOption.id)}` : "";
-        await requestJson(`${API_ROOT}/options${suffix}`, {
-          method,
+        const mutation = buildOptionMutation(
+          editingUser ? "update" : "create",
+          editingUser ? sourceOption.id : null,
+          payload,
+          field.key,
+        );
+        await requestJson(mutation.path, {
+          method: mutation.method,
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(mutation.payload),
         });
-        await refreshFieldOptions(context, field.key);
+        await refreshFieldOptions(context, mutation.refresh_field);
         setStatus(context, editingUser ? "User option updated." : "User option saved.");
         renderSections(context);
       } catch (error) {
@@ -765,10 +875,16 @@ function optionRow(context, field, option, editorTarget) {
       makeButton("Delete option", `Delete saved option ${option.label}`, async () => {
         if (!confirm(`Delete user option “${option.label}”? Existing workflow copies will remain.`)) return;
         try {
-          await requestJson(`${API_ROOT}/options/${encodeURIComponent(option.id)}`, {
-            method: "DELETE",
+          const mutation = buildOptionMutation(
+            "delete",
+            option.id,
+            null,
+            field.key,
+          );
+          await requestJson(mutation.path, {
+            method: mutation.method,
           });
-          await refreshFieldOptions(context, field.key);
+          await refreshFieldOptions(context, mutation.refresh_field);
           setStatus(context, "User option deleted; existing copied chips were not changed.");
           renderSections(context);
         } catch (error) {
@@ -897,12 +1013,13 @@ function renderField(context, field) {
       ? "Disabled by default; uses authored descriptive phrases rather than numbers."
       : "Selections are copied into this workflow and can be edited below.";
   wrapper.append(label);
-  if (field.control === "quick_buttons") {
-    renderQuickButtons(context, field, wrapper);
+  const kind = controlKind(field.control);
+  if (kind === "buttons") {
+    renderButtonOptions(context, field, wrapper);
     renderOptionManagement(context, field, wrapper);
   }
-  if (field.control === "searchable_options") renderSearchable(context, field, wrapper);
-  if (field.control === "semantic_spectrum") renderSpectrum(context, field, wrapper);
+  if (kind === "searchable") renderSearchable(context, field, wrapper);
+  if (kind === "spectrum") renderSpectrum(context, field, wrapper);
   renderChips(context, field, wrapper);
   renderSpecifics(context, field, wrapper);
   return wrapper;
@@ -933,19 +1050,18 @@ async function initializeContext(context) {
   setStatus(context, "Loading schema and choices…");
   context.body.replaceChildren(makeElement("div", "Loading…", "arch-pt-note"));
   try {
-    const restored = restoreState(String(context.stateWidget.value || ""), context.nodeKey);
-    if (!restored.ok) {
-      context.invalid = true;
-      renderError(context, `Saved prompt state is invalid: ${restored.error}. It was not overwritten.`, true);
-      return;
-    }
     context.family = currentFamily(context);
-    if (restored.state.model_family !== context.family) {
+    const restored = editorRestoreDecision(
+      String(context.stateWidget.value || ""),
+      context.nodeKey,
+      context.family,
+    );
+    if (!restored.ok) {
       context.invalid = true;
       renderError(
         context,
-        `Saved state uses ${restored.state.model_family}, but the model selector uses ${context.family}. The saved state was not overwritten.`,
-        true,
+        `Saved prompt state is invalid: ${restored.error}. It was not overwritten.`,
+        restored.allow_reset,
       );
       return;
     }
@@ -1066,15 +1182,22 @@ function extendFocusedNode(nodeType, nodeKey) {
 app.registerExtension({
   name: "arch-pt.prompt-tools",
   async beforeRegisterNodeDef(nodeType, nodeData) {
-    const nodeKey = FOCUSED_NODES[nodeData?.name];
+    const nodeKey = focusedNodeKey(nodeData?.name);
     if (nodeKey) extendFocusedNode(nodeType, nodeKey);
   },
 });
 
 export {
+  buildOptionMutation,
   buildUserOptionPayload,
+  buttonChoiceModels,
+  controlKind,
+  createChoiceButtons,
   createEmptyState,
   editFragmentText,
+  editorRestoreDecision,
+  focusedNodeKey,
+  optionsQuery,
   removeFragmentById,
   restoreState,
   serializeState,
