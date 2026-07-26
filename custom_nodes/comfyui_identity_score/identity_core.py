@@ -188,6 +188,76 @@ def score_embeddings(
     }
 
 
+def _dual_score(
+    source: FaceEmbedding | None,
+    generated: FaceEmbedding | None,
+    threshold: float,
+) -> dict[str, Any]:
+    """Score a dual-report comparison without representing a missing face as zero."""
+    score = score_embeddings(source, generated, threshold)
+    if source is None or generated is None:
+        score["cosine_similarity"] = None
+    return score
+
+
+def build_dual_report(
+    base_bgr: np.ndarray,
+    reference_bgr: np.ndarray,
+    generated_bgr: np.ndarray,
+    models: OpenCVFaceModels,
+    experiment_mode: str,
+    face_score_threshold: float,
+    same_identity_threshold: float,
+    face_selection: str,
+) -> dict[str, Any]:
+    """Build the two-source identity report used by experiment workflows.
+
+    Each image is detected once.  The resulting generated embedding is shared by
+    both comparisons so the output face selection is consistent.
+    """
+    if experiment_mode not in {"face_swap", "identity_i2i"}:
+        raise ValueError("experiment_mode must be 'face_swap' or 'identity_i2i'")
+
+    base = detect_best_face(base_bgr, models, face_score_threshold, face_selection)
+    reference = detect_best_face(reference_bgr, models, face_score_threshold, face_selection)
+    generated = detect_best_face(generated_bgr, models, face_score_threshold, face_selection)
+
+    reference_to_output = _dual_score(reference, generated, same_identity_threshold)
+    base_to_output = _dual_score(base, generated, same_identity_threshold)
+    active_source = "reference" if experiment_mode == "face_swap" else "base"
+    active = reference_to_output if active_source == "reference" else base_to_output
+    detection = {
+        "base": base is not None,
+        "reference": reference is not None,
+        "generated": generated is not None,
+    }
+    issues = []
+    for name, face in (("base", base), ("reference", reference), ("generated", generated)):
+        if face is None:
+            issues.append(f"{name} face not detected")
+
+    return {
+        "scorer": "opencv_yunet_sface",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "experiment_mode": experiment_mode,
+        "settings": {
+            "face_score_threshold": face_score_threshold,
+            "same_identity_threshold": same_identity_threshold,
+            "face_selection": face_selection,
+        },
+        "face_detection": detection,
+        "reference_to_output": reference_to_output,
+        "base_to_output": base_to_output,
+        "active_score": {
+            "source": active_source,
+            "cosine_similarity": active["cosine_similarity"],
+            "same_identity": active["same_identity"],
+        },
+        "rankable": active["cosine_similarity"] is not None,
+        "issues": issues,
+    }
+
+
 def catalog_entries(
     catalog_root: Path,
     subject_name: str,

@@ -7,6 +7,7 @@ import folder_paths
 
 from .identity_core import (
     DEFAULT_SAME_IDENTITY_THRESHOLD,
+    build_dual_report,
     build_report,
     default_model_paths,
     image_tensor_to_bgr,
@@ -143,10 +144,139 @@ class OpenCVIdentityScore:
         )
 
 
+class DualIdentityScore:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "base_image": ("IMAGE", {"tooltip": "Base/input image that supplies composition."}),
+                "reference_image": ("IMAGE", {"tooltip": "Identity/reference image."}),
+                "generated_image": ("IMAGE", {"tooltip": "Generated final image to score."}),
+                "experiment_mode": (["face_swap", "identity_i2i"],),
+                "face_score_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "same_identity_threshold": (
+                    "FLOAT",
+                    {"default": DEFAULT_SAME_IDENTITY_THRESHOLD, "min": -1.0, "max": 1.0, "step": 0.001},
+                ),
+                "face_selection": (["largest", "highest_confidence"],),
+                "write_manifest": ("BOOLEAN", {"default": True}),
+                "manifest_dir": (
+                    "STRING",
+                    {
+                        "default": "default/identity_score_runs",
+                        "multiline": False,
+                        "tooltip": "Relative paths resolve under ComfyUI/user.",
+                    },
+                ),
+                "run_label": ("STRING", {"default": "dual-identity-score", "multiline": False}),
+                "metadata_key": ("STRING", {"default": "identity_score_report", "multiline": False}),
+            },
+            "optional": {
+                "experiment_id": ("STRING", {"default": "", "forceInput": True}),
+                "run_id": ("STRING", {"default": "", "forceInput": True}),
+                "extra_metadata": ("EXTRA_METADATA", {"forceInput": True}),
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    RETURN_TYPES = ("FLOAT", "BOOLEAN", "FLOAT", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")
+    RETURN_NAMES = (
+        "reference_cosine_similarity",
+        "reference_same_identity",
+        "base_cosine_similarity",
+        "base_same_identity",
+        "active_cosine_similarity",
+        "active_same_identity",
+        "rankable",
+        "report_json",
+        "extra_metadata",
+    )
+    FUNCTION = "score_identity"
+    CATEGORY = "arch-image/identity"
+    OUTPUT_NODE = True
+    DESCRIPTION = "Compare generated identity against both the reference and base images for local experiment ranking."
+
+    def score_identity(
+        self,
+        base_image,
+        reference_image,
+        generated_image,
+        experiment_mode,
+        face_score_threshold,
+        same_identity_threshold,
+        face_selection,
+        write_manifest,
+        manifest_dir,
+        run_label,
+        metadata_key,
+        experiment_id="",
+        run_id="",
+        extra_metadata=None,
+        prompt=None,
+        extra_pnginfo=None,
+    ):
+        node_dir = Path(__file__).resolve().parent
+        report = build_dual_report(
+            base_bgr=image_tensor_to_bgr(base_image),
+            reference_bgr=image_tensor_to_bgr(reference_image),
+            generated_bgr=image_tensor_to_bgr(generated_image),
+            models=default_model_paths(node_dir),
+            experiment_mode=experiment_mode,
+            face_score_threshold=face_score_threshold,
+            same_identity_threshold=same_identity_threshold,
+            face_selection=face_selection,
+        )
+        if experiment_id:
+            report["experiment_id"] = str(experiment_id)
+        if run_id:
+            report["run_id"] = str(run_id)
+
+        if write_manifest:
+            manifest_root = resolve_path(manifest_dir, Path(folder_paths.get_user_directory()))
+            manifest_path = write_identity_manifest(report, manifest_root, run_label, prompt, extra_pnginfo)
+            report["manifest_path"] = str(manifest_path)
+
+        report_json = json.dumps(report, indent=2, ensure_ascii=False)
+        metadata = dict(extra_metadata or {})
+        metadata[metadata_key or "identity_score_report"] = report_json
+
+        reference = report["reference_to_output"]
+        base = report["base_to_output"]
+        active = report["active_score"]
+        rankable = bool(report["rankable"])
+        status = "rankable" if rankable else "not_rankable"
+        score_text = lambda value: f"{float(value):.6f}" if value is not None else "unavailable"
+        text = (
+            f"reference {score_text(reference['cosine_similarity'])}; "
+            f"base {score_text(base['cosine_similarity'])}; "
+            f"active ({active['source']}) {score_text(active['cosine_similarity'])}; {status}"
+        )
+        result = (
+            float(reference["cosine_similarity"] or 0.0),
+            bool(reference["same_identity"]),
+            float(base["cosine_similarity"] or 0.0),
+            bool(base["same_identity"]),
+            float(active["cosine_similarity"] or 0.0),
+            bool(active["same_identity"]),
+            rankable,
+            report_json,
+            metadata,
+        )
+        return {
+            "ui": {"text": [text], "status": [status], "result_id": [str(run_id or "")]},
+            "result": result,
+        }
+
+
 NODE_CLASS_MAPPINGS = {
     "OpenCVIdentityScore": OpenCVIdentityScore,
+    "DualIdentityScore": DualIdentityScore,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "OpenCVIdentityScore": "arch-OpenCV Identity Score",
+    "DualIdentityScore": "arch-Dual Identity Score",
 }
