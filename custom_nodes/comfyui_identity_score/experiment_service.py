@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PureWindowsPath
 import shutil
 import time
@@ -208,7 +209,35 @@ class ExperimentService:
         return self.store.update_review(run_id, **fields)
 
     def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
+        for run in self.store.list_runs(experiment_id):
+            if run["id"] in active_run_ids or run["state"] != "running" or not run["output_path"]:
+                continue
+            updated_at = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
+            if updated_at > cutoff:
+                continue
+            try:
+                self._remove_stale_claimed_output(run["output_path"])
+            except (OSError, ValueError) as exc:
+                try:
+                    self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run["id"], error=f"stale claimed output cleanup failed: {type(exc).__name__}: {exc}")
+                except (KeyError, ValueError):
+                    pass
+                raise ValueError("unable to clean stale claimed output") from exc
         return self.store.resume_stale_runs(experiment_id=experiment_id, stale_after_seconds=stale_after_seconds, active_run_ids=active_run_ids)
+
+    def _remove_stale_claimed_output(self, output_path: str) -> None:
+        relative = _safe_relative_name(output_path)
+        if relative is None or not relative.startswith("identity_lab/results/"):
+            raise ValueError("stale claim is outside identity-lab results")
+        root = self.output_directory.resolve()
+        result_root = (root / "identity_lab" / "results").resolve()
+        target = (root / relative).resolve()
+        if result_root not in target.parents:
+            raise ValueError("stale claim is outside identity-lab results")
+        if target.exists() and not target.is_file():
+            raise ValueError("stale claimed output is not a file")
+        target.unlink(missing_ok=True)
 
     def archive(self, experiment_id: str) -> dict[str, Any]:
         return self.store.archive_experiment(experiment_id)

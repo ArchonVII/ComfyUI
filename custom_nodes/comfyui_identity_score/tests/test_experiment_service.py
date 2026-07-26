@@ -268,3 +268,46 @@ def test_record_run_marks_claim_failed_when_result_directory_setup_raises(tmp_pa
         service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
 
     assert service.store.get_run(run_id)["state"] == "failed"
+
+
+def test_stale_claimed_file_is_removed_before_resume_and_retry_completes(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "after install", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    relative = f"identity_lab/results/{run_id}.png"
+    service.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative)
+    stale_file = Path(service.output_directory) / relative
+    stale_file.parent.mkdir(parents=True, exist_ok=True)
+    stale_file.write_bytes(b"interrupted-final")
+    with service.store._connection() as connection:
+        connection.execute("UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run_id,))
+
+    resumed = service.resume_stale(experiment_id, stale_after_seconds=0)
+    completed = service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+
+    assert resumed[0]["output_path"] is None
+    assert completed["state"] == "completed"
+    assert stale_file.is_file()
+    assert stale_file.read_bytes() != b"interrupted-final"
+
+
+def test_stale_cleanup_rejects_out_of_root_claims_and_fails_closed(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "unsafe stale", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    service.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path="other/result.png")
+    outside = Path(service.output_directory) / "other/result.png"
+    outside.parent.mkdir(parents=True, exist_ok=True)
+    outside.write_bytes(b"keep")
+    with service.store._connection() as connection:
+        connection.execute("UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run_id,))
+
+    with pytest.raises(ValueError, match="stale claimed output"):
+        service.resume_stale(experiment_id, stale_after_seconds=0)
+
+    assert outside.read_bytes() == b"keep"
+    assert service.store.get_run(run_id)["state"] == "failed"
