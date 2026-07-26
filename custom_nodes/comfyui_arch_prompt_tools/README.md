@@ -91,10 +91,11 @@ Built-in choices are protected. They cannot be edited or deleted. Use
 also create a new option directly in the field's Manage choices panel.
 Duplicate labels are allowed because each user option has its own stable ID.
 
-User choices live under the active ComfyUI user directory at
-`arch_prompt_tools/options.json` (normally
-`user/default/arch_prompt_tools/options.json`). Create, edit, and delete are
-explicit actions; merely choosing a chip does not change the library.
+User choices live at
+`<configured ComfyUI user root>/arch_prompt_tools/options.json`. With ComfyUI's
+normal repository-level user root, that is
+`user/arch_prompt_tools/options.json`. Create, edit, and delete are explicit
+actions; merely choosing a chip does not change the library.
 
 Each saved choice belongs to one node, field, group, and model family. If you
 want different Flux and Qwen wording, create the corresponding choice for each
@@ -133,11 +134,10 @@ interrupted write does not leave a half-written catalog. If
 an invalid option, the file is preserved and the library reports an error
 instead of silently replacing it.
 
-Before hand-editing user choices, make a backup of
-`arch_prompt_tools/options.json`. If the file becomes invalid, keep the broken
-copy for recovery, restore your backup or correct the JSON, and reload ComfyUI.
-Deleting the file starts with an empty user library; protected built-ins remain
-available.
+Before hand-editing user choices, back up the file at that configured user-root
+path. If the file becomes invalid, keep the broken copy for recovery, restore
+your backup or correct the JSON, and reload ComfyUI. Deleting the file starts
+with an empty user library; protected built-ins remain available.
 
 These nodes coexist with the legacy Arch prompt nodes. Their class names and
 workflow state are separate, and installing `arch-pt` does not replace or
