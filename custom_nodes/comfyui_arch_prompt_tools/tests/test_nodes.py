@@ -245,6 +245,46 @@ def test_combiner_rejects_noncanonical_bundle_fields_prompt_and_metadata(mutatio
 
 
 @pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda metadata: metadata.update({"extra": "injected"}),
+        lambda metadata: metadata["sections"][0].update({"extra": "injected"}),
+        lambda metadata: metadata["sections"][0]["fields"][0].update({"extra": "injected"}),
+        lambda metadata: metadata.pop("node"),
+        lambda metadata: metadata["sections"][0].pop("label"),
+        lambda metadata: metadata["sections"][0]["fields"][0].pop("control"),
+        lambda metadata: metadata.update({"version": True}),
+        lambda metadata: metadata["sections"][0].update({"order": True}),
+        lambda metadata: metadata["sections"][0]["fields"][0].update({"order": True}),
+        lambda metadata: metadata["sections"].reverse(),
+        lambda metadata: metadata["sections"][0].update({"key": "wrong"}),
+        lambda metadata: metadata["sections"][0].update({"label": "Wrong"}),
+        lambda metadata: metadata["sections"][0]["fields"][0].update({"key": "wrong"}),
+        lambda metadata: metadata["sections"][0]["fields"][0].update({"label": "Wrong"}),
+        lambda metadata: metadata["sections"][0]["fields"][0].update({"control": "wrong"}),
+        lambda metadata: metadata.update({"sections": {}}),
+        lambda metadata: metadata["sections"].__setitem__(0, []),
+        lambda metadata: metadata["sections"][0].update({"fields": {}}),
+        lambda metadata: metadata["sections"][0]["fields"].__setitem__(0, "invalid"),
+    ],
+)
+def test_combiner_rejects_metadata_that_is_not_the_exact_canonical_shape(mutation):
+    bundle = make_bundle("identity", "subject")
+    mutation(bundle["metadata"])
+
+    with pytest.raises(ValueError, match="metadata"):
+        ArchPtCombine().combine(", ", True, identity=bundle)
+
+
+def test_combiner_accepts_exact_catalog_derived_metadata_shape():
+    bundle = make_bundle("identity", "subject")
+
+    _, metadata_json, _ = ArchPtCombine().combine(", ", True, identity=bundle)
+
+    assert json.loads(metadata_json)["bundles"][0]["metadata"] == bundle["metadata"]
+
+
+@pytest.mark.parametrize(
     ("mutation", "match"),
     [
         (lambda bundle: bundle["fields"][0]["fragments"][0].update({"node": "pose"}), "fragment"),
@@ -284,14 +324,13 @@ def test_combiner_preserves_per_node_metadata_and_dedupes_only_identical_lora_re
 
 def test_combiner_unicode_json_is_literal_and_byte_deterministic():
     identity = identity_bundle_with_lora(text="portrait with 髪", instance_id="髪", lora={"name": "café 光", "strength": 0.8})
-    identity["metadata"]["note"] = "café 光"
 
     first = ArchPtCombine().combine(", ", True, identity=identity)
     second = ArchPtCombine().combine(", ", True, identity=identity)
 
-    assert "café" in first[1]
+    assert "café" in first[2]
     assert "髪" in first[2]
-    assert "光" in first[1]
+    assert "光" in first[2]
     assert "\\u" not in first[1]
     assert "\\u" not in first[2]
     assert second[1:] == first[1:]

@@ -280,8 +280,23 @@ def _expected_field_metadata(catalog: Catalog, node_key: str) -> list[dict[str, 
 
 
 def _validate_metadata(metadata: Mapping[str, Any], expected: Mapping[str, Any], node_key: str) -> None:
-    if any(metadata.get(key) != value for key, value in expected.items()):
+    if not _matches_exact_json_shape(metadata, expected):
         raise ValueError(f"{node_key} bundle metadata must match the node family and schema")
+
+
+def _matches_exact_json_shape(actual: Any, expected: Any) -> bool:
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, dict):
+        return set(actual) == set(expected) and all(
+            _matches_exact_json_shape(actual[key], value) for key, value in expected.items()
+        )
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            _matches_exact_json_shape(actual_item, expected_item)
+            for actual_item, expected_item in zip(actual, expected)
+        )
+    return actual == expected
 
 
 def _validate_lora_requests(actual: list[Any], expected: list[dict[str, Any]], node_key: str) -> None:
