@@ -37,6 +37,7 @@ _RECORD_KEYS = frozenset(
     }
 )
 _CREATE_KEYS = _RECORD_KEYS - {"id"}
+_MAX_JAVASCRIPT_SAFE_INTEGER = 2**53 - 1
 _PATH_LOCKS_GUARD = threading.Lock()
 _PATH_LOCKS: dict[str, threading.RLock] = {}
 _DIRECTORY_FSYNC_SUPPORTED = os.name == "posix" and hasattr(os, "O_DIRECTORY")
@@ -470,10 +471,18 @@ def _freeze_lora(value: Any, *, key: str | None = None) -> Any:
             raise OptionValidationError(f"lora {key} must be a number, not a boolean")
         return value
     if isinstance(value, int):
+        if abs(value) > _MAX_JAVASCRIPT_SAFE_INTEGER:
+            raise OptionValidationError(
+                "lora integer values must be JavaScript-safe"
+            )
         return value
     if isinstance(value, float):
         if not math.isfinite(value):
             raise OptionValidationError("lora numbers must be finite")
+        if value.is_integer() and abs(value) > _MAX_JAVASCRIPT_SAFE_INTEGER:
+            raise OptionValidationError(
+                "lora integer values must be JavaScript-safe"
+            )
         return value
     raise OptionValidationError("lora metadata must contain only JSON values")
 

@@ -39,8 +39,32 @@ function normalizeText(value) {
   return value.trim().replace(/\s+/gu, " ");
 }
 
+function assertJavaScriptSafeJsonNumbers(value) {
+  if (typeof value === "number") {
+    if (
+      !Number.isFinite(value) ||
+      (Number.isInteger(value) && !Number.isSafeInteger(value))
+    ) {
+      throw new Error(
+        "LoRA metadata numbers must be finite and use JavaScript-safe integers",
+      );
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) assertJavaScriptSafeJsonNumbers(item);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      assertJavaScriptSafeJsonNumbers(item);
+    }
+  }
+}
+
 function jsonCopy(value) {
   if (value === undefined) return undefined;
+  assertJavaScriptSafeJsonNumbers(value);
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -589,7 +613,7 @@ async function requestJson(path, options = undefined) {
   const response = await api.fetchApi(path, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `${response.status} ${response.statusText}`);
-  return data;
+  return jsonCopy(data);
 }
 
 async function loadSchema() {

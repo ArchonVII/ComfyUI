@@ -132,6 +132,11 @@ metadata is copied with the chip and Combine can list it in
 A later centralized LoRA node can consume those explicit requests; until then
 they are inspection data only.
 
+LoRA metadata must contain ordinary JSON values. Numbers must be finite, and
+integer-valued numbers must stay within JavaScript's safe-integer range
+(`-(2^53 - 1)` through `2^53 - 1`). The editor and HTTP API reject values
+outside that range instead of silently rounding or replacing them.
+
 ## Safety and recovery
 
 User-option writes use a temporary file and atomic replacement so an

@@ -436,6 +436,13 @@ assert.deepEqual(payload, {
   lora: {name: "phone"},
   lora_enabled: true,
 });
+assert.throws(
+  () => buildUserOptionPayload({
+    ...payload,
+    lora: {seed: Number.MAX_SAFE_INTEGER + 1},
+  }),
+  /JavaScript-safe/u,
+);
 const additivePayload = buildUserOptionPayload({
   label: " Custom detail ",
   node: "identity",
@@ -605,6 +612,17 @@ const ROUTE_OPTION = ROUTE_OPTIONS.find((option) => option.field === "age_group"
 
 assert.equal(registeredExtensions.length, 1);
 assert.equal(focusedNodeKey("ArchPtCombine"), null);
+const originalFetchApi = api.fetchApi;
+api.fetchApi = async () => ({
+  ok: true,
+  status: 200,
+  statusText: "OK",
+  async json() {
+    return {options: [{lora: {seed: Number.POSITIVE_INFINITY}}]};
+  },
+});
+await assert.rejects(requestJson("/unsafe-integer"), /JavaScript-safe/u);
+api.fetchApi = originalFetchApi;
 
 const ageField = REAL_SCHEMA.nodes
   .find((item) => item.key === "identity")

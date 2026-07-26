@@ -496,17 +496,15 @@ def test_failed_fdopen_closes_raw_descriptor_and_removes_temporary_file(
     assert list(tmp_path.glob("*.tmp")) == []
 
 
-def test_extreme_lora_integer_round_trips_without_float_overflow(tmp_path, catalog):
+def test_extreme_lora_integer_is_rejected_before_persistence(tmp_path, catalog):
     extreme = 10**400
     store = OptionStore(
         catalog, tmp_path / "options.json", id_factory=lambda: "user.extreme-int"
     )
 
-    created = store.create(valid_option(lora={"seed": extreme}))
-    reloaded = OptionStore(catalog, store.path).list_options()[0]
-
-    assert created.lora["seed"] == extreme
-    assert reloaded.lora["seed"] == extreme
+    with pytest.raises(OptionValidationError, match="JavaScript-safe"):
+        store.create(valid_option(lora={"seed": extreme}))
+    assert not store.path.exists()
 
 
 def test_process_wide_per_path_lock_prevents_lost_updates_across_store_instances(tmp_path, catalog):

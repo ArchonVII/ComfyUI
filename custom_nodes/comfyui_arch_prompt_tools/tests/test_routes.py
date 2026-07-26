@@ -399,7 +399,7 @@ def test_registered_create_route_rejects_invalid_group_with_valid_choices(
     )
 
 
-def test_registered_create_route_accepts_extreme_json_integer_without_internal_error(
+def test_registered_create_route_rejects_extreme_json_integer_before_browser_corruption(
     store, catalog
 ):
     routes = FakeRoutes()
@@ -416,8 +416,8 @@ def test_registered_create_route_accepts_extreme_json_integer_without_internal_e
         post(FakeRequest(body=valid_option(lora={"seed": extreme})))
     )
 
-    assert response["status"] == 201
-    assert response["payload"]["option"]["lora"]["seed"] == extreme
+    assert response["status"] == 400
+    assert "JavaScript-safe" in response["payload"]["error"]
 
 
 def test_registered_handlers_sanitize_and_log_corrupt_store_error(
