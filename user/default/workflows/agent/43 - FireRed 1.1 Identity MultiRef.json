@@ -488,6 +488,14 @@
           "link": 5
         },
         {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
           "name": "vae",
           "type": "VAE",
           "link": 6,
@@ -510,14 +518,6 @@
           "type": "IMAGE",
           "link": null,
           "shape": 7
-        },
-        {
-          "name": "prompt",
-          "type": "STRING",
-          "link": null,
-          "widget": {
-            "name": "prompt"
-          }
         }
       ],
       "outputs": [
@@ -559,6 +559,14 @@
           "link": 9
         },
         {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
           "name": "vae",
           "type": "VAE",
           "link": 10,
@@ -581,14 +589,6 @@
           "type": "IMAGE",
           "link": null,
           "shape": 7
-        },
-        {
-          "name": "prompt",
-          "type": "STRING",
-          "link": null,
-          "widget": {
-            "name": "prompt"
-          }
         }
       ],
       "outputs": [
@@ -1148,7 +1148,7 @@
       6,
       0,
       10,
-      1,
+      2,
       "VAE"
     ],
     [
@@ -1156,7 +1156,7 @@
       9,
       0,
       10,
-      2,
+      3,
       "IMAGE"
     ],
     [
@@ -1164,7 +1164,7 @@
       8,
       0,
       10,
-      3,
+      4,
       "IMAGE"
     ],
     [
@@ -1180,7 +1180,7 @@
       6,
       0,
       11,
-      1,
+      2,
       "VAE"
     ],
     [
@@ -1188,7 +1188,7 @@
       9,
       0,
       11,
-      2,
+      3,
       "IMAGE"
     ],
     [
@@ -1196,7 +1196,7 @@
       8,
       0,
       11,
-      3,
+      4,
       "IMAGE"
     ],
     [

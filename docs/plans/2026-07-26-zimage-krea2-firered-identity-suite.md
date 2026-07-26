@@ -100,13 +100,19 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   similarity against the configured `0.363` same-identity threshold. The
   highest raw result scored `0.812342`.
 - **Verification:** All eight model files matched their expected sizes and
-  SHA-256 hashes; 19 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
+  SHA-256 hashes; 20 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
   live/direct node schema checks, and proof-integrity checks passed.
 - **Review closeout:** A P1 portability review found OS-native separators in
   nested model selector values. The final workflows use separator-free model
   filenames at each category root; Windows exposes the existing downloads
   through zero-storage NTFS hardlinks. A regression test and live combo-option
   validation cover this contract.
+- **FireRed review closeout:** A second P1 review found that the generated
+  `TextEncodeQwenImageEditPlus` inputs did not follow the registered positional
+  schema. Both positive and unconditional nodes now declare
+  `clip, prompt, vae, image1, image2, image3`, with a regression test covering
+  the exact order and normal link-integrity checks covering the resulting
+  target slots.
 - **Runtime scope clarification:** The native Z-Image, Krea 2, and FireRed
   graphs were model-selector and node-schema validated, but no native result is
   presented as benchmark evidence. The running shared ComfyUI process predated

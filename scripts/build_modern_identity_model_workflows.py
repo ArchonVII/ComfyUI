@@ -1155,11 +1155,11 @@ def build_firered_identity() -> dict:
         pos=(-760, -420),
         inputs=(
             ("clip", "CLIP", False, False),
+            ("prompt", "STRING", True, False),
             ("vae", "VAE", False, True),
             ("image1", "IMAGE", False, True),
             ("image2", "IMAGE", False, True),
             ("image3", "IMAGE", False, True),
-            ("prompt", "STRING", True, False),
         ),
         outputs=(("CONDITIONING", "CONDITIONING"),),
         widgets=(
@@ -1175,11 +1175,11 @@ def build_firered_identity() -> dict:
         pos=(-760, -100),
         inputs=(
             ("clip", "CLIP", False, False),
+            ("prompt", "STRING", True, False),
             ("vae", "VAE", False, True),
             ("image1", "IMAGE", False, True),
             ("image2", "IMAGE", False, True),
             ("image3", "IMAGE", False, True),
-            ("prompt", "STRING", True, False),
         ),
         outputs=(("CONDITIONING", "CONDITIONING"),),
         widgets=("",),

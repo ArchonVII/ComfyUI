@@ -220,6 +220,24 @@ def test_firered_uses_current_gguf_lightning_and_two_reference_roles():
     assert nodes(workflow, "OpenCVIdentityScore")
 
 
+def test_firered_conditioner_inputs_follow_registered_schema_order():
+    workflow = load_workflow("43 - FireRed 1.1 Identity MultiRef.json")
+    expected_order = [
+        "clip",
+        "prompt",
+        "vae",
+        "image1",
+        "image2",
+        "image3",
+    ]
+    conditioners = nodes(workflow, "TextEncodeQwenImageEditPlus")
+    assert len(conditioners) == 2
+    for conditioner in conditioners:
+        assert [
+            input_spec["name"] for input_spec in conditioner["inputs"]
+        ] == expected_order
+
+
 def test_reactor_proof_graph_keeps_target_and_identity_roles_unambiguous():
     workflow = load_workflow("44 - Face Swap Proof and ReActor Baseline.json")
     swaps = nodes(workflow, "ReActorFaceSwap")
