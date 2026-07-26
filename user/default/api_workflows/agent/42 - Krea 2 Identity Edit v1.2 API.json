@@ -19,7 +19,7 @@
   },
   "3": {
     "inputs": {
-      "unet_name": "Krea2\\krea2_turbo_fp8_scaled.safetensors",
+      "unet_name": "krea2_turbo_fp8_scaled.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -29,7 +29,7 @@
   },
   "4": {
     "inputs": {
-      "lora_name": "Krea2\\krea2_identity_edit_v1_2.safetensors",
+      "lora_name": "krea2_identity_edit_v1_2.safetensors",
       "strength_model": 1.0,
       "model": [
         "3",
@@ -43,7 +43,7 @@
   },
   "5": {
     "inputs": {
-      "clip_name": "Krea2\\qwen3vl_4b_fp8_scaled.safetensors",
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
       "type": "krea2",
       "device": "default"
     },

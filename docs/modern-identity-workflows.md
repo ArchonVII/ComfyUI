@@ -123,6 +123,14 @@ Exact URLs, expected byte sizes, SHA-256 hashes, destinations, and licenses are 
 
 `docs/modern-identity-model-manifest.json`
 
+Selector-facing model files are intentionally placed directly in the
+corresponding model-category root rather than nested subdirectories. ComfyUI
+serializes discovered nested paths with host-native separators and strictly
+validates combo values, so flat filenames keep the committed workflows valid on
+both Windows and POSIX hosts. On the verified Windows installation, the
+previously downloaded nested files are exposed at these portable names with
+NTFS hardlinks, consuming no additional model storage.
+
 Existing assets reused by these workflows:
 
 - `models/vae/ae.safetensors`

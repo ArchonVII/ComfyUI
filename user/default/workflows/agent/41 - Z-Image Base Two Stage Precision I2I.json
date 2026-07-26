@@ -43,7 +43,7 @@
         "Node name for S&R": "UnetLoaderGGUF"
       },
       "widgets_values": [
-        "Z-Image\\z_image-Q8_0.gguf"
+        "z_image-Q8_0.gguf"
       ]
     },
     {
@@ -150,7 +150,7 @@
         "Node name for S&R": "CLIPLoader"
       },
       "widgets_values": [
-        "Z-Image\\qwen_3_4b.safetensors",
+        "qwen_3_4b.safetensors",
         "lumina2",
         "default"
       ]
@@ -1304,7 +1304,7 @@
     "modern_identity_suite": {
       "workflow_slug": "z-image-base-two-stage-precision-i2i",
       "version": 1,
-      "model": "Z-Image\\z_image-Q8_0.gguf",
+      "model": "z_image-Q8_0.gguf",
       "license": "Apache-2.0 (Z-Image); GGUF conversion follows source terms",
       "research_sources": [
         "https://huggingface.co/Tongyi-MAI/Z-Image",

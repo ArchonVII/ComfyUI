@@ -43,7 +43,7 @@
         "Node name for S&R": "UnetLoaderGGUF"
       },
       "widgets_values": [
-        "FireRed\\FireRed-Image-Edit-1.1-Q4_K_M.gguf"
+        "FireRed-Image-Edit-1.1-Q4_K_M.gguf"
       ]
     },
     {
@@ -98,7 +98,7 @@
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
-        "FireRed\\FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors",
+        "FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors",
         1.0
       ]
     },
@@ -262,7 +262,7 @@
         "Node name for S&R": "CLIPLoader"
       },
       "widgets_values": [
-        "Qwen\\qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "qwen_2.5_vl_7b_fp8_scaled.safetensors",
         "qwen_image",
         "default"
       ]
@@ -1302,7 +1302,7 @@
     "modern_identity_suite": {
       "workflow_slug": "firered-1-1-identity-multiref",
       "version": 1,
-      "model": "FireRed\\FireRed-Image-Edit-1.1-Q4_K_M.gguf",
+      "model": "FireRed-Image-Edit-1.1-Q4_K_M.gguf",
       "license": "Apache-2.0",
       "research_sources": [
         "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1",

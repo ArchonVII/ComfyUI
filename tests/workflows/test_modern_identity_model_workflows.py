@@ -13,19 +13,19 @@ KREA_API_NAME = "42 - Krea 2 Identity Edit v1.2 API.json"
 WORKFLOWS = {
     "40 - Z-Image Turbo Identity Anchor I2I.json": {
         "slug": "z-image-turbo-identity-anchor-i2i",
-        "model": r"Z-Image\z_image_turbo-Q8_0.gguf",
+        "model": "z_image_turbo-Q8_0.gguf",
     },
     "41 - Z-Image Base Two Stage Precision I2I.json": {
         "slug": "z-image-base-two-stage-precision-i2i",
-        "model": r"Z-Image\z_image-Q8_0.gguf",
+        "model": "z_image-Q8_0.gguf",
     },
     "42 - Krea 2 Identity Edit v1.2.json": {
         "slug": "krea-2-identity-edit-v1-2",
-        "model": r"Krea2\krea2_turbo_fp8_scaled.safetensors",
+        "model": "krea2_turbo_fp8_scaled.safetensors",
     },
     "43 - FireRed 1.1 Identity MultiRef.json": {
         "slug": "firered-1-1-identity-multiref",
-        "model": r"FireRed\FireRed-Image-Edit-1.1-Q4_K_M.gguf",
+        "model": "FireRed-Image-Edit-1.1-Q4_K_M.gguf",
     },
     "44 - Face Swap Proof and ReActor Baseline.json": {
         "slug": "face-swap-proof-reactor-baseline",
@@ -106,17 +106,55 @@ def test_each_workflow_has_visible_instructions_and_saved_evidence(name):
     assert "source" in text or "reference" in text
 
 
+def test_model_selector_values_use_portable_flat_filenames():
+    selector_node_types = {
+        "UnetLoaderGGUF",
+        "UNETLoader",
+        "CLIPLoader",
+        "LoraLoaderModelOnly",
+    }
+    for name in WORKFLOWS:
+        workflow = load_workflow(name)
+        declared_model = workflow["extra"]["modern_identity_suite"]["model"]
+        assert "/" not in declared_model
+        assert "\\" not in declared_model
+        for node in workflow["nodes"]:
+            if node["type"] not in selector_node_types:
+                continue
+            selector = node["widgets_values"][0]
+            assert "/" not in selector, f"{name}: {selector}"
+            assert "\\" not in selector, f"{name}: {selector}"
+
+    for api_name in (KREA_API_NAME, REACTOR_API_NAME):
+        prompt = json.loads(
+            (API_WORKFLOW_DIR / api_name).read_text(encoding="utf-8")
+        )
+        for node in prompt.values():
+            if node["class_type"] not in selector_node_types:
+                continue
+            selector_inputs = (
+                "unet_name",
+                "clip_name",
+                "lora_name",
+            )
+            for input_name in selector_inputs:
+                if input_name in node["inputs"]:
+                    selector = node["inputs"][input_name]
+                    assert "/" not in selector, f"{api_name}: {selector}"
+                    assert "\\" not in selector, f"{api_name}: {selector}"
+
+
 def test_z_turbo_uses_q8_full_encoder_and_external_identity_anchor():
     workflow = load_workflow("40 - Z-Image Turbo Identity Anchor I2I.json")
     unet = nodes(workflow, "UnetLoaderGGUF")
     assert len(unet) == 1
     assert unet[0]["widgets_values"][0] == (
-        r"Z-Image\z_image_turbo-Q8_0.gguf"
+        "z_image_turbo-Q8_0.gguf"
     )
     clip = nodes(workflow, "CLIPLoader")
     assert len(clip) == 1
     assert clip[0]["widgets_values"][:2] == [
-        r"Z-Image\qwen_3_4b.safetensors",
+        "qwen_3_4b.safetensors",
         "lumina2",
     ]
     images = nodes(workflow, "LoadImage")
@@ -131,7 +169,7 @@ def test_z_base_has_distinct_generation_and_low_denoise_refinement_passes():
     workflow = load_workflow("41 - Z-Image Base Two Stage Precision I2I.json")
     unet = nodes(workflow, "UnetLoaderGGUF")
     assert len(unet) == 1
-    assert unet[0]["widgets_values"][0] == r"Z-Image\z_image-Q8_0.gguf"
+    assert unet[0]["widgets_values"][0] == "z_image-Q8_0.gguf"
     samplers = nodes(workflow, "KSampler")
     assert len(samplers) == 2
     denoises = sorted(node["widgets_values"][6] for node in samplers)
@@ -145,7 +183,7 @@ def test_krea_identity_edit_uses_current_patch_and_grounded_encoder():
     unet = nodes(workflow, "UNETLoader")
     assert len(unet) == 1
     assert unet[0]["widgets_values"][0] == (
-        r"Krea2\krea2_turbo_fp8_scaled.safetensors"
+        "krea2_turbo_fp8_scaled.safetensors"
     )
     patch = nodes(workflow, "Krea2EditModelPatch")
     grounded = nodes(workflow, "Krea2EditGroundedEncode")
@@ -166,7 +204,7 @@ def test_firered_uses_current_gguf_lightning_and_two_reference_roles():
     unet = nodes(workflow, "UnetLoaderGGUF")
     assert len(unet) == 1
     assert unet[0]["widgets_values"][0] == (
-        r"FireRed\FireRed-Image-Edit-1.1-Q4_K_M.gguf"
+        "FireRed-Image-Edit-1.1-Q4_K_M.gguf"
     )
     lora = nodes(workflow, "LoraLoaderModelOnly")
     assert len(lora) == 1
@@ -237,7 +275,7 @@ def test_krea_identity_has_a_two_reference_executable_api_graph():
 
     assert len(by_type["UNETLoader"]) == 1
     assert by_type["UNETLoader"][0][1]["inputs"]["unet_name"] == (
-        r"Krea2\krea2_turbo_fp8_scaled.safetensors"
+        "krea2_turbo_fp8_scaled.safetensors"
     )
     assert len(by_type["Krea2EditModelPatch"]) == 1
     patch_id, patch = by_type["Krea2EditModelPatch"][0]

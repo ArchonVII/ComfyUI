@@ -20,21 +20,21 @@ KREA_NAME = "42 - Krea 2 Identity Edit v1.2.json"
 FIRERED_NAME = "43 - FireRed 1.1 Identity MultiRef.json"
 REACTOR_NAME = "44 - Face Swap Proof and ReActor Baseline.json"
 
-Z_TURBO_MODEL = r"Z-Image\z_image_turbo-Q8_0.gguf"
-Z_BASE_MODEL = r"Z-Image\z_image-Q8_0.gguf"
-Z_CLIP = r"Z-Image\qwen_3_4b.safetensors"
+Z_TURBO_MODEL = "z_image_turbo-Q8_0.gguf"
+Z_BASE_MODEL = "z_image-Q8_0.gguf"
+Z_CLIP = "qwen_3_4b.safetensors"
 Z_VAE = "ae.safetensors"
 
-KREA_MODEL = r"Krea2\krea2_turbo_fp8_scaled.safetensors"
-KREA_CLIP = r"Krea2\qwen3vl_4b_fp8_scaled.safetensors"
+KREA_MODEL = "krea2_turbo_fp8_scaled.safetensors"
+KREA_CLIP = "qwen3vl_4b_fp8_scaled.safetensors"
 KREA_VAE = "qwen_image_vae.safetensors"
-KREA_LORA = r"Krea2\krea2_identity_edit_v1_2.safetensors"
+KREA_LORA = "krea2_identity_edit_v1_2.safetensors"
 
-FIRERED_MODEL = r"FireRed\FireRed-Image-Edit-1.1-Q4_K_M.gguf"
-FIRERED_CLIP = r"Qwen\qwen_2.5_vl_7b_fp8_scaled.safetensors"
+FIRERED_MODEL = "FireRed-Image-Edit-1.1-Q4_K_M.gguf"
+FIRERED_CLIP = "qwen_2.5_vl_7b_fp8_scaled.safetensors"
 FIRERED_VAE = "qwen_image_vae.safetensors"
 FIRERED_LORA = (
-    r"FireRed\FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors"
+    "FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors"
 )
 
 Z_SOURCES = [

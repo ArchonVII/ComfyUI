@@ -51,7 +51,7 @@
         "Node name for S&R": "UNETLoader"
       },
       "widgets_values": [
-        "Krea2\\krea2_turbo_fp8_scaled.safetensors",
+        "krea2_turbo_fp8_scaled.safetensors",
         "default"
       ]
     },
@@ -107,7 +107,7 @@
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
-        "Krea2\\krea2_identity_edit_v1_2.safetensors",
+        "krea2_identity_edit_v1_2.safetensors",
         1.0
       ]
     },
@@ -167,7 +167,7 @@
         "Node name for S&R": "CLIPLoader"
       },
       "widgets_values": [
-        "Krea2\\qwen3vl_4b_fp8_scaled.safetensors",
+        "qwen3vl_4b_fp8_scaled.safetensors",
         "krea2",
         "default"
       ]
@@ -1418,7 +1418,7 @@
     "modern_identity_suite": {
       "workflow_slug": "krea-2-identity-edit-v1-2",
       "version": 1,
-      "model": "Krea2\\krea2_turbo_fp8_scaled.safetensors",
+      "model": "krea2_turbo_fp8_scaled.safetensors",
       "license": "Krea 2 Community License; Krea2Edit nodes Apache-2.0",
       "research_sources": [
         "https://github.com/krea-ai/krea-2",
