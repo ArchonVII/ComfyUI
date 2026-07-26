@@ -189,6 +189,22 @@ def test_store_completes_and_fails_an_exact_queued_run_without_intermediate_tran
     assert store.fail_recorded_run(experiment_id=experiment["id"], run_id=failed["id"], error="image write failed")["state"] == "failed"
 
 
+def test_failed_retry_clears_attempt_fields_before_claim_and_completion(store, planned_run):
+    experiment = store.create_experiment(name="Retry reset", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/first.png")
+    store.fail_recorded_run(experiment_id=experiment["id"], run_id=run["id"], error="write failed")
+
+    queued = store.mark_run_queued(experiment_id=experiment["id"], run_id=run["id"])
+    assert queued["identity_report"] is None
+    assert queued["output_path"] is None
+    assert queued["started_at"] is None
+    assert queued["completed_at"] is None
+    assert queued["plan"] == planned_run.as_dict()
+    claimed = store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/retry.png")
+    assert store.complete_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path=claimed["output_path"], identity_report={})["state"] == "completed"
+
+
 def test_store_claims_one_exact_result_path_before_file_writes_and_rejects_competing_claims(store, planned_run):
     experiment = store.create_experiment(name="Claim", mode="face_swap")
     run = store.create_run(experiment["id"], planned_run)

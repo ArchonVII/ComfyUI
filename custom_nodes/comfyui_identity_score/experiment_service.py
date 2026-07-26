@@ -124,11 +124,11 @@ class ExperimentService:
             validate_api_workflow(workflow)
         self._validate_catalog_selection(checkpoints, loras)
         refine = dict(payload.get("refine_settings") or {})
-        if workflow is not None:
-            refine["workflow_template"] = workflow
         runs = plan_runs(mode=mode, checkpoints=checkpoints, seeds=seeds, loras=loras, stages=stages, refine_settings=refine)
         self._require_capacity(self.estimate(None, run_count=len(runs)))
         settings = dict(payload.get("settings", {}))
+        if workflow is not None:
+            settings["workflow_template"] = workflow
         experiment = self.store.create_experiment(name=name, mode=mode, settings=settings)
         stored_runs = self.store.create_runs(experiment["id"], list(runs))
         return {"experiment": experiment, "runs": stored_runs}

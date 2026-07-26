@@ -82,6 +82,17 @@ def test_workflow_template_requires_one_typed_node_for_every_stable_role():
         validate_api_workflow(wrong)
 
 
+def test_created_experiment_keeps_validated_workflow_in_durable_settings_not_run_refine(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    workflow = template()
+    created = service.create_experiment({"name": "workflow", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"], "workflow": workflow})
+
+    restarted = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path), db_path=service.store.path)
+    detail = restarted.detail(created["experiment"]["id"])
+    assert detail["experiment"]["settings"]["workflow_template"] == workflow
+    assert detail["runs"][0]["plan"]["refine"] == {}
+
+
 def test_estimates_use_completed_medians_or_labeled_fallback_and_current_free_output_space(tmp_path, monkeypatch):
     service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
     experiment = service.create_experiment({

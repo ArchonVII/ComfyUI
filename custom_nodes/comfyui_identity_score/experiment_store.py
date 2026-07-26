@@ -165,7 +165,10 @@ class ExperimentStore:
             if run["experiment_id"] != experiment_id or run["state"] not in {"planned", "failed"}:
                 raise ValueError("run is not queueable")
             now = _utc_now()
-            connection.execute("UPDATE runs SET state = 'queued', queued_at = ?, updated_at = ? WHERE id = ?", (now, now, run_id))
+            if run["state"] == "failed":
+                connection.execute("UPDATE runs SET state = 'queued', queued_at = ?, updated_at = ?, output_path = NULL, identity_report_json = NULL, started_at = NULL, completed_at = NULL WHERE id = ? AND state = 'failed' AND updated_at = ?", (now, now, run_id, run["updated_at"]))
+            else:
+                connection.execute("UPDATE runs SET state = 'queued', queued_at = ?, updated_at = ? WHERE id = ? AND state = 'planned' AND updated_at = ?", (now, now, run_id, run["updated_at"]))
             return self._fetch_run(connection, run_id)
 
     def resume_stale_runs(
