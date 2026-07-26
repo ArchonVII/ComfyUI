@@ -150,7 +150,8 @@ def test_record_run_writes_local_png_metadata_and_completes_a_non_rankable_run(t
     assert output.is_file()
     assert completed["state"] == "completed"
     assert completed["identity_report"]["rankable"] is False
-    assert completed["identity_report"]["runtime_seconds"] == 3.5
+    assert completed["identity_report"]["scorer_seconds"] == 3.5
+    assert completed["identity_report"]["runtime_source"] == "completion_fallback"
 
 
 def test_estimate_uses_recent_completed_output_median_and_blocks_insufficient_storage_before_create(tmp_path, monkeypatch):

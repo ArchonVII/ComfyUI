@@ -74,7 +74,7 @@ def test_active_run_helper_extracts_only_dual_identity_runs_from_live_queue_and_
 
     prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
 
-    assert routes.active_identity_lab_run_ids(prompt_server) == {"queued-run", "history-run", "complete-run"}
+    assert routes.active_identity_lab_run_ids(prompt_server) == {"queued-run"}
 
 
 def test_active_run_helper_uses_prompt_queue_history_api_and_treats_history_as_active():
@@ -89,7 +89,7 @@ def test_active_run_helper_uses_prompt_queue_history_api_and_treats_history_as_a
 
     prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
 
-    assert routes.active_identity_lab_run_ids(prompt_server) == {"history-run"}
+    assert routes.active_identity_lab_run_ids(prompt_server) == set()
 
 
 def test_active_run_helper_fails_closed_when_prompt_queue_inspection_errors():
@@ -102,7 +102,7 @@ def test_active_run_helper_fails_closed_when_prompt_queue_inspection_errors():
 
     prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
 
-    with pytest.raises(ValueError, match="unable to inspect"):
+    with pytest.raises(routes.QueueInspectionError, match="unable to inspect"):
         routes.active_identity_lab_run_ids(prompt_server)
 
 

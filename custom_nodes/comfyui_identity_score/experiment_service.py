@@ -119,14 +119,18 @@ class ExperimentService:
         seeds = list(payload.get("seeds", ()))
         loras = [tuple(item) for item in payload.get("loras", ())]
         stages = list(payload.get("stages", DEFAULT_STAGES))
-        if "workflow" in payload:
-            validate_api_workflow(payload["workflow"])
+        workflow = payload.get("workflow")
+        if workflow is not None:
+            validate_api_workflow(workflow)
         self._validate_catalog_selection(checkpoints, loras)
-        runs = plan_runs(mode=mode, checkpoints=checkpoints, seeds=seeds, loras=loras, stages=stages, refine_settings=payload.get("refine_settings"))
+        refine = dict(payload.get("refine_settings") or {})
+        if workflow is not None:
+            refine["workflow_template"] = workflow
+        runs = plan_runs(mode=mode, checkpoints=checkpoints, seeds=seeds, loras=loras, stages=stages, refine_settings=refine)
         self._require_capacity(self.estimate(None, run_count=len(runs)))
         settings = dict(payload.get("settings", {}))
         experiment = self.store.create_experiment(name=name, mode=mode, settings=settings)
-        stored_runs = [self.store.create_run(experiment["id"], run) for run in runs]
+        stored_runs = self.store.create_runs(experiment["id"], list(runs))
         return {"experiment": experiment, "runs": stored_runs}
 
     def list_experiments(self, *, include_archived: bool = False) -> list[dict[str, Any]]:
@@ -146,7 +150,7 @@ class ExperimentService:
         self._validate_catalog_selection(checkpoints, loras)
         planned = plan_runs(mode=experiment["mode"], checkpoints=checkpoints, seeds=list(payload.get("seeds", ())), loras=loras, stages=list(payload.get("stages", ())), refine_settings=payload.get("refine_settings"))
         self._require_capacity(self.estimate(experiment_id, run_count=len(planned)))
-        return [self.store.create_run(experiment_id, run) for run in planned]
+        return self.store.create_runs(experiment_id, list(planned))
 
     promote = plan_stage
 
@@ -208,6 +212,9 @@ class ExperimentService:
         fields = {key: payload[key] for key in ("rating", "favorite", "notes") if key in payload}
         return self.store.update_review(run_id, **fields)
 
+    def mark_queued(self, experiment_id: str, run_id: str) -> dict[str, Any]:
+        return self.store.mark_run_queued(experiment_id=experiment_id, run_id=run_id)
+
     def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset()) -> list[dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
         for run in self.store.list_runs(experiment_id):
@@ -252,6 +259,15 @@ class ExperimentService:
             raise ValueError("output file is not available")
         return target
 
+    def completed_output_file(self, run_id: str) -> Path:
+        run = self.store.get_run(run_id)
+        if run["state"] != "completed" or not isinstance(run["output_path"], str):
+            raise ValueError("completed result is not available")
+        relative = run["output_path"]
+        if not relative.startswith("identity_lab/results/") or not relative.endswith(".png"):
+            raise ValueError("completed result is not available")
+        return self.output_file(relative)
+
     def record_run(self, *, experiment_id: str, run_id: str, generated_image: Any, report: dict[str, Any], prompt: Any = None, extra_pnginfo: Any = None, runtime_seconds: float | None = None) -> dict[str, Any]:
         relative = f"identity_lab/results/{run_id}.png"
         output = self.output_directory / relative
@@ -266,9 +282,12 @@ class ExperimentService:
             created_output = True
             temporary.replace(output)
         except BaseException as exc:
-            temporary.unlink(missing_ok=True)
-            if created_output:
-                output.unlink(missing_ok=True)
+            try:
+                temporary.unlink(missing_ok=True)
+                if created_output:
+                    output.unlink(missing_ok=True)
+            except OSError:
+                pass
             try:
                 self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"image save failed: {type(exc).__name__}: {exc}")
             except (KeyError, ValueError):
@@ -277,12 +296,16 @@ class ExperimentService:
         report["experiment_id"] = experiment_id
         report["run_id"] = run_id
         report["result_path"] = relative
-        report["runtime_seconds"] = float(runtime_seconds if runtime_seconds is not None else report.get("runtime_seconds", 0.0))
+        if runtime_seconds is not None:
+            report["scorer_seconds"] = float(runtime_seconds)
         try:
             return self.store.complete_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative, identity_report=report)
         except BaseException as exc:
-            if created_output:
-                output.unlink(missing_ok=True)
+            try:
+                if created_output:
+                    output.unlink(missing_ok=True)
+            except OSError:
+                pass
             try:
                 self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"record completion failed: {type(exc).__name__}: {exc}")
             except (KeyError, ValueError):
@@ -303,6 +326,8 @@ class ExperimentService:
         pnginfo = PngImagePlugin.PngInfo()
         if prompt is not None:
             pnginfo.add_text("prompt", json.dumps(prompt, ensure_ascii=False))
-        if extra_pnginfo is not None:
-            pnginfo.add_text("extra_pnginfo", json.dumps(extra_pnginfo, ensure_ascii=False))
+        if isinstance(extra_pnginfo, Mapping):
+            for key, value in extra_pnginfo.items():
+                if isinstance(key, str) and key:
+                    pnginfo.add_text(key, json.dumps(value, ensure_ascii=False))
         Image.fromarray(array).save(path, format="PNG", pnginfo=pnginfo)

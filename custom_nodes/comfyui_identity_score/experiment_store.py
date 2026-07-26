@@ -24,6 +24,7 @@ _TRANSITIONS = {
     "archived": frozenset(),
 }
 _UNSET = object()
+MAX_EXPERIMENT_RUNS = 100
 
 
 class ExperimentStore:
@@ -108,6 +109,29 @@ class ExperimentStore:
 
     insert_run = create_run
 
+    def create_runs(self, experiment_id: str, planned_runs: list[PlannedRun]) -> list[dict[str, Any]]:
+        """Atomically add a deduplicated batch without exceeding the experiment cap."""
+        unique = {run.combination_hash: run for run in planned_runs}
+        with self._connection() as connection:
+            experiment = self._fetch_experiment(connection, experiment_id)
+            if experiment["state"] != "active":
+                raise ValueError("cannot add runs to an archived experiment")
+            existing = {row["combination_hash"] for row in connection.execute("SELECT combination_hash FROM runs WHERE experiment_id = ?", (experiment_id,))}
+            additions = [run for key, run in unique.items() if key not in existing]
+            if len(existing) + len(additions) > MAX_EXPERIMENT_RUNS:
+                raise ValueError("experiment cannot exceed 100 runs")
+            result: list[dict[str, Any]] = []
+            for run in planned_runs:
+                if not isinstance(run, PlannedRun) or run.combination_hash != canonical_combination_hash(run.as_dict()):
+                    raise ValueError("planned_run does not have its canonical combination hash")
+                row = connection.execute("SELECT * FROM runs WHERE experiment_id = ? AND combination_hash = ?", (experiment_id, run.combination_hash)).fetchone()
+                if row is None:
+                    now = _utc_now()
+                    connection.execute("INSERT INTO runs (id, experiment_id, combination_hash, state, plan_json, identity_report_json, output_path, rating, favorite, notes, created_at, updated_at, started_at, queued_at, completed_at) VALUES (?, ?, ?, 'planned', ?, NULL, NULL, NULL, 0, '', ?, ?, NULL, NULL, NULL)", (str(uuid4()), experiment_id, run.combination_hash, _encode_json(run.as_dict(), label="plan", reject_embeddings=True), now, now))
+                    row = connection.execute("SELECT * FROM runs WHERE experiment_id = ? AND combination_hash = ?", (experiment_id, run.combination_hash)).fetchone()
+                result.append(_decode_run(row))
+            return result
+
     def get_run(self, run_id: str) -> dict[str, Any]:
         with self._connection() as connection:
             return self._fetch_run(connection, run_id)
@@ -133,6 +157,15 @@ class ExperimentStore:
             )
             if updated.rowcount != 1:
                 raise ValueError("run state changed concurrently")
+            return self._fetch_run(connection, run_id)
+
+    def mark_run_queued(self, *, experiment_id: str, run_id: str) -> dict[str, Any]:
+        with self._connection() as connection:
+            run = self._fetch_run(connection, run_id)
+            if run["experiment_id"] != experiment_id or run["state"] not in {"planned", "failed"}:
+                raise ValueError("run is not queueable")
+            now = _utc_now()
+            connection.execute("UPDATE runs SET state = 'queued', queued_at = ?, updated_at = ? WHERE id = ?", (now, now, run_id))
             return self._fetch_run(connection, run_id)
 
     def resume_stale_runs(
@@ -176,7 +209,7 @@ class ExperimentStore:
             for row in rows:
                 updated = connection.execute(
                     """
-                    UPDATE runs SET state = 'planned', output_path = NULL, updated_at = ?, started_at = NULL
+                UPDATE runs SET state = 'planned', output_path = NULL, updated_at = ?, started_at = NULL
                     WHERE id = ? AND state = ? AND updated_at = ?
                     """,
                     (now, row["id"], row["state"], row["updated_at"]),
@@ -204,6 +237,14 @@ class ExperimentStore:
             if run["state"] not in {"planned", "queued", "running"}:
                 raise ValueError(f"run is not recordable from state: {run['state']}")
             now = _utc_now()
+            queued_at = run.get("queued_at")
+            report = dict(identity_report)
+            if queued_at:
+                report["runtime_seconds"] = max(0.0, (datetime.now(timezone.utc) - datetime.fromisoformat(queued_at.replace("Z", "+00:00"))).total_seconds())
+                report["runtime_source"] = "queued_to_completion"
+            else:
+                report["runtime_source"] = "completion_fallback"
+            report_json = _encode_json(report, label="identity report", reject_embeddings=True)
             updated = connection.execute(
                 """
                 UPDATE runs
@@ -351,6 +392,7 @@ class ExperimentStore:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     started_at TEXT,
+                    queued_at TEXT,
                     completed_at TEXT,
                     UNIQUE (experiment_id, combination_hash)
                 );
@@ -358,6 +400,9 @@ class ExperimentStore:
                 CREATE INDEX IF NOT EXISTS idx_runs_state_updated ON runs(state, updated_at);
                 """
             )
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(runs)")}
+            if "queued_at" not in columns:
+                connection.execute("ALTER TABLE runs ADD COLUMN queued_at TEXT")
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:

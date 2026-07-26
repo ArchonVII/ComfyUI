@@ -19,6 +19,10 @@ _ROUTES_REGISTERED = False
 _SERVICE: ExperimentService | None = None
 
 
+class QueueInspectionError(RuntimeError):
+    pass
+
+
 def get_service() -> ExperimentService:
     global _SERVICE
     if _SERVICE is None:
@@ -61,20 +65,20 @@ def active_identity_lab_run_ids(prompt_server: Any | None = None) -> set[str]:
         server_module = sys.modules.get("server")
         prompt_server = getattr(getattr(server_module, "PromptServer", None), "instance", None)
     if prompt_server is None:
-        raise ValueError("unable to inspect ComfyUI queue/history")
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history")
     queue = getattr(prompt_server, "prompt_queue", None)
     get_current_queue = getattr(queue, "get_current_queue", None)
     get_history = getattr(queue, "get_history", None)
     if not callable(get_current_queue) or not callable(get_history):
-        raise ValueError("unable to inspect ComfyUI queue/history")
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history")
     try:
         current = get_current_queue()
         history = get_history()
     except Exception as exc:
-        raise ValueError("unable to inspect ComfyUI queue/history") from exc
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history") from exc
     if not isinstance(history, Mapping):
-        raise ValueError("unable to inspect ComfyUI queue/history")
-    return _queued_run_ids(current) | _queued_run_ids(history)
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history")
+    return _queued_run_ids(current)
 
 
 # Test seam for route-level resume handling; production keeps it local to PromptServer.
@@ -217,6 +221,8 @@ async def _body(request) -> dict[str, Any]:
 def _response(call):
     try:
         return web.json_response(call())
+    except QueueInspectionError as exc:
+        raise web.HTTPServiceUnavailable(text=str(exc)) from exc
     except KeyError as exc:
         if "not found" in str(exc).lower():
             raise web.HTTPNotFound(text=str(exc)) from exc
@@ -229,6 +235,8 @@ def _validated(handler):
     async def wrapped(request):
         try:
             return await handler(request)
+        except QueueInspectionError as exc:
+            raise web.HTTPServiceUnavailable(text=str(exc)) from exc
         except KeyError as exc:
             if "not found" in str(exc).lower():
                 raise web.HTTPNotFound(text=str(exc)) from exc
@@ -300,11 +308,19 @@ async def post_estimate(request):
     return _response(lambda: get_service().estimate(experiment_id, **payload))
 
 
+async def post_mark_queued(request):
+    run_id = require_id(request.match_info["run_id"])
+    payload = require_object(await _body(request))
+    if set(payload) != {"experiment_id"}:
+        raise ValueError("queue payload requires only experiment_id")
+    return _response(lambda: get_service().mark_queued(require_id(payload["experiment_id"]), run_id))
+
+
 async def get_output(request):
-    output_path = require_relative_path(request.match_info["output_path"])
+    run_id = require_id(request.match_info["run_id"])
     try:
-        return web.FileResponse(get_service().output_file(output_path))
-    except ValueError as exc:
+        return web.FileResponse(get_service().completed_output_file(run_id), headers={"Content-Type": "image/png", "X-Content-Type-Options": "nosniff"})
+    except (KeyError, ValueError) as exc:
         raise web.HTTPNotFound(text=str(exc)) from exc
 
 
@@ -325,9 +341,10 @@ def register_routes() -> None:
     routes.post("/identity-lab/experiments/{experiment_id}/plan")(_validated(post_plan))
     routes.post("/identity-lab/experiments/{experiment_id}/promote")(_validated(post_promote))
     routes.post("/identity-lab/experiments/{experiment_id}/estimate")(_validated(post_estimate))
+    routes.post("/identity-lab/runs/{run_id}/queued")(_validated(post_mark_queued))
     routes.get("/identity-lab/experiments/{experiment_id}/results")(_validated(get_results))
     routes.patch("/identity-lab/runs/{run_id}/review")(_validated(patch_review))
     routes.post("/identity-lab/experiments/{experiment_id}/resume")(_validated(post_resume))
     routes.post("/identity-lab/experiments/{experiment_id}/archive")(_validated(post_archive))
-    routes.get("/identity-lab/output/{output_path:.*}")(_validated(get_output))
+    routes.get("/identity-lab/runs/{run_id}/output")(_validated(get_output))
     _ROUTES_REGISTERED = True
