@@ -52,6 +52,27 @@ def test_store_creates_one_run_per_experiment_combination_hash(store, planned_ru
     assert first["state"] == "planned"
 
 
+def test_store_insert_is_atomic_against_experiment_archival(store, planned_run, monkeypatch):
+    experiment = store.create_experiment(name="Archive race", mode="face_swap")
+    original_fetch = store._fetch_experiment
+    archived = False
+
+    def fetch_then_archive(connection, experiment_id):
+        nonlocal archived
+        row = original_fetch(connection, experiment_id)
+        if not archived:
+            archived = True
+            with sqlite3.connect(store.path) as other:
+                other.execute("UPDATE experiments SET state = 'archived' WHERE id = ?", (experiment_id,))
+        return row
+
+    monkeypatch.setattr(store, "_fetch_experiment", fetch_then_archive)
+    with pytest.raises(ValueError, match="archived"):
+        store.create_run(experiment["id"], planned_run)
+    monkeypatch.setattr(store, "_fetch_experiment", original_fetch)
+    assert store.list_runs(experiment["id"]) == []
+
+
 def test_store_requires_valid_matching_modes_and_durable_mode_constraints(store, planned_run):
     with pytest.raises(ValueError, match="mode"):
         store.create_experiment(name="Invalid", mode="txt2img")
@@ -115,7 +136,12 @@ def test_store_resumes_stale_queued_and_running_runs_to_planned_without_touching
     store.transition_run(fresh_queued["id"], "queued")
     with sqlite3.connect(store.path) as connection:
         connection.execute(
-            "UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id IN (?, ?)",
+            """
+            UPDATE runs
+            SET updated_at = '2000-01-01T00:00:00.000000Z',
+                started_at = '2000-01-01T00:00:00.000000Z'
+            WHERE id IN (?, ?)
+            """,
             (stale_running["id"], stale_queued["id"]),
         )
 
@@ -123,6 +149,7 @@ def test_store_resumes_stale_queued_and_running_runs_to_planned_without_touching
 
     assert {item["id"] for item in resumed} == {stale_running["id"], stale_queued["id"]}
     assert {item["state"] for item in resumed} == {"planned"}
+    assert {item["started_at"] for item in resumed} == {None}
     assert store.get_run(fresh_queued["id"])["state"] == "queued"
     assert store.resume_stale_runs(stale_after_seconds=60) == []
 
@@ -221,6 +248,9 @@ def test_store_refuses_embeddings_or_image_bytes_in_completion_data(store, plann
     [
         {"image_bytes": [0, 127, 255]},
         {"image_base64": "iVBORw0KGgo="},
+        {"png_base64": "iVBORw0KGgo="},
+        {"thumbnail_b64": "iVBORw0KGgo="},
+        {"image_data-uri": "payload"},
         {"preview": "data:image/png;base64,iVBORw0KGgo="},
     ],
 )
@@ -282,6 +312,40 @@ def test_store_allows_human_review_fields_to_change_after_completion(store, plan
     assert changed["favorite"] is False
     assert changed["notes"] == "still strong"
     assert changed["output_path"] == "result.png"
+
+
+def test_store_reviews_only_completed_runs_and_preserve_separate_fields(store, planned_run, monkeypatch):
+    experiment = store.create_experiment(name="Review contract", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    with pytest.raises(ValueError, match="completed"):
+        store.update_review(run["id"], rating=5)
+
+    store.transition_run(run["id"], "queued")
+    store.transition_run(run["id"], "running")
+    store.complete_run(run["id"], output_path="result.png", identity_report={})
+    assert store.update_review(run["id"], rating=5)["rating"] == 5
+    assert store.update_review(run["id"], favorite=True)["favorite"] is True
+    assert store.update_review(run["id"], notes="keep this one")["notes"] == "keep this one"
+
+    original_fetch = store._fetch_run
+    changed = False
+
+    def fetch_after_separate_review(connection, run_id):
+        nonlocal changed
+        row = original_fetch(connection, run_id)
+        if run_id == run["id"] and not changed:
+            changed = True
+            with sqlite3.connect(store.path) as other:
+                other.execute("UPDATE runs SET favorite = 0, notes = 'concurrent note' WHERE id = ?", (run_id,))
+        return row
+
+    monkeypatch.setattr(store, "_fetch_run", fetch_after_separate_review)
+    reviewed = store.update_review(run["id"], rating=4)
+    monkeypatch.setattr(store, "_fetch_run", original_fetch)
+
+    assert reviewed["rating"] == 4
+    assert reviewed["favorite"] is False
+    assert reviewed["notes"] == "concurrent note"
 
 
 def test_store_archives_experiments_non_destructively(store, planned_run):

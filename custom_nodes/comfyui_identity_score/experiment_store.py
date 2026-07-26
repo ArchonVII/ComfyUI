@@ -83,11 +83,14 @@ class ExperimentStore:
                 INSERT INTO runs (
                     id, experiment_id, combination_hash, state, plan_json, identity_report_json,
                     output_path, rating, favorite, notes, created_at, updated_at, started_at, completed_at
-                ) VALUES (?, ?, ?, 'planned', ?, NULL, NULL, NULL, 0, '', ?, ?, NULL, NULL)
+                )
+                SELECT ?, id, ?, 'planned', ?, NULL, NULL, NULL, 0, '', ?, ?, NULL, NULL
+                FROM experiments
+                WHERE id = ? AND state = 'active' AND mode = ?
                 ON CONFLICT(experiment_id, combination_hash) DO NOTHING
                 RETURNING *
                 """,
-                (run_id, experiment_id, planned_run.combination_hash, plan_json, now, now),
+                (run_id, planned_run.combination_hash, plan_json, now, now, experiment_id, planned_run.mode),
             ).fetchone()
             if inserted is not None:
                 return _decode_run(inserted)
@@ -95,6 +98,11 @@ class ExperimentStore:
                 "SELECT * FROM runs WHERE experiment_id = ? AND combination_hash = ?", (experiment_id, planned_run.combination_hash)
             ).fetchone()
             if existing is None:
+                experiment = self._fetch_experiment(connection, experiment_id)
+                if experiment["state"] != "active":
+                    raise ValueError("cannot add runs to an archived experiment")
+                if planned_run.mode != experiment["mode"]:
+                    raise ValueError("planned run mode must match the experiment mode")
                 raise ValueError("run insertion did not produce a deterministic existing row")
             return _verified_existing_run(existing, plan)
 
@@ -147,7 +155,7 @@ class ExperimentStore:
             for row in rows:
                 updated = connection.execute(
                     """
-                    UPDATE runs SET state = 'planned', updated_at = ?
+                    UPDATE runs SET state = 'planned', updated_at = ?, started_at = NULL
                     WHERE id = ? AND state = ? AND updated_at = ?
                     """,
                     (now, row["id"], row["state"], row["updated_at"]),
@@ -192,13 +200,29 @@ class ExperimentStore:
     ) -> dict[str, Any]:
         with self._connection() as connection:
             run = self._fetch_run(connection, run_id)
-            next_rating = run["rating"] if rating is _UNSET else _validate_rating(rating)
-            next_favorite = run["favorite"] if favorite is _UNSET else _validate_favorite(favorite)
-            next_notes = run["notes"] if notes is _UNSET else _validate_notes(notes)
-            connection.execute(
-                "UPDATE runs SET rating = ?, favorite = ?, notes = ?, updated_at = ? WHERE id = ?",
-                (next_rating, int(next_favorite), next_notes, _utc_now(), run_id),
+            if run["state"] != "completed":
+                raise ValueError("reviews are only allowed for completed runs")
+            assignments: list[str] = []
+            values: list[Any] = []
+            if rating is not _UNSET:
+                assignments.append("rating = ?")
+                values.append(_validate_rating(rating))
+            if favorite is not _UNSET:
+                assignments.append("favorite = ?")
+                values.append(int(_validate_favorite(favorite)))
+            if notes is not _UNSET:
+                assignments.append("notes = ?")
+                values.append(_validate_notes(notes))
+            if not assignments:
+                return run
+            assignments.append("updated_at = ?")
+            values.extend([_utc_now(), run_id])
+            updated = connection.execute(
+                f"UPDATE runs SET {', '.join(assignments)} WHERE id = ? AND state = 'completed'",
+                values,
             )
+            if updated.rowcount != 1:
+                raise ValueError("run state changed concurrently")
             return self._fetch_run(connection, run_id)
 
     def _initialize(self) -> None:
@@ -327,10 +351,10 @@ def _reject_sensitive_completion_data(value: Any) -> None:
         raise ValueError("identity report must not contain image payloads")
     if isinstance(value, Mapping):
         for key, item in value.items():
-            normalized_key = str(key).lower()
+            normalized_key = "".join(character for character in str(key).lower() if character.isalnum())
             if "embedding" in normalized_key:
                 raise ValueError("identity report must not contain embeddings")
-            if "image" in normalized_key and ("bytes" in normalized_key or "base64" in normalized_key):
+            if any(marker in normalized_key for marker in ("base64", "b64", "bytes", "blob", "datauri")):
                 raise ValueError("identity report must not contain image payloads")
             _reject_sensitive_completion_data(item)
     elif isinstance(value, (list, tuple)):
