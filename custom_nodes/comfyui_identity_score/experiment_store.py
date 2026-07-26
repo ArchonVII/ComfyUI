@@ -64,7 +64,7 @@ class ExperimentStore:
         if not isinstance(planned_run, PlannedRun):
             raise ValueError("planned_run must be a PlannedRun")
         plan = planned_run.as_dict()
-        plan_json = _encode_json(plan, label="plan")
+        plan_json = _encode_json(plan, label="plan", reject_embeddings=True)
         now = _utc_now()
         with self._connection() as connection:
             experiment = self._fetch_experiment(connection, experiment_id)
@@ -122,12 +122,12 @@ class ExperimentStore:
         now = _utc_now()
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT id FROM runs WHERE state = 'running' AND updated_at <= ? ORDER BY updated_at, id", (cutoff_text,)
+                "SELECT id FROM runs WHERE state IN ('queued', 'running') AND updated_at <= ? ORDER BY updated_at, id", (cutoff_text,)
             ).fetchall()
             if not rows:
                 return []
             run_ids = [row["id"] for row in rows]
-            connection.executemany("UPDATE runs SET state = 'queued', updated_at = ? WHERE id = ?", [(now, run_id) for run_id in run_ids])
+            connection.executemany("UPDATE runs SET state = 'planned', updated_at = ? WHERE id = ?", [(now, run_id) for run_id in run_ids])
             return [self._fetch_run(connection, run_id) for run_id in run_ids]
 
     def complete_run(self, run_id: str, *, output_path: str, identity_report: Mapping[str, Any]) -> dict[str, Any]:

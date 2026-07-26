@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 import sqlite3
 import sys
@@ -66,17 +67,31 @@ def test_store_enforces_valid_run_state_transitions(store, planned_run):
         store.transition_run(run["id"], "discarded")
 
 
-def test_store_resumes_stale_running_runs_to_queued(store, planned_run):
+def test_store_resumes_stale_queued_and_running_runs_to_planned_without_touching_fresh_runs(store, planned_run):
     experiment = store.create_experiment(name="Resume", mode="face_swap")
-    run = store.create_run(experiment["id"], planned_run)
-    store.transition_run(run["id"], "queued")
-    store.transition_run(run["id"], "running")
+    stale_running = store.create_run(experiment["id"], planned_run)
+    stale_queued = store.create_run(
+        experiment["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0]
+    )
+    fresh_queued = store.create_run(
+        experiment["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[9], stages=["baseline"])[0]
+    )
+    store.transition_run(stale_running["id"], "queued")
+    store.transition_run(stale_running["id"], "running")
+    store.transition_run(stale_queued["id"], "queued")
+    store.transition_run(fresh_queued["id"], "queued")
+    with sqlite3.connect(store.path) as connection:
+        connection.execute(
+            "UPDATE runs SET updated_at = '2000-01-01T00:00:00.000000Z' WHERE id IN (?, ?)",
+            (stale_running["id"], stale_queued["id"]),
+        )
 
-    resumed = store.resume_stale_runs(stale_after_seconds=0)
+    resumed = store.resume_stale_runs(stale_after_seconds=60)
 
-    assert [item["id"] for item in resumed] == [run["id"]]
-    assert resumed[0]["state"] == "queued"
-    assert store.resume_stale_runs(stale_after_seconds=0) == []
+    assert {item["id"] for item in resumed} == {stale_running["id"], stale_queued["id"]}
+    assert {item["state"] for item in resumed} == {"planned"}
+    assert store.get_run(fresh_queued["id"])["state"] == "queued"
+    assert store.resume_stale_runs(stale_after_seconds=60) == []
 
 
 def test_store_completion_data_is_immutable_and_output_paths_are_relative(store, planned_run):
@@ -122,6 +137,20 @@ def test_store_refuses_embeddings_or_image_bytes_in_completion_data(store, plann
 
     with pytest.raises(ValueError, match="embedding"):
         store.create_experiment(name="No embeddings", mode="face_swap", settings={"reference_embedding": [0.1, 0.2]})
+
+
+def test_store_refuses_embedding_like_data_in_plans_but_keeps_numeric_parameter_arrays(store, planned_run):
+    experiment = store.create_experiment(name="Plan privacy", mode="face_swap")
+    numeric_parameters = replace(planned_run, refine={"guidance_values": [2.5, 3.0]})
+    safe_run = store.create_run(experiment["id"], numeric_parameters)
+
+    assert safe_run["plan"]["refine"] == {"guidance_values": [2.5, 3.0]}
+    unsafe_plan = replace(
+        plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0],
+        refine={"face_embedding": [0.1, 0.2]},
+    )
+    with pytest.raises(ValueError, match="embedding"):
+        store.create_run(experiment["id"], unsafe_plan)
 
 
 def test_store_allows_human_review_fields_to_change_after_completion(store, planned_run):
