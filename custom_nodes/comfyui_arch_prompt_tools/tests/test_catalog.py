@@ -277,6 +277,16 @@ SPECTRUM_FIELDS = {
     ("lighting", "contrast_ratio"),
 }
 
+ADDITIVE_USER_FIELDS = {
+    ("identity", "body_snippets"),
+    ("pose", "pose_snippets"),
+    ("clothing", "clothing_modifiers"),
+    ("clothing", "outfit_snippets"),
+    ("environment", "environment_snippets"),
+    ("camera", "optical_effects"),
+    ("lighting", "lighting_techniques"),
+}
+
 
 def load_default_catalog():
     return load_catalog(DATA_DIR / "schemas.json", DATA_DIR / "builtin_options.json")
@@ -314,6 +324,40 @@ def test_loads_matching_versioned_schema_and_builtin_catalog():
     assert catalog.version == "1.0"
     assert catalog.families == ("flux", "qwen")
     assert set(catalog.schemas_by_node) == set(APPROVED_FIELDS)
+
+
+def test_schema_marks_only_the_seven_intended_user_option_fields_additive():
+    catalog = load_default_catalog()
+    actual_additive = {
+        (node_key, field.key)
+        for node_key, schema in catalog.schemas_by_node.items()
+        for section in schema.sections
+        for field in section.fields
+        if field.user_selection == "additive"
+    }
+
+    assert actual_additive == ADDITIVE_USER_FIELDS
+    assert all(
+        field.user_selection in {"grouped", "additive"}
+        for schema in catalog.schemas_by_node.values()
+        for section in schema.sections
+        for field in section.fields
+    )
+
+
+def test_schema_defaults_user_selection_to_grouped_and_rejects_unknown_modes():
+    schemas, options = default_payloads()
+    age_group = raw_field(schemas, "identity", "age_group")
+    age_group.pop("user_selection", None)
+
+    catalog = catalog_from_data(schemas, options)
+
+    assert catalog.field("identity", "age_group").user_selection == "grouped"
+
+    schemas, options = default_payloads()
+    raw_field(schemas, "identity", "age_group")["user_selection"] = "freeform"
+    with pytest.raises(CatalogValidationError, match="user selection"):
+        catalog_from_data(schemas, options)
 
 
 def test_load_catalog_converts_non_utf8_data_to_a_validation_error(tmp_path):

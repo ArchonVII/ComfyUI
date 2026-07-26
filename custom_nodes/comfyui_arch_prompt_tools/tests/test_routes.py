@@ -48,6 +48,19 @@ def valid_option(**changes):
     return value
 
 
+def additive_option(**changes):
+    value = {
+        "label": "Route body detail",
+        "node": "identity",
+        "field": "body_snippets",
+        "model_family": "flux",
+        "phrase": "a route-created body detail",
+        "builtin": False,
+    }
+    value.update(changes)
+    return value
+
+
 def test_schema_payload_is_complete_json_native_and_copy_safe(catalog):
     first = schema_payload(catalog)
     encoded = json.dumps(first, ensure_ascii=False)
@@ -58,6 +71,19 @@ def test_schema_payload_is_complete_json_native_and_copy_safe(catalog):
     assert first["families"] == ["flux", "qwen"]
     assert {node["key"] for node in second["nodes"]} == set(catalog.schemas_by_node)
     assert second["nodes"][0]["sections"][0]["fields"][0]["label"] != "Mutated"
+
+
+def test_schema_payload_serializes_grouped_and_additive_user_selection_modes(catalog):
+    payload = schema_payload(catalog)
+    fields = {
+        (node["key"], field["key"]): field
+        for node in payload["nodes"]
+        for section in node["sections"]
+        for field in section["fields"]
+    }
+
+    assert fields[("identity", "subject_type")]["user_selection"] == "grouped"
+    assert fields[("identity", "body_snippets")]["user_selection"] == "additive"
 
 
 def test_options_payload_merges_protected_builtins_and_users_with_family_projection(store, catalog):
@@ -131,6 +157,22 @@ def test_explicit_payload_helpers_create_update_and_delete(store, catalog):
     assert updated["option"]["id"] == created["option"]["id"]
     assert updated["option"]["label"] == "Updated"
     assert deleted == {"deleted_id": created["option"]["id"]}
+
+
+def test_additive_payload_helper_assigns_and_preserves_group_without_client_group(
+    store, catalog
+):
+    created = create_option_payload(catalog, store, additive_option())
+    option_id = created["option"]["id"]
+    updated = update_option_payload(
+        catalog,
+        store,
+        option_id,
+        {"label": "Updated additive"},
+    )
+
+    assert created["option"]["group"] == f"user_option:{option_id}"
+    assert updated["option"]["group"] == created["option"]["group"]
 
 
 class FakeRoutes:
@@ -332,6 +374,29 @@ def test_registered_handlers_return_useful_success_and_4xx_responses(store, cata
     assert bad_json == {"status": 400, "payload": {"error": "bad JSON"}}
     assert protected["status"] == 403
     assert missing["status"] == 404
+
+
+def test_registered_create_route_rejects_invalid_group_with_valid_choices(
+    store, catalog
+):
+    routes = FakeRoutes()
+    register_routes(
+        SimpleNamespace(routes=routes),
+        web_module=FakeWeb,
+        catalog_provider=lambda: catalog,
+        store_provider=lambda _catalog: store,
+    )
+    post = routes.handlers[("POST", f"{ROUTE_PREFIX}/options")]
+
+    response = asyncio.run(
+        post(FakeRequest(body=valid_option(group="invented-group")))
+    )
+
+    assert response["status"] == 400
+    assert "unknown group" in response["payload"]["error"]
+    assert response["payload"]["error"].endswith(
+        "choose one of: subject_type"
+    )
 
 
 def test_registered_create_route_accepts_extreme_json_integer_without_internal_error(

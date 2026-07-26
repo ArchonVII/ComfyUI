@@ -21,6 +21,7 @@ CONTROL_TYPES = frozenset(
     {"buttons", "searchable_options", "semantic_spectrum", "free_text"}
 )
 CATALOG_SCOPES = frozenset({"shared", "side_aware"})
+USER_SELECTION_MODES = frozenset({"grouped", "additive"})
 OPTION_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:\.[a-z0-9_]+){2,}$")
 SPECTRUM_DOMAIN = (0.0, 1.0)
 
@@ -47,6 +48,7 @@ class FieldRecord:
     order: int
     control: str
     groups: tuple[str, ...] = ()
+    user_selection: str = "grouped"
     catalog_scope: str | None = None
     enabled_by_default: bool = True
     spectrum: tuple[SpectrumStop, ...] = ()
@@ -228,6 +230,18 @@ def _parse_field(raw_field: Any, families: tuple[str, ...]) -> FieldRecord:
         raise CatalogValidationError("field groups must be unique")
     if control in {"buttons", "searchable_options"} and not groups:
         raise CatalogValidationError(f"{control} fields must define groups")
+    user_selection = raw.get("user_selection", "grouped")
+    if not isinstance(user_selection, str) or user_selection not in USER_SELECTION_MODES:
+        raise CatalogValidationError(
+            f"unsupported user selection mode: {user_selection!r}"
+        )
+    if (
+        user_selection == "additive"
+        and control not in {"buttons", "searchable_options"}
+    ):
+        raise CatalogValidationError(
+            "additive user selection requires an option field"
+        )
     scope = raw.get("catalog_scope")
     if scope is not None and scope not in CATALOG_SCOPES:
         raise CatalogValidationError(f"unsupported catalog scope: {scope}")
@@ -248,6 +262,7 @@ def _parse_field(raw_field: Any, families: tuple[str, ...]) -> FieldRecord:
         order=_integer(raw.get("order"), "field order"),
         control=control,
         groups=groups,
+        user_selection=user_selection,
         catalog_scope=scope,
         enabled_by_default=enabled,
         spectrum=spectrum,

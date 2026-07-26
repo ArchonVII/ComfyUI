@@ -9,6 +9,7 @@ from types import MappingProxyType, SimpleNamespace
 import pytest
 
 from custom_nodes.comfyui_arch_prompt_tools.catalog import load_catalog
+from custom_nodes.comfyui_arch_prompt_tools.engine import assemble, replace_group_select
 from custom_nodes.comfyui_arch_prompt_tools.store import (
     ID_GENERATION_ATTEMPTS,
     STORE_VERSION,
@@ -39,6 +40,33 @@ def valid_option(**changes):
     }
     value.update(changes)
     return value
+
+
+def additive_option(**changes):
+    value = {
+        "label": "Custom body detail",
+        "node": "identity",
+        "field": "body_snippets",
+        "model_family": "flux",
+        "phrase": "a custom body detail",
+        "builtin": False,
+    }
+    value.update(changes)
+    return value
+
+
+def copied_fragment(option, instance_id):
+    return {
+        "instance_id": instance_id,
+        "source_option_id": option.id,
+        "label": option.label,
+        "node": option.node,
+        "field": option.field,
+        "group": option.group,
+        "text": option.phrase,
+        "model_family": option.model_family,
+        "lora_enabled": option.lora_enabled,
+    }
 
 
 def test_default_path_is_resolved_from_comfy_user_directory_only_when_called(tmp_path, monkeypatch):
@@ -76,6 +104,139 @@ def test_create_update_delete_are_explicit_and_keep_a_stable_opaque_id(tmp_path,
     assert [item.id for item in store.list_options()] == ["user.first", "user.second"]
     assert store.delete(first.id).id == first.id
     assert [item.id for item in store.list_options()] == ["user.second"]
+
+
+def test_additive_user_options_get_stable_per_id_groups_and_stack_in_assembly(
+    tmp_path, catalog
+):
+    ids = iter(("user.additive-one", "user.additive-two"))
+    store = OptionStore(
+        catalog, tmp_path / "options.json", id_factory=lambda: next(ids)
+    )
+
+    first = store.create(additive_option(label="First", phrase="first detail"))
+    second = store.create(additive_option(label="Second", phrase="second detail"))
+    updated = store.update(first.id, {"label": "First renamed"})
+    state = {
+        "version": 1,
+        "node": "identity",
+        "model_family": "flux",
+        "fields": {},
+    }
+    state = replace_group_select(state, copied_fragment(updated, "copy-one"))
+    state = replace_group_select(state, copied_fragment(second, "copy-two"))
+
+    assert first.group == "user_option:user.additive-one"
+    assert second.group == "user_option:user.additive-two"
+    assert updated.group == first.group
+    assert assemble(catalog, state).prompt == "first detail, second detail"
+
+
+def test_duplicated_additive_builtin_gets_a_new_stable_user_group(
+    tmp_path, catalog
+):
+    builtin = next(
+        option
+        for option in catalog.options
+        if (option.node, option.field) == ("identity", "body_snippets")
+    )
+    store = OptionStore(
+        catalog,
+        tmp_path / "options.json",
+        id_factory=lambda: "user.duplicate-snippet",
+    )
+
+    duplicate = store.create(
+        additive_option(
+            label=builtin.label,
+            phrase=builtin.phrases["flux"],
+        )
+    )
+
+    assert duplicate.id == "user.duplicate-snippet"
+    assert duplicate.group == "user_option:user.duplicate-snippet"
+    assert duplicate.group != builtin.group
+
+
+def test_grouped_user_options_share_schema_group_and_replace_in_assembly(
+    tmp_path, catalog
+):
+    ids = iter(("user.grouped-one", "user.grouped-two"))
+    store = OptionStore(
+        catalog, tmp_path / "options.json", id_factory=lambda: next(ids)
+    )
+    first = store.create(valid_option(label="First", phrase="first subject"))
+    second = store.create(valid_option(label="Second", phrase="second subject"))
+    state = {
+        "version": 1,
+        "node": "identity",
+        "model_family": "flux",
+        "fields": {},
+    }
+    state = replace_group_select(state, copied_fragment(first, "grouped-one"))
+    state = replace_group_select(state, copied_fragment(second, "grouped-two"))
+
+    assert first.group == second.group == "subject_type"
+    assert assemble(catalog, state).prompt == "second subject"
+
+
+def test_additive_group_is_system_assigned_on_create_and_move_but_corruption_is_rejected(
+    tmp_path, catalog
+):
+    store = OptionStore(
+        catalog, tmp_path / "options.json", id_factory=lambda: "user.movable"
+    )
+    grouped = store.create(valid_option())
+
+    moved_additive = store.update(
+        grouped.id,
+        {
+            "field": "body_snippets",
+            "label": "Moved detail",
+            "phrase": "moved detail",
+        },
+    )
+    moved_grouped = store.update(
+        grouped.id,
+        {
+            "field": "subject_type",
+            "group": "subject_type",
+            "label": "Moved subject",
+            "phrase": "moved subject",
+        },
+    )
+
+    assert moved_additive.id == grouped.id
+    assert moved_additive.group == "user_option:user.movable"
+    assert moved_grouped.id == grouped.id
+    assert moved_grouped.group == "subject_type"
+    with pytest.raises(OptionValidationError, match="assigned automatically"):
+        store.create(additive_option(group="body_detail"))
+    with pytest.raises(OptionValidationError, match="stable"):
+        store.update(
+            grouped.id,
+            {"field": "body_snippets", "group": "corrupt-group"},
+        )
+
+
+def test_invalid_additive_group_on_disk_is_rejected_without_rewriting_file(
+    tmp_path, catalog
+):
+    path = tmp_path / "options.json"
+    store = OptionStore(
+        catalog, path, id_factory=lambda: "user.strict-additive"
+    )
+    created = store.create(additive_option())
+    envelope = json.loads(path.read_text(encoding="utf-8"))
+    envelope["options"][0]["group"] = "body_detail"
+    path.write_text(json.dumps(envelope), encoding="utf-8")
+    before = path.read_bytes()
+
+    with pytest.raises(OptionStoreDataError, match="stable"):
+        store.list_options()
+
+    assert created.group == "user_option:user.strict-additive"
+    assert path.read_bytes() == before
 
 
 def test_generated_id_collision_retries_until_a_unique_id_is_found(tmp_path, catalog):

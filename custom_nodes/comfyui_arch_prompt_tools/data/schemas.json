@@ -118,6 +118,7 @@
               "label": "Body snippets",
               "order": 70,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "proportions",
                 "frame",
@@ -312,6 +313,7 @@
               "label": "Pose snippets",
               "order": 20,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "contrapposto",
                 "dynamic_action",
@@ -578,6 +580,7 @@
               "label": "Clothing modifiers",
               "order": 20,
               "control": "buttons",
+              "user_selection": "additive",
               "groups": [
                 "topless",
                 "bottomless",
@@ -769,6 +772,7 @@
               "label": "Outfit snippets",
               "order": 20,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "layered",
                 "monochrome",
@@ -1192,6 +1196,7 @@
               "label": "Environment snippets",
               "order": 60,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "symmetrical_layout",
                 "layered_depth",
@@ -1434,6 +1439,7 @@
               "label": "Optical effects",
               "order": 20,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "bokeh",
                 "lens_flare",
@@ -1996,6 +2002,7 @@
               "label": "Lighting techniques",
               "order": 10,
               "control": "searchable_options",
+              "user_selection": "additive",
               "groups": [
                 "rim_light",
                 "backlight",

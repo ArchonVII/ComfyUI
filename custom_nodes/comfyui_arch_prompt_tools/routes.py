@@ -38,6 +38,7 @@ def schema_payload(catalog: Catalog) -> dict[str, Any]:
                     "order": field.order,
                     "control": field.control,
                     "groups": list(field.groups),
+                    "user_selection": field.user_selection,
                     "enabled_by_default": field.enabled_by_default,
                 }
                 if field.catalog_scope is not None:

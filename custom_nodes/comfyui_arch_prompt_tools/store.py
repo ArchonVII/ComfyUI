@@ -15,12 +15,13 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
-from .catalog import Catalog, CatalogError
+from .catalog import Catalog, CatalogError, FieldRecord
 
 
 STORE_VERSION = 1
 ID_GENERATION_ATTEMPTS = 8
 _USER_ID_PATTERN = re.compile(r"^user\.[A-Za-z0-9_-]+$")
+_ADDITIVE_GROUP_PREFIX = "user_option:"
 _RECORD_KEYS = frozenset(
     {
         "id",
@@ -142,6 +143,12 @@ class OptionStore:
             )
         if value.get("builtin") is True:
             raise OptionValidationError("built-in options are protected")
+        field_record = self._field_record(value)
+        if field_record.user_selection == "additive" and "group" in value:
+            raise OptionValidationError(
+                f"group is assigned automatically for additive field "
+                f"{value['node']}.{value['field']}; omit group"
+            )
         with _lock_for(self.path):
             records = list(self._read_unlocked())
             existing_ids = {item.id for item in records}
@@ -157,7 +164,10 @@ class OptionStore:
                     "could not generate a unique user option id after "
                     f"{ID_GENERATION_ATTEMPTS} attempts"
                 )
-            record = self._validate_record({**value, "id": option_id})
+            candidate = {**value, "id": option_id}
+            if field_record.user_selection == "additive":
+                candidate["group"] = _additive_group(option_id)
+            record = self._validate_record(candidate)
             records.append(record)
             self._write_unlocked(records)
             return record
@@ -178,7 +188,17 @@ class OptionStore:
             records = list(self._read_unlocked())
             index = _record_index(records, option_id)
             current = records[index].to_dict()
-            updated = self._validate_record({**current, **patch, "id": option_id})
+            candidate = {**current, **patch, "id": option_id}
+            field_record = self._field_record(candidate)
+            if field_record.user_selection == "additive":
+                expected_group = _additive_group(option_id)
+                if "group" in patch and patch["group"] != expected_group:
+                    raise OptionValidationError(
+                        f"additive user option group must remain stable: "
+                        f"{expected_group}"
+                    )
+                candidate["group"] = expected_group
+            updated = self._validate_record(candidate)
             records[index] = updated
             self._write_unlocked(records)
             return updated
@@ -201,6 +221,14 @@ class OptionStore:
         if not isinstance(option_id, str) or not _USER_ID_PATTERN.fullmatch(option_id):
             raise OptionValidationError("generated user option id is not a valid opaque id")
         return option_id
+
+    def _field_record(self, value: Mapping[str, Any]) -> FieldRecord:
+        node = _nonempty_string(value.get("node"), "node")
+        field = _nonempty_string(value.get("field"), "field")
+        try:
+            return self.catalog.field(node, field)
+        except CatalogError as error:
+            raise OptionValidationError(str(error)) from error
 
     def _read_unlocked(self) -> tuple[UserOption, ...]:
         if not self.path.exists():
@@ -289,8 +317,17 @@ class OptionStore:
         if model_family not in self.catalog.families:
             raise OptionValidationError(f"unknown model family: {model_family}")
         group = _nonempty_string(value["group"], "group")
-        if group not in field_record.groups:
-            raise OptionValidationError(f"unknown group: {node}.{field}.{group}")
+        if field_record.user_selection == "additive":
+            expected_group = _additive_group(option_id)
+            if group != expected_group:
+                raise OptionValidationError(
+                    f"additive user option group must be stable: {expected_group}"
+                )
+        elif group not in field_record.groups:
+            choices = ", ".join(field_record.groups)
+            raise OptionValidationError(
+                f"unknown group: {node}.{field}.{group}; choose one of: {choices}"
+            )
         lora_enabled = value.get("lora_enabled", False)
         if not isinstance(lora_enabled, bool):
             raise OptionValidationError("lora_enabled must be boolean")
@@ -388,6 +425,10 @@ def _record_index(records: list[UserOption], option_id: str) -> int:
         if record.id == option_id:
             return index
     raise OptionNotFoundError(f"user option not found: {option_id}")
+
+
+def _additive_group(option_id: str) -> str:
+    return f"{_ADDITIVE_GROUP_PREFIX}{option_id}"
 
 
 def _lock_for(path: Path) -> threading.RLock:

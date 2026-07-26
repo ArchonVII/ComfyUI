@@ -80,6 +80,8 @@ Each focused node defaults to Flux and can instead be set to Qwen. The model
 family controls the wording copied by future selections. Switching from Flux
 to Qwen does not translate or rewrite selections already copied into the
 workflow. This keeps old workflows repeatable even when the catalog changes.
+If the visible selector and saved editor snapshot ever disagree, the visible
+selector wins for future choices while every existing chip stays unchanged.
 
 The setting is only a prompt-phrase selector. It does not load a Flux or Qwen
 model, checkpoint, text encoder, or sampler.
@@ -97,9 +99,13 @@ normal repository-level user root, that is
 `user/arch_prompt_tools/options.json`. Create, edit, and delete are explicit
 actions; merely choosing a chip does not change the library.
 
-Each saved choice belongs to one node, field, group, and model family. If you
-want different Flux and Qwen wording, create the corresponding choice for each
-family.
+Each saved choice belongs to one node, field, selection behavior, and model
+family. Grouped fields offer only the groups defined by their schema, and
+another choice in the same group replaces the earlier one. Additive fields
+stack custom choices; their stable per-option group is assigned by the system
+and is not something you type or edit. Duplicating an additive built-in also
+creates an independent stacking choice. If you want different Flux and Qwen
+wording, create the corresponding choice for each family.
 
 ## Combine outputs
 

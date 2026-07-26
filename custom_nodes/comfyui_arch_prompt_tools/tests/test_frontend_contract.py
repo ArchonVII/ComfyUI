@@ -161,6 +161,8 @@ for (const [nodeKey, fieldKey] of [
 assert.equal(controlKind(realField("identity", "identity_specifics").control), "text");
 assert.equal(controlKind(realField("identity", "body_snippets").control), "searchable");
 assert.equal(controlKind(realField("environment", "scene_density").control), "spectrum");
+assert.equal(userSelectionMode(realField("identity", "age_group")), "grouped");
+assert.equal(userSelectionMode(realField("identity", "body_snippets")), "additive");
 assert.equal(focusedNodeKey("ArchPtIdentity"), "identity");
 assert.equal(focusedNodeKey("ArchPtLighting"), "lighting");
 assert.equal(focusedNodeKey("ArchPtCombine"), null);
@@ -231,6 +233,66 @@ const scars = {
 state = toggleOption(state, freckles, "flux", "copy-3");
 state = toggleOption(state, scars, "flux", "copy-4");
 assert.deepEqual(state.fields.body_snippets.fragments.map((item) => item.text), ["freckles", "visible scars"]);
+const firstUserSnippet = {
+  ...freckles,
+  id: "user.first-snippet",
+  label: "First custom snippet",
+  group: "user_option:user.first-snippet",
+  phrases: {flux: "first custom detail", qwen: "add first custom detail"},
+  builtin: false,
+};
+const secondUserSnippet = {
+  ...firstUserSnippet,
+  id: "user.second-snippet",
+  label: "Second custom snippet",
+  group: "user_option:user.second-snippet",
+  phrases: {flux: "second custom detail", qwen: "add second custom detail"},
+};
+let customSelectionState = toggleOption(
+  createEmptyState("identity", "flux"),
+  firstUserSnippet,
+  "flux",
+  "custom-one",
+);
+customSelectionState = toggleOption(
+  customSelectionState,
+  secondUserSnippet,
+  "flux",
+  "custom-two",
+);
+assert.deepEqual(
+  customSelectionState.fields.body_snippets.fragments.map((item) => item.text),
+  ["first custom detail", "second custom detail"],
+);
+const firstGroupedUser = {
+  ...brown,
+  id: "user.first-grouped",
+  label: "First grouped",
+  phrases: {flux: "first grouped", qwen: "first grouped qwen"},
+  builtin: false,
+};
+const secondGroupedUser = {
+  ...firstGroupedUser,
+  id: "user.second-grouped",
+  label: "Second grouped",
+  phrases: {flux: "second grouped", qwen: "second grouped qwen"},
+};
+let groupedSelectionState = toggleOption(
+  createEmptyState("identity", "flux"),
+  firstGroupedUser,
+  "flux",
+  "grouped-one",
+);
+groupedSelectionState = toggleOption(
+  groupedSelectionState,
+  secondGroupedUser,
+  "flux",
+  "grouped-two",
+);
+assert.deepEqual(
+  groupedSelectionState.fields.hair_color.fragments.map((item) => item.text),
+  ["second grouped"],
+);
 
 const buttonState = toggleOption(createEmptyState("identity", "flux"), brown, "flux", "button-copy");
 const buttonModels = buttonChoiceModels([brown], buttonState, "flux");
@@ -348,9 +410,10 @@ const mismatchDecision = editorRestoreDecision(
   "identity",
   "qwen",
 );
-assert.equal(mismatchDecision.ok, false);
-assert.equal(mismatchDecision.allow_reset, true);
-assert.equal(mismatchDecision.state, null);
+assert.equal(mismatchDecision.ok, true);
+assert.equal(mismatchDecision.allow_reset, false);
+assert.equal(mismatchDecision.state.model_family, "qwen");
+assert.deepEqual(Object.keys(mismatchDecision.state.fields), []);
 
 const payload = buildUserOptionPayload({
   label: " Phone pose ",
@@ -373,6 +436,25 @@ assert.deepEqual(payload, {
   lora: {name: "phone"},
   lora_enabled: true,
 });
+const additivePayload = buildUserOptionPayload({
+  label: " Custom detail ",
+  node: "identity",
+  field: "body_snippets",
+  model_family: "flux",
+  phrase: " layered custom detail ",
+  lora: null,
+  lora_enabled: false,
+});
+assert.deepEqual(additivePayload, {
+  label: "Custom detail",
+  node: "identity",
+  field: "body_snippets",
+  model_family: "flux",
+  phrase: "layered custom detail",
+  builtin: false,
+  lora_enabled: false,
+});
+assert.equal("group" in additivePayload, false);
 const createRequest = buildOptionMutation("create", null, payload, payload.field);
 assert.equal(createRequest.method, "POST");
 assert.equal(createRequest.path, "/arch-prompt-tools/options");
@@ -664,6 +746,57 @@ searchInput = all(
 assert.equal(bodyDetails.open, true);
 assert.equal(searchInput.value, snippetOption.label.slice(0, 3));
 assert.equal(document.activeElement, searchInput);
+
+const groupedEditorTarget = new FakeElement("div");
+showOptionEditor(continuityContext, ageField, groupedEditorTarget);
+const groupedSelectors = all(
+  groupedEditorTarget,
+  (item) =>
+    item.tagName === "SELECT" &&
+    item.attributes["aria-label"] === "User option selection group",
+);
+assert.equal(groupedSelectors.length, 1);
+assert.deepEqual(
+  groupedSelectors[0].childNodes.map((option) => option.value),
+  ageField.groups,
+);
+assert.deepEqual(
+  groupedSelectors[0].childNodes.map((option) => option.textContent),
+  ["Age group"],
+);
+assert.equal(
+  all(
+    groupedEditorTarget,
+    (item) =>
+      item.tagName === "INPUT" &&
+      item.attributes["aria-label"] === "User option selection group",
+  ).length,
+  0,
+);
+
+for (const sourceOption of [null, snippetOption]) {
+  const additiveEditorTarget = new FakeElement("div");
+  showOptionEditor(
+    continuityContext,
+    bodySection.fields.find((field) => field.key === "body_snippets"),
+    additiveEditorTarget,
+    sourceOption,
+  );
+  assert.equal(
+    all(
+      additiveEditorTarget,
+      (item) => item.attributes?.["aria-label"] === "User option selection group",
+    ).length,
+    0,
+  );
+  assert.equal(
+    all(
+      additiveEditorTarget,
+      (item) => /stacks with other selections/iu.test(item.textContent),
+    ).length,
+    1,
+  );
+}
 
 const lightingSchema = REAL_SCHEMA.nodes.find((item) => item.key === "lighting");
 const illuminationSection = lightingSchema.sections.find(
@@ -1011,6 +1144,62 @@ assert.equal(olderFieldResult.applied, false);
 assert.equal(olderFieldResult.stale, true);
 assert.deepEqual(newerFullContext.options.get("hair_color"), [currentFullHair]);
 assert.deepEqual(newerFullContext.options.get("hair_length"), [currentFullLength]);
+
+const savedFluxHair = optionFragment(
+  ROUTE_OPTIONS.find((option) => option.field === "hair_color"),
+  "flux",
+  "family-mismatch-old",
+);
+savedFluxHair.text = "custom preserved auburn wording";
+savedFluxHair.lora = {name: "preserved.safetensors", strength: 0.65};
+savedFluxHair.lora_enabled = true;
+const savedFamilyState = createEmptyState("identity", "flux");
+savedFamilyState.fields.hair_color = {
+  fragments: [savedFluxHair],
+  specifics: "preserve these exact hair specifics",
+};
+const savedFamilyRaw = serializeState(savedFamilyState);
+const qwenBodyOption = ROUTE_OPTIONS.find((option) => option.field === "body_snippets");
+const familyFetchPaths = [];
+api.fetchApi = async (path) => {
+  familyFetchPaths.push(path);
+  return optionResponse([qwenBodyOption]);
+};
+const familyMismatchContext = {
+  ...raceContext(),
+  stateWidget: {value: savedFamilyRaw, callback() {}},
+  familyWidget: {value: "qwen"},
+};
+await initializeContext(familyMismatchContext);
+assert.equal(familyMismatchContext.invalid, false);
+assert.equal(familyMismatchContext.family, "qwen");
+assert.equal(familyMismatchContext.state.model_family, "qwen");
+assert.equal(familyMismatchContext.stateWidget.value, savedFamilyRaw);
+assert.deepEqual(
+  familyMismatchContext.state.fields.hair_color.fragments[0],
+  savedFluxHair,
+);
+assert.equal(
+  familyMismatchContext.state.fields.hair_color.specifics,
+  "preserve these exact hair specifics",
+);
+assert.ok(familyFetchPaths.some((path) => path.includes("model_family=qwen")));
+selectOption(familyMismatchContext, qwenBodyOption);
+const reconciledSavedState = JSON.parse(familyMismatchContext.stateWidget.value);
+assert.equal(reconciledSavedState.model_family, "qwen");
+assert.deepEqual(reconciledSavedState.fields.hair_color.fragments[0], savedFluxHair);
+assert.equal(
+  reconciledSavedState.fields.hair_color.specifics,
+  "preserve these exact hair specifics",
+);
+assert.equal(
+  reconciledSavedState.fields.body_snippets.fragments[0].text,
+  qwenBodyOption.phrases.qwen,
+);
+assert.equal(
+  reconciledSavedState.fields.body_snippets.fragments[0].model_family,
+  "qwen",
+);
 
 const invalidRaw = '{"version":2,"node":"identity","model_family":"flux","fields":{}}';
 let invalidWrites = 0;

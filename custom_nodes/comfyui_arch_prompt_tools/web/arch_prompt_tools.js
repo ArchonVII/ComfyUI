@@ -26,6 +26,14 @@ function controlKind(control) {
   throw new Error(`unsupported schema control: ${control}`);
 }
 
+function userSelectionMode(field) {
+  const mode = field?.user_selection || "grouped";
+  if (!["grouped", "additive"].includes(mode)) {
+    throw new Error(`unsupported user selection mode: ${mode}`);
+  }
+  return mode;
+}
+
 function normalizeText(value) {
   if (typeof value !== "string") throw new Error("text must be a string");
   return value.trim().replace(/\s+/gu, " ");
@@ -167,10 +175,10 @@ function editorRestoreDecision(raw, expectedNode, selectedFamily) {
   }
   if (restored.state.model_family !== selectedFamily) {
     return {
-      ok: false,
-      state: null,
-      error: `saved state uses ${restored.state.model_family}, but the model selector uses ${selectedFamily}`,
-      allow_reset: true,
+      ok: true,
+      state: setModelFamily(restored.state, selectedFamily),
+      error: "",
+      allow_reset: false,
     };
   }
   return {
@@ -419,14 +427,19 @@ function buildUserOptionPayload(input) {
     label: normalizeText(input.label),
     node: normalizeText(input.node),
     field: normalizeText(input.field),
-    group: normalizeText(input.group),
     model_family: normalizeText(input.model_family),
     phrase: normalizeText(input.phrase),
     builtin: false,
     lora_enabled: Boolean(input.lora && input.lora_enabled),
   };
-  if (!payload.label || !payload.node || !payload.field || !payload.group || !payload.phrase) {
-    throw new Error("label, location, group, and phrase are required");
+  if (input.group !== undefined && input.group !== null) {
+    payload.group = normalizeText(input.group);
+  }
+  if (!payload.label || !payload.node || !payload.field || !payload.phrase) {
+    throw new Error("label, location, and phrase are required");
+  }
+  if ("group" in payload && !payload.group) {
+    throw new Error("selection group is required when provided");
   }
   if (!FAMILY_SET.has(payload.model_family)) throw new Error("unsupported model family");
   if (input.lora !== undefined && input.lora !== null) {
@@ -959,6 +972,11 @@ function renderOptionManagement(context, field, target) {
   target.append(details);
 }
 
+function readableGroupLabel(group) {
+  const words = group.replace(/[_-]+/gu, " ");
+  return words.charAt(0).toLocaleUpperCase() + words.slice(1);
+}
+
 function showOptionEditor(context, field, target, sourceOption = null) {
   target.replaceChildren();
   const form = makeElement("div", "", "arch-pt-form");
@@ -975,11 +993,34 @@ function showOptionEditor(context, field, target, sourceOption = null) {
   phrase.placeholder = `${context.family} prompt phrase`;
   phrase.setAttribute("aria-label", "User option prompt phrase");
   phrase.value = sourceOption?.phrases?.[context.family] || "";
-  const group = document.createElement("input");
-  group.type = "text";
-  group.placeholder = "Selection group";
-  group.setAttribute("aria-label", "User option selection group");
-  group.value = sourceOption?.group || field.groups?.[0] || field.key;
+  const selectionMode = userSelectionMode(field);
+  let groupControl;
+  let groupSelect = null;
+  if (selectionMode === "additive") {
+    groupControl = makeElement(
+      "div",
+      "Stacks with other selections · selection group is assigned automatically",
+      "arch-pt-note",
+    );
+  } else {
+    groupControl = makeElement("label", "", "arch-pt-row");
+    groupSelect = document.createElement("select");
+    groupSelect.setAttribute("aria-label", "User option selection group");
+    for (const groupId of field.groups || []) {
+      const option = document.createElement("option");
+      option.value = groupId;
+      option.textContent = readableGroupLabel(groupId);
+      groupSelect.append(option);
+    }
+    const requestedGroup = sourceOption?.group;
+    groupSelect.value = field.groups?.includes(requestedGroup)
+      ? requestedGroup
+      : field.groups?.[0] || "";
+    groupControl.append(
+      makeElement("span", "Selection group"),
+      groupSelect,
+    );
+  }
   const lora = document.createElement("textarea");
   lora.placeholder = 'Optional LoRA metadata JSON, for example {"name":"phone.safetensors","strength":0.8}';
   lora.setAttribute("aria-label", "Optional LoRA metadata JSON");
@@ -1002,7 +1043,7 @@ function showOptionEditor(context, field, target, sourceOption = null) {
         label: label.value,
         node: context.nodeKey,
         field: field.key,
-        group: group.value,
+        group: groupSelect?.value,
         model_family: context.family,
         phrase: phrase.value,
         lora: parsedLora,
@@ -1036,7 +1077,7 @@ function showOptionEditor(context, field, target, sourceOption = null) {
     saveButton,
     makeButton("Cancel", "Cancel option editing", () => target.replaceChildren()),
   );
-  form.append(label, phrase, group, lora, loraRow, actions);
+  form.append(label, phrase, groupControl, lora, loraRow, actions);
   target.append(form);
 }
 
