@@ -189,6 +189,7 @@ def score_embeddings(
 
 
 def _dual_score(
+    source_name: str,
     source: FaceEmbedding | None,
     generated: FaceEmbedding | None,
     threshold: float,
@@ -197,6 +198,12 @@ def _dual_score(
     score = score_embeddings(source, generated, threshold)
     if source is None or generated is None:
         score["cosine_similarity"] = None
+    if source_name == "base":
+        score["base_face"] = score.pop("reference_face")
+        score["issues"] = [
+            issue.replace("reference face", "base face")
+            for issue in score["issues"]
+        ]
     return score
 
 
@@ -222,8 +229,8 @@ def build_dual_report(
     reference = detect_best_face(reference_bgr, models, face_score_threshold, face_selection)
     generated = detect_best_face(generated_bgr, models, face_score_threshold, face_selection)
 
-    reference_to_output = _dual_score(reference, generated, same_identity_threshold)
-    base_to_output = _dual_score(base, generated, same_identity_threshold)
+    reference_to_output = _dual_score("reference", reference, generated, same_identity_threshold)
+    base_to_output = _dual_score("base", base, generated, same_identity_threshold)
     active_source = "reference" if experiment_mode == "face_swap" else "base"
     active = reference_to_output if active_source == "reference" else base_to_output
     detection = {

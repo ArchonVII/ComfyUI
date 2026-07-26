@@ -82,6 +82,7 @@ def test_dual_report_detects_generated_face_once_for_both_comparisons(monkeypatc
     )
 
     assert len(calls) == 3
+    assert [int(bgr[0, 0, 0]) for bgr in calls] == [1, 2, 3]
     assert report["reference_to_output"]["cosine_similarity"] == 1.0
     assert report["base_to_output"]["cosine_similarity"] == 0.0
 
@@ -129,6 +130,9 @@ def test_dual_report_marks_missing_active_face_as_non_rankable(monkeypatch, tmp_
 
     assert report["face_detection"] == {"base": False, "reference": True, "generated": True}
     assert report["base_to_output"]["cosine_similarity"] is None
+    assert report["base_to_output"]["issues"] == ["base face not detected"]
+    assert report["base_to_output"]["base_face"] is None
+    assert "reference_face" not in report["base_to_output"]
     assert report["rankable"] is False
     assert report["active_score"]["cosine_similarity"] is None
     assert "base face not detected" in report["issues"]

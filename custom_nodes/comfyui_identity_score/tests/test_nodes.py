@@ -23,7 +23,10 @@ def test_dual_identity_score_exposes_experiment_contract_and_visible_node_metada
     assert dual.RETURN_TYPES == (
         "FLOAT",
         "BOOLEAN",
+        "BOOLEAN",
         "FLOAT",
+        "BOOLEAN",
+        "BOOLEAN",
         "BOOLEAN",
         "FLOAT",
         "BOOLEAN",
@@ -66,8 +69,8 @@ def test_dual_identity_score_returns_ui_payload_and_result_values(monkeypatch):
         extra_metadata={"prior": "metadata"},
     )
 
-    assert result["result"][:7] == (0.91, True, 0.42, True, 0.91, True, True)
-    assert result["result"][8]["prior"] == "metadata"
+    assert result["result"][:10] == (0.91, True, True, 0.42, True, True, True, 0.91, True, True)
+    assert result["result"][11]["prior"] == "metadata"
     assert result["ui"]["status"] == ["rankable"]
     assert result["ui"]["result_id"] == ["run-2"]
     assert result["ui"]["face_detection"] == [{"base": True, "reference": True, "generated": True}]
@@ -75,3 +78,34 @@ def test_dual_identity_score_returns_ui_payload_and_result_values(monkeypatch):
     assert "base face detected" in result["ui"]["text"][0]
     assert "reference face detected" in result["ui"]["text"][0]
     assert "generated face detected" in result["ui"]["text"][0]
+
+
+def test_dual_identity_score_marks_missing_active_score_unavailable_in_result(monkeypatch):
+    report = {
+        "reference_to_output": {"cosine_similarity": None, "same_identity": False},
+        "base_to_output": {"cosine_similarity": 0.84, "same_identity": True},
+        "active_score": {"source": "reference", "cosine_similarity": None, "same_identity": False},
+        "rankable": False,
+        "face_detection": {"base": True, "reference": False, "generated": True},
+        "issues": ["reference face not detected"],
+    }
+    monkeypatch.setattr(nodes, "build_dual_report", lambda **_kwargs: report)
+    monkeypatch.setattr(nodes, "image_tensor_to_bgr", lambda image: image)
+
+    result = nodes.DualIdentityScore().score_identity(
+        base_image="base",
+        reference_image="reference",
+        generated_image="generated",
+        experiment_mode="face_swap",
+        face_score_threshold=0.7,
+        same_identity_threshold=0.363,
+        face_selection="largest",
+        write_manifest=False,
+        manifest_dir="default/identity_score_runs",
+        run_label="dual-score",
+        metadata_key="identity_score_report",
+    )
+
+    assert result["result"][:10] == (0.0, False, False, 0.84, True, True, True, 0.0, False, False)
+    assert result["ui"]["status"] == ["not_rankable"]
+    assert "active (reference) unavailable" in result["ui"]["text"][0]

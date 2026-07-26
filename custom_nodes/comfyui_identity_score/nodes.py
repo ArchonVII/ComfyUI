@@ -182,12 +182,28 @@ class DualIdentityScore:
             },
         }
 
-    RETURN_TYPES = ("FLOAT", "BOOLEAN", "FLOAT", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")
+    RETURN_TYPES = (
+        "FLOAT",
+        "BOOLEAN",
+        "BOOLEAN",
+        "FLOAT",
+        "BOOLEAN",
+        "BOOLEAN",
+        "BOOLEAN",
+        "FLOAT",
+        "BOOLEAN",
+        "BOOLEAN",
+        "STRING",
+        "EXTRA_METADATA",
+    )
     RETURN_NAMES = (
         "reference_cosine_similarity",
+        "reference_detected",
         "reference_same_identity",
         "base_cosine_similarity",
+        "base_detected",
         "base_same_identity",
+        "generated_detected",
         "active_cosine_similarity",
         "active_same_identity",
         "rankable",
@@ -261,9 +277,12 @@ class DualIdentityScore:
         )
         result = (
             float(reference["cosine_similarity"] or 0.0),
+            bool(face_detection["reference"]),
             bool(reference["same_identity"]),
             float(base["cosine_similarity"] or 0.0),
+            bool(face_detection["base"]),
             bool(base["same_identity"]),
+            bool(face_detection["generated"]),
             float(active["cosine_similarity"] or 0.0),
             bool(active["same_identity"]),
             rankable,
