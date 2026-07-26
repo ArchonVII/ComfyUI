@@ -1,0 +1,161 @@
+{
+  "identity_report": {
+    "scorer": "opencv_yunet_sface",
+    "generated_at": "2026-07-26T17:07:39",
+    "models": {
+      "detector": "C:\\tools\\image\\ComfyUI\\custom_nodes\\comfyui_identity_score\\models\\face_detection_yunet_2023mar.onnx",
+      "recognizer": "C:\\tools\\image\\ComfyUI\\custom_nodes\\comfyui_identity_score\\models\\face_recognition_sface_2021dec.onnx"
+    },
+    "settings": {
+      "face_score_threshold": 0.7,
+      "same_identity_threshold": 0.363,
+      "face_selection": "largest",
+      "catalog_mode": "off",
+      "catalog_aggregation": "mean_top3",
+      "max_catalog_images": 64,
+      "include_subfolders": true
+    },
+    "source_identity": {
+      "cosine_similarity": 0.780879,
+      "same_identity": true,
+      "same_identity_threshold": 0.363,
+      "issues": [],
+      "reference_face": {
+        "box": [
+          378,
+          221,
+          488,
+          590
+        ],
+        "confidence": 0.799732,
+        "image_size": [
+          1254,
+          1254
+        ],
+        "face_area_fraction": 0.183095
+      },
+      "generated_face": {
+        "box": [
+          480,
+          257,
+          414,
+          540
+        ],
+        "confidence": 0.892861,
+        "image_size": [
+          1254,
+          1254
+        ],
+        "face_area_fraction": 0.142167
+      }
+    },
+    "catalog": {
+      "mode": "off",
+      "catalog_root": "C:\\tools\\image\\ComfyUI\\input\\people",
+      "images_scored": 0,
+      "best_subject": "",
+      "best_reference": "",
+      "best_cosine_similarity": 0.0,
+      "subject_scores": [],
+      "errors": [
+        "no catalog images found"
+      ]
+    }
+  },
+  "prompt": {
+    "1": {
+      "inputs": {
+        "image": "identity-benchmark/source_identity.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Synthetic identity source"
+      },
+      "is_changed": [
+        "45458553830515904986a8d37d263ce7b56c6236363d65087133115b5e196999"
+      ]
+    },
+    "2": {
+      "inputs": {
+        "image": "identity-benchmark/target_scene_v2.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Synthetic target scene"
+      },
+      "is_changed": [
+        "5670f75ea86a3d1362e3d03b22244562827946894d7244fe5a4aeb51c95cb922"
+      ]
+    },
+    "3": {
+      "inputs": {
+        "enabled": true,
+        "swap_model": "inswapper_128.onnx",
+        "facedetection": "retinaface_resnet50",
+        "face_restore_model": "GFPGANv1.4.pth",
+        "face_restore_visibility": 0.75,
+        "codeformer_weight": 0.5,
+        "detect_gender_input": "no",
+        "detect_gender_source": "no",
+        "input_faces_index": "0",
+        "source_faces_index": "0",
+        "console_log_level": 1,
+        "input_image": [
+          "2",
+          0
+        ],
+        "source_image": [
+          "1",
+          0
+        ]
+      },
+      "class_type": "ReActorFaceSwap",
+      "_meta": {
+        "title": "ReActor face-swap baseline"
+      }
+    },
+    "4": {
+      "inputs": {
+        "filename_prefix": "agent/identity-model-benchmark/reactor-gfpgan",
+        "images": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "Save face-swap proof"
+      }
+    },
+    "5": {
+      "inputs": {
+        "catalog_root": "people",
+        "subject_name": "",
+        "catalog_mode": "off",
+        "catalog_aggregation": "mean_top3",
+        "max_catalog_images": 64,
+        "include_subfolders": true,
+        "face_score_threshold": 0.7,
+        "same_identity_threshold": 0.363,
+        "face_selection": "largest",
+        "write_manifest": true,
+        "manifest_dir": "default/identity_score_runs",
+        "run_label": "reactor-proof-gfpgan",
+        "metadata_key": "identity_score_report",
+        "reference_image": [
+          "1",
+          0
+        ],
+        "generated_image": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "OpenCVIdentityScore",
+      "_meta": {
+        "title": "Identity similarity evidence"
+      }
+    }
+  },
+  "extra_pnginfo": null
+}
