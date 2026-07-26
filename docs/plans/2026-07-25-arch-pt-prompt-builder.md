@@ -403,13 +403,13 @@ Replace Active status with exact completion/deferred evidence and leave no stale
   - Seven new registered `arch-pt-` nodes live entirely in `custom_nodes/comfyui_arch_prompt_tools`: six focused builders plus `arch-pt-Combine`.
   - The protected catalog contains all six approved schemas, 30 collapsible sections, 153 focused fields, Flux/Qwen phrases, and disabled-by-default authored spectra.
   - Workflow-owned versioned state preserves copied text, copied model family, manual specifics, and optional LoRA metadata. Family reconciliation affects future selections without rewriting copied fragments.
-  - User options use validated, locked, atomic persistence under `<configured ComfyUI user root>/arch_prompt_tools/options.json`; built-ins remain protected. Grouped fields expose bounded groups, while designated snippet/effect fields assign stable per-option additive groups. LoRA metadata rejects non-finite and non-JavaScript-safe integer values before persistence.
+  - User options use validated, request-profile-scoped, locked, atomic persistence under `<configured ComfyUI user root>/<profile>/arch_prompt_tools/options.json`; built-ins remain protected, and multi-user routes cannot cross profile boundaries. Grouped fields expose bounded groups, while designated snippet/effect fields assign stable per-option additive groups. LoRA metadata rejects non-finite and non-JavaScript-safe integer values before persistence.
   - The schema-driven frontend implements quick buttons, search, free text, collapsible sections, semantic sliders, editable/removable copied chips, explicit option CRUD, safe text rendering, LoRA indicators, state restoration, stale-request ordering, and loss-preventing JSON number validation at API and copy boundaries.
   - Focused nodes emit ordinary positive prompt strings and structured bundles. Combine validates canonical bundles and emits the ordered positive prompt, metadata JSON, and enabled future LoRA requests.
   - `user/default/workflows/agent/38 - Arch PT Prompt Builder.json` is a new, blank, prompt-only example. No existing workflow or legacy custom-node package changed.
   - `custom_nodes/comfyui_arch_prompt_tools/README.md` documents selection, ownership, direction conventions, Flux/Qwen behavior, recovery, wiring, and Save As/non-overwrite safety.
 - **Fresh local verification:**
-  - `C:\tools\image\ComfyUI\venv\Scripts\python.exe -m pytest custom_nodes/comfyui_arch_prompt_tools/tests -q` → `241 passed`.
+  - `C:\tools\image\ComfyUI\venv\Scripts\python.exe -m pytest custom_nodes/comfyui_arch_prompt_tools/tests -q` → `242 passed`.
   - `C:\tools\image\ComfyUI\venv\Scripts\python.exe -m compileall -q custom_nodes/comfyui_arch_prompt_tools` → passed.
   - `C:\Program Files\nodejs\node.exe --check custom_nodes/comfyui_arch_prompt_tools/web/arch_prompt_tools.js` → passed.
   - `git diff --check fork/master...HEAD` → passed before this closeout-only edit.

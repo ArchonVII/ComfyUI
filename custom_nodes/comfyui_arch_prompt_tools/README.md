@@ -93,11 +93,13 @@ Built-in choices are protected. They cannot be edited or deleted. Use
 also create a new option directly in the field's Manage choices panel.
 Duplicate labels are allowed because each user option has its own stable ID.
 
-User choices live at
-`<configured ComfyUI user root>/arch_prompt_tools/options.json`. With ComfyUI's
-normal repository-level user root, that is
-`user/arch_prompt_tools/options.json`. Create, edit, and delete are explicit
-actions; merely choosing a chip does not change the library.
+User choices live under the active ComfyUI profile at
+`<configured ComfyUI user root>/<profile>/arch_prompt_tools/options.json`. With
+ComfyUI's normal repository-level user root and single-user default profile,
+that is `user/default/arch_prompt_tools/options.json`. Multi-user requests use
+the validated `comfy-user` profile, so one profile cannot list or mutate
+another profile's saved choices. Create, edit, and delete are explicit actions;
+merely choosing a chip does not change the library.
 
 Each saved choice belongs to one node, field, selection behavior, and model
 family. Grouped fields offer only the groups defined by their schema, and

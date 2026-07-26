@@ -528,8 +528,11 @@ def test_readme_explains_plain_english_workflow_and_persistence_contracts():
         assert phrase in text
 
     assert (
-        "<configured comfyui user root>/arch_prompt_tools/options.json" in text
+        "<configured comfyui user root>/<profile>/arch_prompt_tools/options.json"
+        in text
     )
-    assert "user/arch_prompt_tools/options.json" in text
-    assert "user/default/arch_prompt_tools/options.json" not in text
+    assert "multi-user requests" in text
+    assert "cannot list or mutate another profile" in flat_text
+    assert "user/default/arch_prompt_tools/options.json" in text
+    assert "user/arch_prompt_tools/options.json" not in text
     assert "back up the file at that configured user-root path" in flat_text

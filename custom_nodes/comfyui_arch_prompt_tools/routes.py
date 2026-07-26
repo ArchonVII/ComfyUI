@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import threading
 from typing import Any, Callable, Mapping
@@ -148,7 +149,11 @@ def register_routes(
         _LOGGER.exception("Arch PT route registration setup failed")
         return False
     get_catalog = catalog_provider or _default_catalog
-    get_store = store_provider or (lambda catalog: OptionStore(catalog))
+
+    def get_store(catalog: Catalog, request: Any) -> OptionStore:
+        if store_provider is not None:
+            return store_provider(catalog)
+        return _request_store(prompt_server, catalog, request)
 
     async def get_schema(_request):
         try:
@@ -159,7 +164,7 @@ def register_routes(
     async def get_options(request):
         try:
             catalog = get_catalog()
-            store = get_store(catalog)
+            store = get_store(catalog, request)
             return web_module.json_response(
                 options_payload(
                     catalog,
@@ -176,7 +181,7 @@ def register_routes(
         try:
             data = await request.json()
             catalog = get_catalog()
-            payload = create_option_payload(catalog, get_store(catalog), data)
+            payload = create_option_payload(catalog, get_store(catalog, request), data)
             return web_module.json_response(payload, status=201)
         except Exception as error:
             return _error_response(web_module, error)
@@ -187,7 +192,7 @@ def register_routes(
             catalog = get_catalog()
             payload = update_option_payload(
                 catalog,
-                get_store(catalog),
+                get_store(catalog, request),
                 request.match_info["option_id"],
                 data,
             )
@@ -200,7 +205,7 @@ def register_routes(
             catalog = get_catalog()
             payload = delete_option_payload(
                 catalog,
-                get_store(catalog),
+                get_store(catalog, request),
                 request.match_info["option_id"],
             )
             return web_module.json_response(payload)
@@ -261,6 +266,25 @@ def _default_catalog() -> Catalog:
     from .nodes import _catalog
 
     return _catalog()
+
+
+def _request_store(
+    prompt_server: Any,
+    catalog: Catalog,
+    request: Any,
+) -> OptionStore:
+    user_manager = getattr(prompt_server, "user_manager", None)
+    resolver = getattr(user_manager, "get_request_user_filepath", None)
+    if not callable(resolver):
+        raise OptionStoreDataError(
+            "ComfyUI request-scoped user storage is unavailable"
+        )
+    path = resolver(request, "arch_prompt_tools/options.json")
+    if not isinstance(path, (str, os.PathLike)):
+        raise OptionStoreDataError(
+            "ComfyUI request-scoped user storage returned an invalid path"
+        )
+    return OptionStore(catalog, path)
 
 
 def _query_value(request: Any, key: str) -> str | None:

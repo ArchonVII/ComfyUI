@@ -228,11 +228,20 @@ class FakeWeb:
 
 
 class FakeRequest:
-    def __init__(self, *, body=None, query=None, option_id=None, json_error=None):
+    def __init__(
+        self,
+        *,
+        body=None,
+        query=None,
+        option_id=None,
+        json_error=None,
+        headers=None,
+    ):
         self._body = body
         self.query = query or {}
         self.match_info = {} if option_id is None else {"option_id": option_id}
         self._json_error = json_error
+        self.headers = headers or {}
 
     async def json(self):
         if self._json_error:
@@ -269,6 +278,67 @@ def test_route_registration_is_idempotent_per_registry_and_has_the_explicit_api(
         ("PATCH", f"{ROUTE_PREFIX}/options/{{option_id}}"),
         ("DELETE", f"{ROUTE_PREFIX}/options/{{option_id}}"),
     }
+
+
+def test_default_routes_isolate_user_option_storage_by_request_profile(
+    tmp_path, catalog, monkeypatch
+):
+    shared_path = tmp_path / "shared" / "options.json"
+    monkeypatch.setattr(
+        "custom_nodes.comfyui_arch_prompt_tools.store.default_user_options_path",
+        lambda: shared_path,
+    )
+
+    class FakeUserManager:
+        def get_request_user_filepath(
+            self, request, file, *, type="userdata", create_dir=True
+        ):
+            assert type == "userdata"
+            path = tmp_path / request.headers["comfy-user"] / file
+            if create_dir:
+                path.parent.mkdir(parents=True, exist_ok=True)
+            return str(path)
+
+    routes = FakeRoutes()
+    prompt_server = SimpleNamespace(
+        routes=routes,
+        user_manager=FakeUserManager(),
+    )
+    assert register_routes(
+        prompt_server,
+        web_module=FakeWeb,
+        catalog_provider=lambda: catalog,
+    )
+    post = routes.handlers[("POST", f"{ROUTE_PREFIX}/options")]
+    get = routes.handlers[("GET", f"{ROUTE_PREFIX}/options")]
+    delete = routes.handlers[
+        ("DELETE", f"{ROUTE_PREFIX}/options/{{option_id}}")
+    ]
+    alice = {"comfy-user": "alice"}
+    bob = {"comfy-user": "bob"}
+
+    created = asyncio.run(post(FakeRequest(body=valid_option(), headers=alice)))
+    option_id = created["payload"]["option"]["id"]
+    alice_options = asyncio.run(get(FakeRequest(headers=alice)))
+    bob_options = asyncio.run(get(FakeRequest(headers=bob)))
+    bob_delete = asyncio.run(
+        delete(FakeRequest(option_id=option_id, headers=bob))
+    )
+    alice_options_after = asyncio.run(get(FakeRequest(headers=alice)))
+
+    assert created["status"] == 201
+    assert option_id in {
+        option["id"] for option in alice_options["payload"]["options"]
+    }
+    assert option_id not in {
+        option["id"] for option in bob_options["payload"]["options"]
+    }
+    assert bob_delete["status"] == 404
+    assert option_id in {
+        option["id"] for option in alice_options_after["payload"]["options"]
+    }
+    assert (tmp_path / "alice" / "arch_prompt_tools" / "options.json").is_file()
+    assert not shared_path.exists()
 
 
 def test_actual_aiohttp_route_table_commits_exactly_five_definitions(store, catalog):
