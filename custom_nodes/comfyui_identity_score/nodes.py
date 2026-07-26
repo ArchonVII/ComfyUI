@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 
 import folder_paths
 
@@ -14,6 +15,13 @@ from .identity_core import (
     resolve_path,
     write_manifest as write_identity_manifest,
 )
+
+
+def get_experiment_service():
+    """Create the local experiment service only when a queued run needs it."""
+    from .routes import get_service
+
+    return get_service()
 
 
 class OpenCVIdentityScore:
@@ -234,6 +242,7 @@ class DualIdentityScore:
         prompt=None,
         extra_pnginfo=None,
     ):
+        started_at = time.perf_counter()
         node_dir = Path(__file__).resolve().parent
         report = build_dual_report(
             base_bgr=image_tensor_to_bgr(base_image),
@@ -249,6 +258,19 @@ class DualIdentityScore:
             report["experiment_id"] = str(experiment_id)
         if run_id:
             report["run_id"] = str(run_id)
+
+        if str(experiment_id).strip() and str(run_id).strip():
+            completed = get_experiment_service().record_run(
+                experiment_id=str(experiment_id),
+                run_id=str(run_id),
+                generated_image=generated_image,
+                report=report,
+                prompt=prompt,
+                extra_pnginfo=extra_pnginfo,
+                runtime_seconds=time.perf_counter() - started_at,
+            )
+            report["result_path"] = completed["output_path"]
+            report["result_id"] = completed["id"]
 
         if write_manifest:
             manifest_root = resolve_path(manifest_dir, Path(folder_paths.get_user_directory()))
@@ -294,6 +316,7 @@ class DualIdentityScore:
                 "text": [text],
                 "status": [status],
                 "result_id": [str(run_id or "")],
+                "result_path": [str(report.get("result_path", ""))],
                 "face_detection": [face_detection],
             },
             "result": result,

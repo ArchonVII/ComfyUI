@@ -1,0 +1,146 @@
+from pathlib import Path
+import shutil
+import sys
+
+import numpy as np
+import pytest
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from comfyui_identity_score.experiment_service import (
+    IDENTITY_LAB_BASE_IMAGE,
+    IDENTITY_LAB_LORA_1,
+    IDENTITY_LAB_LORA_2,
+    IDENTITY_LAB_LORA_3,
+    IDENTITY_LAB_MODEL,
+    IDENTITY_LAB_REFERENCE_IMAGE,
+    IDENTITY_LAB_SAMPLER,
+    IDENTITY_LAB_SCORE,
+    ExperimentService,
+    validate_api_workflow,
+)
+
+
+class FakeFolderPaths:
+    names = {
+        "diffusion_models": ["Flux/9B/flux-9b.safetensors", "sdxl.safetensors", "../escape.safetensors"],
+        "checkpoints": ["flux-dev-9b.safetensors"],
+        "loras": ["Flux/9B/face-9b.safetensors", "Flux/other.safetensors", "../bad.safetensors"],
+    }
+
+    def __init__(self, root):
+        self.root = root
+
+    def get_filename_list(self, category):
+        return list(self.names.get(category, []))
+
+    def get_user_directory(self):
+        return str(self.root / "user")
+
+    def get_output_directory(self):
+        return str(self.root / "output")
+
+
+def template():
+    return {
+        "1": {"class_type": "LoadImage", "inputs": {}, "_meta": {"title": IDENTITY_LAB_BASE_IMAGE}},
+        "2": {"class_type": "LoadImage", "inputs": {}, "_meta": {"title": IDENTITY_LAB_REFERENCE_IMAGE}},
+        "3": {"class_type": "UNETLoader", "inputs": {}, "_meta": {"title": IDENTITY_LAB_MODEL}},
+        "4": {"class_type": "LoraLoader", "inputs": {}, "_meta": {"title": IDENTITY_LAB_LORA_1}},
+        "5": {"class_type": "LoraLoader", "inputs": {}, "_meta": {"title": IDENTITY_LAB_LORA_2}},
+        "6": {"class_type": "LoraLoader", "inputs": {}, "_meta": {"title": IDENTITY_LAB_LORA_3}},
+        "7": {"class_type": "KSampler", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SAMPLER}},
+        "8": {"class_type": "DualIdentityScore", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SCORE}},
+    }
+
+
+def test_catalogs_are_deterministic_flux_9b_only_and_path_safe(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+
+    assert service.catalogs() == {
+        "diffusion_models": ["Flux/9B/flux-9b.safetensors", "flux-dev-9b.safetensors"],
+        "loras": ["Flux/9B/face-9b.safetensors"],
+    }
+
+
+def test_workflow_template_requires_one_typed_node_for_every_stable_role():
+    roles = validate_api_workflow(template())
+    assert roles[IDENTITY_LAB_SCORE] == "8"
+
+    missing = template()
+    del missing["8"]
+    with pytest.raises(ValueError, match="missing"):
+        validate_api_workflow(missing)
+    duplicate = template()
+    duplicate["9"] = {"class_type": "DualIdentityScore", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SCORE}}
+    with pytest.raises(ValueError, match="duplicate"):
+        validate_api_workflow(duplicate)
+    wrong = template()
+    wrong["3"]["class_type"] = "KSampler"
+    with pytest.raises(ValueError, match="expected"):
+        validate_api_workflow(wrong)
+
+
+def test_estimates_use_completed_medians_or_labeled_fallback_and_current_free_output_space(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    experiment = service.create_experiment({
+        "name": "median", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    run = experiment["runs"][0]
+    service.store.transition_run(run["id"], "queued")
+    service.store.transition_run(run["id"], "running")
+    service.store.complete_run(run["id"], output_path="identity_lab/results/a.png", identity_report={"runtime_seconds": 12.0})
+    monkeypatch.setattr(shutil, "disk_usage", lambda _path: (1000, 250, 750))
+
+    known = service.estimate(experiment["experiment"]["id"], run_count=2)
+    assert known["seconds_per_run"] == 12.0
+    assert known["time_source"] == "completed_run_median"
+    assert known["free_bytes"] == 750
+    fallback = service.estimate("missing", run_count=2, fallback_seconds=9)
+    assert fallback["seconds_per_run"] == 9
+    assert fallback["time_source"] == "fallback"
+
+
+def test_service_lifecycle_reviews_resume_archive_results_and_safe_output_file(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "local", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id = created["experiment"]["id"]
+    run = created["runs"][0]
+    service.store.transition_run(run["id"], "queued")
+    assert service.resume_stale(experiment_id, stale_after_seconds=0)[0]["state"] == "planned"
+    service.store.transition_run(run["id"], "queued")
+    service.store.transition_run(run["id"], "running")
+    output = Path(service.output_directory) / "identity_lab/results/a.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"png")
+    service.store.complete_run(run["id"], output_path="identity_lab/results/a.png", identity_report={"rankable": False})
+
+    assert service.list_results(experiment_id)[0]["id"] == run["id"]
+    assert service.update_review(run["id"], {"rating": 5, "favorite": True})["rating"] == 5
+    assert service.output_file("identity_lab/results/a.png") == output
+    with pytest.raises(ValueError, match="relative"):
+        service.output_file("../secret.png")
+    assert service.archive(experiment_id)["state"] == "archived"
+
+
+def test_record_run_writes_local_png_metadata_and_completes_a_non_rankable_run(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "record", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    report = {"rankable": False, "face_detection": {"base": True, "reference": False, "generated": True}}
+
+    completed = service.record_run(
+        experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((4, 4, 3), dtype=np.uint8),
+        report=report, prompt={"positive": "portrait"}, extra_pnginfo={"workflow": {"nodes": []}}, runtime_seconds=3.5,
+    )
+
+    output = service.output_file(completed["output_path"])
+    assert output.is_file()
+    assert completed["state"] == "completed"
+    assert completed["identity_report"]["rankable"] is False
+    assert completed["identity_report"]["runtime_seconds"] == 3.5
