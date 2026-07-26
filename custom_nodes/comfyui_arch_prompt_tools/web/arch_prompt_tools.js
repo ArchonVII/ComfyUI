@@ -665,6 +665,22 @@ function optionsByField(options) {
   return grouped;
 }
 
+function mergeFullOptions(context, knownFields, options, refreshTokenSnapshot) {
+  const fullOptions = optionsByField(options);
+  const merged = new Map();
+  for (const fieldKey of knownFields) {
+    const tokenAtStart = refreshTokenSnapshot.get(fieldKey) || 0;
+    const currentToken = context.refreshTokens.get(fieldKey) || 0;
+    merged.set(
+      fieldKey,
+      currentToken === tokenAtStart
+        ? fullOptions.get(fieldKey) || []
+        : context.options.get(fieldKey) || [],
+    );
+  }
+  return merged;
+}
+
 async function refreshFieldOptions(
   context,
   fieldKey,
@@ -1277,6 +1293,8 @@ function renderSections(context) {
 async function initializeContext(context) {
   context.loadGeneration += 1;
   const loadGeneration = context.loadGeneration;
+  context.refreshTokens ||= new Map();
+  const refreshTokenSnapshot = new Map(context.refreshTokens);
   context.invalid = false;
   setStatus(context, "Loading schema and choices…");
   context.body.replaceChildren(makeElement("div", "Loading…", "arch-pt-note"));
@@ -1317,7 +1335,12 @@ async function initializeContext(context) {
     }
     context.state = restored.state;
     context.schemaNode = schemaNode;
-    context.options = optionsByField(options);
+    context.options = mergeFullOptions(
+      context,
+      knownFields,
+      options,
+      refreshTokenSnapshot,
+    );
     setStatus(
       context,
       `Ready · ${context.family} affects future selections only · ${options.length} choices`,

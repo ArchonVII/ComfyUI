@@ -922,6 +922,96 @@ assert.equal(fluxRefreshResult.applied, false);
 assert.equal(fluxRefreshResult.stale, true);
 assert.deepEqual(guardedRefreshContext.options.get("hair_color"), [{id: "qwen-current"}]);
 
+function raceOption(field, id, label) {
+  const source = ROUTE_OPTIONS.find((option) => option.field === field);
+  return {
+    ...source,
+    id,
+    label,
+    phrases: {flux: `${label} flux`, qwen: `${label} qwen`},
+  };
+}
+
+function raceContext(initialOptions = new Map()) {
+  return {
+    node: {setDirtyCanvas() {}},
+    nodeKey: "identity",
+    stateWidget: {
+      value: serializeState(createEmptyState("identity", "flux")),
+      callback() {},
+    },
+    familyWidget: {value: "flux"},
+    family: "flux",
+    state: null,
+    schemaNode: null,
+    options: initialOptions,
+    body: new FakeElement("div"),
+    status: new FakeElement("div"),
+    invalid: false,
+    loadGeneration: 0,
+    refreshTokens: new Map(),
+  };
+}
+
+function optionResponse(options) {
+  return {
+    ok: true,
+    status: 200,
+    async json() { return {version: 1, options}; },
+  };
+}
+
+schemaPromise = Promise.resolve(REAL_SCHEMA);
+const oldFullHair = raceOption("hair_color", "full-old-hair", "Full old hair");
+const freshFieldHair = raceOption("hair_color", "field-fresh-hair", "Field fresh hair");
+const fullHairLength = raceOption("hair_length", "full-hair-length", "Full hair length");
+const olderFullResponse = deferred();
+api.fetchApi = (path) => {
+  assert.match(path, /^\/arch-prompt-tools\/options\?/u);
+  return olderFullResponse.promise;
+};
+const newerFieldContext = raceContext(
+  new Map([["hair_color", [raceOption("hair_color", "initial-hair", "Initial hair")]]]),
+);
+const olderFullLoad = initializeContext(newerFieldContext);
+const newerFieldRefresh = await refreshFieldOptions(
+  newerFieldContext,
+  "hair_color",
+  {loader: async () => [freshFieldHair]},
+);
+assert.equal(newerFieldRefresh.applied, true);
+olderFullResponse.resolve(optionResponse([oldFullHair, fullHairLength]));
+await olderFullLoad;
+assert.deepEqual(newerFieldContext.options.get("hair_color"), [freshFieldHair]);
+assert.deepEqual(newerFieldContext.options.get("hair_length"), [fullHairLength]);
+
+const staleFieldHair = raceOption("hair_color", "field-stale-hair", "Field stale hair");
+const currentFullHair = raceOption("hair_color", "full-current-hair", "Full current hair");
+const currentFullLength = raceOption("hair_length", "full-current-length", "Full current length");
+const olderFieldResponse = deferred();
+const newerFullResponse = deferred();
+const newerFullContext = raceContext(
+  new Map([["hair_color", [raceOption("hair_color", "initial-two", "Initial two")]]]),
+);
+const olderFieldRefresh = refreshFieldOptions(
+  newerFullContext,
+  "hair_color",
+  {loader: () => olderFieldResponse.promise},
+);
+api.fetchApi = (path) => {
+  assert.match(path, /^\/arch-prompt-tools\/options\?/u);
+  return newerFullResponse.promise;
+};
+const newerFullLoad = initializeContext(newerFullContext);
+newerFullResponse.resolve(optionResponse([currentFullHair, currentFullLength]));
+await newerFullLoad;
+olderFieldResponse.resolve([staleFieldHair]);
+const olderFieldResult = await olderFieldRefresh;
+assert.equal(olderFieldResult.applied, false);
+assert.equal(olderFieldResult.stale, true);
+assert.deepEqual(newerFullContext.options.get("hair_color"), [currentFullHair]);
+assert.deepEqual(newerFullContext.options.get("hair_length"), [currentFullLength]);
+
 const invalidRaw = '{"version":2,"node":"identity","model_family":"flux","fields":{}}';
 let invalidWrites = 0;
 const invalidContext = {
