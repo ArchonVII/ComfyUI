@@ -253,7 +253,7 @@ def build_dual_report(
             "cosine_similarity": active["cosine_similarity"],
             "same_identity": active["same_identity"],
         },
-        "rankable": active["cosine_similarity"] is not None,
+        "rankable": all(detection.values()),
         "issues": issues,
     }
 

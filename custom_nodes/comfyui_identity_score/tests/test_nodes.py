@@ -70,4 +70,8 @@ def test_dual_identity_score_returns_ui_payload_and_result_values(monkeypatch):
     assert result["result"][8]["prior"] == "metadata"
     assert result["ui"]["status"] == ["rankable"]
     assert result["ui"]["result_id"] == ["run-2"]
+    assert result["ui"]["face_detection"] == [{"base": True, "reference": True, "generated": True}]
     assert "reference 0.910000" in result["ui"]["text"][0]
+    assert "base face detected" in result["ui"]["text"][0]
+    assert "reference face detected" in result["ui"]["text"][0]
+    assert "generated face detected" in result["ui"]["text"][0]

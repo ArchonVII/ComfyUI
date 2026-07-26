@@ -132,3 +132,23 @@ def test_dual_report_marks_missing_active_face_as_non_rankable(monkeypatch, tmp_
     assert report["rankable"] is False
     assert report["active_score"]["cosine_similarity"] is None
     assert "base face not detected" in report["issues"]
+
+
+def test_dual_report_marks_missing_inactive_face_as_non_rankable(monkeypatch, tmp_path):
+    detected = iter([None, _face([1.0, 0.0]), _face([1.0, 0.0])])
+    monkeypatch.setattr("identity_core.detect_best_face", lambda *_args: next(detected))
+
+    report = build_dual_report(
+        base_bgr=np.zeros((2, 2, 3), dtype=np.uint8),
+        reference_bgr=np.ones((2, 2, 3), dtype=np.uint8),
+        generated_bgr=np.full((2, 2, 3), 2, dtype=np.uint8),
+        models=default_model_paths(tmp_path),
+        experiment_mode="face_swap",
+        face_score_threshold=0.7,
+        same_identity_threshold=0.363,
+        face_selection="largest",
+    )
+
+    assert report["active_score"]["cosine_similarity"] == 1.0
+    assert report["rankable"] is False
+    assert "base face not detected" in report["issues"]

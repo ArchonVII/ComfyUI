@@ -248,11 +248,16 @@ class DualIdentityScore:
         active = report["active_score"]
         rankable = bool(report["rankable"])
         status = "rankable" if rankable else "not_rankable"
+        face_detection = report["face_detection"]
         score_text = lambda value: f"{float(value):.6f}" if value is not None else "unavailable"
+        detection_text = "; ".join(
+            f"{name} face {'detected' if face_detection[name] else 'not detected'}"
+            for name in ("base", "reference", "generated")
+        )
         text = (
             f"reference {score_text(reference['cosine_similarity'])}; "
             f"base {score_text(base['cosine_similarity'])}; "
-            f"active ({active['source']}) {score_text(active['cosine_similarity'])}; {status}"
+            f"active ({active['source']}) {score_text(active['cosine_similarity'])}; {status}; {detection_text}"
         )
         result = (
             float(reference["cosine_similarity"] or 0.0),
@@ -266,7 +271,12 @@ class DualIdentityScore:
             metadata,
         )
         return {
-            "ui": {"text": [text], "status": [status], "result_id": [str(run_id or "")]},
+            "ui": {
+                "text": [text],
+                "status": [status],
+                "result_id": [str(run_id or "")],
+                "face_detection": [face_detection],
+            },
             "result": result,
         }
 
