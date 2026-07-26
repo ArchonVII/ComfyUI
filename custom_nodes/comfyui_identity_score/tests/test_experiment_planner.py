@@ -7,6 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from comfyui_identity_score import experiment_planner
 from comfyui_identity_score.experiment_planner import MAX_EXPERIMENT_RUNS, plan_runs
 
 
@@ -112,6 +113,38 @@ def test_plan_runs_removes_duplicate_inputs_and_never_activates_more_than_three_
     assert len(runs) == 4
     assert all(len(run.loras) == 3 for run in runs)
     assert len({run.combination_hash for run in runs}) == 4
+
+
+def test_plan_runs_canonicalizes_lora_stack_order_before_pair_and_triple_hashing():
+    forward = plan_runs(
+        mode="face_swap",
+        checkpoints=["flux"],
+        seeds=[1],
+        loras=[("a", 0.5), ("b", 0.6), ("c", 0.7)],
+        stages=["lora_pair", "lora_triple"],
+    )
+    reverse = plan_runs(
+        mode="face_swap",
+        checkpoints=["flux"],
+        seeds=[1],
+        loras=[("c", 0.7), ("a", 0.5), ("b", 0.6)],
+        stages=["lora_pair", "lora_triple"],
+    )
+
+    assert forward == reverse
+
+
+def test_plan_runs_rejects_large_lora_combinations_before_materializing_them(monkeypatch):
+    monkeypatch.setattr(experiment_planner, "combinations", lambda *_args: pytest.fail("combinations materialized"))
+
+    with pytest.raises(ValueError, match="100"):
+        plan_runs(
+            mode="face_swap",
+            checkpoints=["flux"],
+            seeds=[1],
+            loras=[(f"lora-{index}", 0.5) for index in range(100)],
+            stages=["lora_pair"],
+        )
 
 
 @pytest.mark.parametrize("mode", ["txt2img", "", None])

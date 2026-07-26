@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 import json
 from itertools import combinations
+from math import comb
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
@@ -72,6 +73,12 @@ def plan_runs(
     normalized_loras = _unique_loras(loras)
     normalized_stages = _unique_stages(stages)
     normalized_refine = _freeze_json(dict(refine_settings or {}))
+    _ensure_run_limit(
+        checkpoints=normalized_checkpoints,
+        seeds=normalized_seeds,
+        loras=normalized_loras,
+        stages=normalized_stages,
+    )
 
     runs: list[PlannedRun] = []
     seen_hashes: set[str] = set()
@@ -152,7 +159,7 @@ def _unique_loras(loras: Iterable[tuple[str, float]]) -> tuple[LoRASetting, ...]
         setting = LoRASetting(name=name.strip(), strength=float(strength))
         if setting not in result:
             result.append(setting)
-    return tuple(result)
+    return tuple(sorted(result, key=lambda setting: (setting.name, setting.strength)))
 
 
 def _unique_stages(stages: Iterable[str]) -> tuple[str, ...]:
@@ -179,6 +186,36 @@ def _stage_lora_sets(stage: str, loras: tuple[LoRASetting, ...]) -> tuple[tuple[
     if len(loras) > 3:
         raise ValueError("focused_refine may not activate more than three LoRAs")
     return (loras,)
+
+
+def _ensure_run_limit(
+    *,
+    checkpoints: tuple[str, ...],
+    seeds: tuple[int, ...],
+    loras: tuple[LoRASetting, ...],
+    stages: tuple[str, ...],
+) -> None:
+    stage_counts = {
+        "baseline": 1,
+        "lora_single": len(loras),
+        "lora_pair": comb(len(loras), 2),
+        "lora_triple": comb(len(loras), 3),
+        "focused_refine": 1,
+    }
+    planned_count = len(checkpoints) * len(seeds) * sum(stage_counts[stage] for stage in stages)
+    if planned_count > MAX_EXPERIMENT_RUNS:
+        raise ValueError(f"experiment plan exceeds the {MAX_EXPERIMENT_RUNS}-run limit")
+
+
+def canonical_combination_hash(plan: Mapping[str, Any]) -> str:
+    """Return the hash for a persisted planned-run mapping, excluding its hash field."""
+
+    required_fields = ("checkpoint", "loras", "mode", "refine", "seed", "stage")
+    try:
+        payload = {field: plan[field] for field in required_fields}
+    except (KeyError, TypeError) as exc:
+        raise ValueError("plan is missing canonical combination fields") from exc
+    return _canonical_hash(payload)
 
 
 def _canonical_hash(payload: Mapping[str, Any]) -> str:

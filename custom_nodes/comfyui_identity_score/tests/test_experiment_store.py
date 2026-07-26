@@ -52,6 +52,39 @@ def test_store_creates_one_run_per_experiment_combination_hash(store, planned_ru
     assert first["state"] == "planned"
 
 
+def test_store_requires_valid_matching_modes_and_durable_mode_constraints(store, planned_run):
+    with pytest.raises(ValueError, match="mode"):
+        store.create_experiment(name="Invalid", mode="txt2img")
+
+    experiment = store.create_experiment(name="Mode", mode="face_swap")
+    mismatched = plan_runs(mode="identity_i2i", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0]
+    with pytest.raises(ValueError, match="mode"):
+        store.create_run(experiment["id"], mismatched)
+
+    with sqlite3.connect(store.path) as connection:
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                """
+                INSERT INTO experiments (id, name, mode, state, settings_json, created_at, updated_at)
+                VALUES ('invalid-mode', 'Invalid', 'txt2img', 'active', '{}', '2000-01-01T00:00:00Z', '2000-01-01T00:00:00Z')
+                """
+            )
+
+
+def test_store_verifies_canonical_hashes_and_rejects_conflicting_existing_payloads(store, planned_run):
+    experiment = store.create_experiment(name="Integrity", mode="face_swap")
+    with pytest.raises(ValueError, match="canonical combination hash"):
+        store.create_run(experiment["id"], replace(planned_run, combination_hash="not-a-hash"))
+
+    first = store.create_run(experiment["id"], planned_run)
+    second_plan = plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0]
+    with sqlite3.connect(store.path) as connection:
+        connection.execute("UPDATE runs SET combination_hash = ? WHERE id = ?", (second_plan.combination_hash, first["id"]))
+
+    with pytest.raises(ValueError, match="integrity"):
+        store.create_run(experiment["id"], second_plan)
+
+
 def test_store_enforces_valid_run_state_transitions(store, planned_run):
     experiment = store.create_experiment(name="States", mode="face_swap")
     run = store.create_run(experiment["id"], planned_run)
@@ -115,6 +148,50 @@ def test_store_completion_data_is_immutable_and_output_paths_are_relative(store,
         store.transition_run(run["id"], "running")
 
 
+def test_store_compare_and_set_prevents_concurrent_transition_and_completion_overwrites(store, planned_run, monkeypatch):
+    experiment = store.create_experiment(name="Atomic", mode="face_swap")
+    transitioning = store.create_run(experiment["id"], planned_run)
+    original_fetch = store._fetch_run
+    changed = False
+
+    def fetch_after_external_archive(connection, run_id):
+        nonlocal changed
+        row = original_fetch(connection, run_id)
+        if run_id == transitioning["id"] and not changed:
+            changed = True
+            with sqlite3.connect(store.path) as other:
+                other.execute("UPDATE runs SET state = 'archived', updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run_id,))
+        return row
+
+    monkeypatch.setattr(store, "_fetch_run", fetch_after_external_archive)
+    with pytest.raises(ValueError, match="changed"):
+        store.transition_run(transitioning["id"], "queued")
+    monkeypatch.setattr(store, "_fetch_run", original_fetch)
+    assert store.get_run(transitioning["id"])["state"] == "archived"
+
+    completing = store.create_run(
+        experiment["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0]
+    )
+    store.transition_run(completing["id"], "queued")
+    store.transition_run(completing["id"], "running")
+    changed = False
+
+    def fetch_after_external_failure(connection, run_id):
+        nonlocal changed
+        row = original_fetch(connection, run_id)
+        if run_id == completing["id"] and not changed:
+            changed = True
+            with sqlite3.connect(store.path) as other:
+                other.execute("UPDATE runs SET state = 'failed', updated_at = '2000-01-01T00:00:00.000000Z' WHERE id = ?", (run_id,))
+        return row
+
+    monkeypatch.setattr(store, "_fetch_run", fetch_after_external_failure)
+    with pytest.raises(ValueError, match="changed"):
+        store.complete_run(completing["id"], output_path="result.png", identity_report={})
+    monkeypatch.setattr(store, "_fetch_run", original_fetch)
+    assert store.get_run(completing["id"])["state"] == "failed"
+
+
 @pytest.mark.parametrize("path", ["C:/output/run.png", "/output/run.png", "../run.png", ""])
 def test_store_rejects_non_relative_output_paths(store, planned_run, path):
     experiment = store.create_experiment(name="Paths", mode="face_swap")
@@ -139,16 +216,52 @@ def test_store_refuses_embeddings_or_image_bytes_in_completion_data(store, plann
         store.create_experiment(name="No embeddings", mode="face_swap", settings={"reference_embedding": [0.1, 0.2]})
 
 
+@pytest.mark.parametrize(
+    "image_payload",
+    [
+        {"image_bytes": [0, 127, 255]},
+        {"image_base64": "iVBORw0KGgo="},
+        {"preview": "data:image/png;base64,iVBORw0KGgo="},
+    ],
+)
+def test_store_rejects_image_payload_encodings_but_allows_paths(store, planned_run, image_payload):
+    experiment = store.create_experiment(name="Image privacy", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    store.transition_run(run["id"], "queued")
+    store.transition_run(run["id"], "running")
+
+    with pytest.raises(ValueError, match="image"):
+        store.complete_run(run["id"], output_path="result.png", identity_report=image_payload)
+
+    path_run = store.create_run(
+        experiment["id"], plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0]
+    )
+    store.transition_run(path_run["id"], "queued")
+    store.transition_run(path_run["id"], "running")
+    assert store.complete_run(
+        path_run["id"], output_path="result-2.png", identity_report={"preview_path": "outputs/preview.png"}
+    )["state"] == "completed"
+
+
 def test_store_refuses_embedding_like_data_in_plans_but_keeps_numeric_parameter_arrays(store, planned_run):
     experiment = store.create_experiment(name="Plan privacy", mode="face_swap")
-    numeric_parameters = replace(planned_run, refine={"guidance_values": [2.5, 3.0]})
+    numeric_parameters = plan_runs(
+        mode="face_swap",
+        checkpoints=["flux"],
+        seeds=[7],
+        stages=["focused_refine"],
+        refine_settings={"guidance_values": [2.5, 3.0]},
+    )[0]
     safe_run = store.create_run(experiment["id"], numeric_parameters)
 
     assert safe_run["plan"]["refine"] == {"guidance_values": [2.5, 3.0]}
-    unsafe_plan = replace(
-        plan_runs(mode="face_swap", checkpoints=["flux"], seeds=[8], stages=["baseline"])[0],
-        refine={"face_embedding": [0.1, 0.2]},
-    )
+    unsafe_plan = plan_runs(
+        mode="face_swap",
+        checkpoints=["flux"],
+        seeds=[8],
+        stages=["focused_refine"],
+        refine_settings={"face_embedding": [0.1, 0.2]},
+    )[0]
     with pytest.raises(ValueError, match="embedding"):
         store.create_run(experiment["id"], unsafe_plan)
 
@@ -180,3 +293,17 @@ def test_store_archives_experiments_non_destructively(store, planned_run):
     assert archived["state"] == "archived"
     assert store.get_experiment(experiment["id"])["state"] == "archived"
     assert store.get_run(run["id"])["id"] == run["id"]
+
+
+@pytest.mark.parametrize("timeout", [float("nan"), float("inf"), float("-inf")])
+def test_store_rejects_non_finite_stale_timeouts(store, timeout):
+    with pytest.raises(ValueError, match="finite"):
+        store.resume_stale_runs(stale_after_seconds=timeout)
+
+
+def test_store_connections_close_at_the_end_of_each_context(store):
+    with store._connection() as connection:
+        assert connection.execute("SELECT 1").fetchone()[0] == 1
+
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        connection.execute("SELECT 1")

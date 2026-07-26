@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import json
+from math import isfinite
 from pathlib import Path, PureWindowsPath
 import sqlite3
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 from uuid import uuid4
 
-from .experiment_planner import PlannedRun
+from .experiment_planner import PlannedRun, VALID_MODES, canonical_combination_hash
 
 
 RUN_STATES = frozenset({"planned", "queued", "running", "completed", "failed", "archived"})
@@ -35,8 +37,8 @@ class ExperimentStore:
     def create_experiment(self, *, name: str, mode: str, settings: Mapping[str, Any] | None = None) -> dict[str, Any]:
         if not isinstance(name, str) or not name.strip():
             raise ValueError("experiment name must be a non-empty string")
-        if not isinstance(mode, str) or not mode.strip():
-            raise ValueError("experiment mode must be a non-empty string")
+        if mode not in VALID_MODES:
+            raise ValueError(f"invalid experiment mode: {mode!r}")
         settings_json = _encode_json(dict(settings or {}), label="settings", reject_embeddings=True)
         now = _utc_now()
         experiment_id = str(uuid4())
@@ -64,28 +66,37 @@ class ExperimentStore:
         if not isinstance(planned_run, PlannedRun):
             raise ValueError("planned_run must be a PlannedRun")
         plan = planned_run.as_dict()
+        expected_hash = canonical_combination_hash(plan)
+        if planned_run.combination_hash != expected_hash:
+            raise ValueError("planned_run does not have its canonical combination hash")
         plan_json = _encode_json(plan, label="plan", reject_embeddings=True)
         now = _utc_now()
         with self._connection() as connection:
             experiment = self._fetch_experiment(connection, experiment_id)
             if experiment["state"] != "active":
                 raise ValueError("cannot add runs to an archived experiment")
-            existing = connection.execute(
-                "SELECT * FROM runs WHERE experiment_id = ? AND combination_hash = ?", (experiment_id, planned_run.combination_hash)
-            ).fetchone()
-            if existing is not None:
-                return _decode_run(existing)
+            if planned_run.mode != experiment["mode"]:
+                raise ValueError("planned run mode must match the experiment mode")
             run_id = str(uuid4())
-            connection.execute(
+            inserted = connection.execute(
                 """
                 INSERT INTO runs (
                     id, experiment_id, combination_hash, state, plan_json, identity_report_json,
                     output_path, rating, favorite, notes, created_at, updated_at, started_at, completed_at
                 ) VALUES (?, ?, ?, 'planned', ?, NULL, NULL, NULL, 0, '', ?, ?, NULL, NULL)
+                ON CONFLICT(experiment_id, combination_hash) DO NOTHING
+                RETURNING *
                 """,
                 (run_id, experiment_id, planned_run.combination_hash, plan_json, now, now),
-            )
-            return self._fetch_run(connection, run_id)
+            ).fetchone()
+            if inserted is not None:
+                return _decode_run(inserted)
+            existing = connection.execute(
+                "SELECT * FROM runs WHERE experiment_id = ? AND combination_hash = ?", (experiment_id, planned_run.combination_hash)
+            ).fetchone()
+            if existing is None:
+                raise ValueError("run insertion did not produce a deterministic existing row")
+            return _verified_existing_run(existing, plan)
 
     insert_run = create_run
 
@@ -108,27 +119,42 @@ class ExperimentStore:
                 raise ValueError(f"invalid state transition: {run['state']} -> {target_state}")
             now = _utc_now()
             started_at = now if target_state == "running" else run["started_at"]
-            connection.execute(
-                "UPDATE runs SET state = ?, updated_at = ?, started_at = ? WHERE id = ?",
-                (target_state, now, started_at, run_id),
+            updated = connection.execute(
+                "UPDATE runs SET state = ?, updated_at = ?, started_at = ? WHERE id = ? AND state = ? AND updated_at = ?",
+                (target_state, now, started_at, run_id, run["state"], run["updated_at"]),
             )
+            if updated.rowcount != 1:
+                raise ValueError("run state changed concurrently")
             return self._fetch_run(connection, run_id)
 
     def resume_stale_runs(self, *, stale_after_seconds: float) -> list[dict[str, Any]]:
-        if isinstance(stale_after_seconds, bool) or not isinstance(stale_after_seconds, (int, float)) or stale_after_seconds < 0:
-            raise ValueError("stale_after_seconds must be a non-negative number")
+        if (
+            isinstance(stale_after_seconds, bool)
+            or not isinstance(stale_after_seconds, (int, float))
+            or not isfinite(stale_after_seconds)
+            or stale_after_seconds < 0
+        ):
+            raise ValueError("stale_after_seconds must be a finite non-negative number")
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
         cutoff_text = cutoff.isoformat(timespec="microseconds").replace("+00:00", "Z")
         now = _utc_now()
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT id FROM runs WHERE state IN ('queued', 'running') AND updated_at <= ? ORDER BY updated_at, id", (cutoff_text,)
+                "SELECT id, state, updated_at FROM runs WHERE state IN ('queued', 'running') AND updated_at <= ? ORDER BY updated_at, id",
+                (cutoff_text,),
             ).fetchall()
-            if not rows:
-                return []
-            run_ids = [row["id"] for row in rows]
-            connection.executemany("UPDATE runs SET state = 'planned', updated_at = ? WHERE id = ?", [(now, run_id) for run_id in run_ids])
-            return [self._fetch_run(connection, run_id) for run_id in run_ids]
+            resumed: list[dict[str, Any]] = []
+            for row in rows:
+                updated = connection.execute(
+                    """
+                    UPDATE runs SET state = 'planned', updated_at = ?
+                    WHERE id = ? AND state = ? AND updated_at = ?
+                    """,
+                    (now, row["id"], row["state"], row["updated_at"]),
+                )
+                if updated.rowcount == 1:
+                    resumed.append(self._fetch_run(connection, row["id"]))
+            return resumed
 
     def complete_run(self, run_id: str, *, output_path: str, identity_report: Mapping[str, Any]) -> dict[str, Any]:
         normalized_path = _relative_output_path(output_path)
@@ -140,14 +166,20 @@ class ExperimentStore:
             if run["state"] != "running":
                 raise ValueError(f"invalid state transition: {run['state']} -> completed")
             now = _utc_now()
-            connection.execute(
+            updated = connection.execute(
                 """
                 UPDATE runs
                 SET state = 'completed', output_path = ?, identity_report_json = ?, updated_at = ?, completed_at = ?
-                WHERE id = ?
+                WHERE id = ? AND state = 'running' AND updated_at = ?
+                    AND output_path IS NULL AND identity_report_json IS NULL
                 """,
-                (normalized_path, report_json, now, now, run_id),
+                (normalized_path, report_json, now, now, run_id, run["updated_at"]),
             )
+            if updated.rowcount != 1:
+                current = self._fetch_run(connection, run_id)
+                if current["state"] == "completed":
+                    raise ValueError("completed run data is immutable")
+                raise ValueError("run state changed concurrently")
             return self._fetch_run(connection, run_id)
 
     def update_review(
@@ -176,7 +208,7 @@ class ExperimentStore:
                 CREATE TABLE IF NOT EXISTS experiments (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
-                    mode TEXT NOT NULL,
+                    mode TEXT NOT NULL CHECK (mode IN ('face_swap', 'identity_i2i')),
                     state TEXT NOT NULL CHECK (state IN ('active', 'archived')),
                     settings_json TEXT NOT NULL,
                     created_at TEXT NOT NULL,
@@ -204,13 +236,21 @@ class ExperimentStore:
                 """
             )
 
-    def _connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
-        connection.execute("PRAGMA busy_timeout = 5000")
-        return connection
+        try:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
+            connection.execute("PRAGMA busy_timeout = 5000")
+            yield connection
+            connection.commit()
+        except BaseException:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     @staticmethod
     def _fetch_experiment(connection: sqlite3.Connection, experiment_id: str) -> dict[str, Any]:
@@ -242,6 +282,21 @@ def _decode_run(row: sqlite3.Row) -> dict[str, Any]:
     return result
 
 
+def _verified_existing_run(row: sqlite3.Row, incoming_plan: Mapping[str, Any]) -> dict[str, Any]:
+    existing = _decode_run(row)
+    existing_hash = canonical_combination_hash(existing["plan"])
+    if existing_hash != existing["combination_hash"]:
+        raise ValueError("existing run integrity error: hash does not match its payload")
+    if _canonical_plan_json(existing["plan"]) != _canonical_plan_json(incoming_plan):
+        raise ValueError("existing run integrity error: hash maps to a different payload")
+    return existing
+
+
+def _canonical_plan_json(plan: Mapping[str, Any]) -> str:
+    payload = {key: value for key, value in plan.items() if key != "combination_hash"}
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
@@ -268,10 +323,15 @@ def _encode_json(value: Any, *, label: str, reject_embeddings: bool = False) -> 
 def _reject_sensitive_completion_data(value: Any) -> None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         raise ValueError("identity report must not contain image bytes")
+    if isinstance(value, str) and value.lower().startswith("data:image/"):
+        raise ValueError("identity report must not contain image payloads")
     if isinstance(value, Mapping):
         for key, item in value.items():
-            if "embedding" in str(key).lower():
+            normalized_key = str(key).lower()
+            if "embedding" in normalized_key:
                 raise ValueError("identity report must not contain embeddings")
+            if "image" in normalized_key and ("bytes" in normalized_key or "base64" in normalized_key):
+                raise ValueError("identity report must not contain image payloads")
             _reject_sensitive_completion_data(item)
     elif isinstance(value, (list, tuple)):
         for item in value:
