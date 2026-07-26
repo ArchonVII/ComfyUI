@@ -1,0 +1,7157 @@
+{
+  "version": "1.0",
+  "options": [
+    {
+      "id": "camera.aperture_character.wide_open",
+      "label": "Wide open",
+      "node": "camera",
+      "field": "aperture_character",
+      "group": "aperture_character",
+      "phrases": {
+        "flux": "a wide-open aperture with a narrow focus plane",
+        "qwen": "a wide-open aperture with a narrow focus plane"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.aperture_character.moderate",
+      "label": "Moderate",
+      "node": "camera",
+      "field": "aperture_character",
+      "group": "aperture_character",
+      "phrases": {
+        "flux": "a moderate aperture balancing focus and separation",
+        "qwen": "a moderate aperture balancing focus and separation"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.aperture_character.stopped_down",
+      "label": "Stopped down",
+      "node": "camera",
+      "field": "aperture_character",
+      "group": "aperture_character",
+      "phrases": {
+        "flux": "a stopped-down aperture with broad detail",
+        "qwen": "a stopped-down aperture with broad detail"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.aperture_character.creamy_bokeh",
+      "label": "Creamy bokeh",
+      "node": "camera",
+      "field": "aperture_character",
+      "group": "aperture_character",
+      "phrases": {
+        "flux": "an aperture rendering smooth creamy bokeh",
+        "qwen": "an aperture rendering smooth creamy bokeh"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.eye_level",
+      "label": "Eye level",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera at the subject's eye level",
+        "qwen": "camera at the subject's eye level"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.high_angle",
+      "label": "High angle",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera above the subject at a high angle",
+        "qwen": "camera above the subject at a high angle"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.low_angle",
+      "label": "Low angle",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera below the subject at a low angle",
+        "qwen": "camera below the subject at a low angle"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.overhead",
+      "label": "Overhead",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera directly overhead",
+        "qwen": "camera directly overhead"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.ground_level",
+      "label": "Ground level",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera close to ground level",
+        "qwen": "camera close to ground level"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.dutch_angle",
+      "label": "Dutch angle",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera set at a deliberate Dutch angle",
+        "qwen": "camera set at a deliberate Dutch angle"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.camera_angle.shoulder_height",
+      "label": "Shoulder height",
+      "node": "camera",
+      "field": "camera_angle",
+      "group": "camera_angle",
+      "phrases": {
+        "flux": "camera at the subject's shoulder height",
+        "qwen": "camera at the subject's shoulder height"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.rule_of_thirds",
+      "label": "Rule of thirds",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "a rule-of-thirds composition",
+        "qwen": "a rule-of-thirds composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.centered_symmetry",
+      "label": "Centered symmetry",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "a centered symmetrical composition",
+        "qwen": "a centered symmetrical composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.leading_lines",
+      "label": "Leading lines",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "strong leading lines guiding the eye",
+        "qwen": "strong leading lines guiding the eye"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.frame_within_frame",
+      "label": "Frame within frame",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "a frame-within-a-frame composition",
+        "qwen": "a frame-within-a-frame composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.open_space",
+      "label": "Open space",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "purposeful open space around the subject",
+        "qwen": "purposeful open space around the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.diagonal",
+      "label": "Diagonal",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "a dynamic diagonal composition",
+        "qwen": "a dynamic diagonal composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.composition.golden_ratio",
+      "label": "Golden ratio",
+      "node": "camera",
+      "field": "composition",
+      "group": "composition",
+      "phrases": {
+        "flux": "a golden-ratio composition",
+        "qwen": "a golden-ratio composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.compression.expanded_depth",
+      "label": "Expanded depth",
+      "node": "camera",
+      "field": "compression",
+      "group": "compression",
+      "phrases": {
+        "flux": "expanded spatial depth from a wide lens",
+        "qwen": "expanded spatial depth from a wide lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.compression.natural_depth",
+      "label": "Natural depth",
+      "node": "camera",
+      "field": "compression",
+      "group": "compression",
+      "phrases": {
+        "flux": "natural perspective depth",
+        "qwen": "natural perspective depth"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.compression.compressed_depth",
+      "label": "Compressed depth",
+      "node": "camera",
+      "field": "compression",
+      "group": "compression",
+      "phrases": {
+        "flux": "compressed perspective depth",
+        "qwen": "compressed perspective depth"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.compression.strong_compression",
+      "label": "Strong compression",
+      "node": "camera",
+      "field": "compression",
+      "group": "compression",
+      "phrases": {
+        "flux": "strong telephoto perspective compression",
+        "qwen": "strong telephoto perspective compression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.distortion.minimal",
+      "label": "Minimal",
+      "node": "camera",
+      "field": "distortion",
+      "group": "distortion",
+      "phrases": {
+        "flux": "minimal optical distortion",
+        "qwen": "minimal optical distortion"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.distortion.wide_angle_stretch",
+      "label": "Wide-angle stretch",
+      "node": "camera",
+      "field": "distortion",
+      "group": "distortion",
+      "phrases": {
+        "flux": "controlled wide-angle edge stretch",
+        "qwen": "controlled wide-angle edge stretch"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.distortion.barrel",
+      "label": "Barrel",
+      "node": "camera",
+      "field": "distortion",
+      "group": "distortion",
+      "phrases": {
+        "flux": "visible barrel distortion",
+        "qwen": "visible barrel distortion"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.distortion.fisheye_curve",
+      "label": "Fisheye curve",
+      "node": "camera",
+      "field": "distortion",
+      "group": "distortion",
+      "phrases": {
+        "flux": "pronounced fisheye curvature",
+        "qwen": "pronounced fisheye curvature"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.14mm",
+      "label": "14mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 14mm lens",
+        "qwen": "photographed with a 14mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.24mm",
+      "label": "24mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 24mm lens",
+        "qwen": "photographed with a 24mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.35mm",
+      "label": "35mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 35mm lens",
+        "qwen": "photographed with a 35mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.50mm",
+      "label": "50mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 50mm lens",
+        "qwen": "photographed with a 50mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.85mm",
+      "label": "85mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with an 85mm lens",
+        "qwen": "photographed with an 85mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.135mm",
+      "label": "135mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 135mm lens",
+        "qwen": "photographed with a 135mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focal_length.200mm",
+      "label": "200mm",
+      "node": "camera",
+      "field": "focal_length",
+      "group": "focal_length",
+      "phrases": {
+        "flux": "photographed with a 200mm lens",
+        "qwen": "photographed with a 200mm lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.subject_locked",
+      "label": "Subject locked",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "focus locked on the main subject",
+        "qwen": "focus locked on the main subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.eyes",
+      "label": "Eyes",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "precise focus on the subject's eyes",
+        "qwen": "precise focus on the subject's eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.foreground",
+      "label": "Foreground",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "focus on the foreground",
+        "qwen": "focus on the foreground"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.background",
+      "label": "Background",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "focus on the background",
+        "qwen": "focus on the background"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.split_focus",
+      "label": "Split focus",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "split focus across near and far subjects",
+        "qwen": "split focus across near and far subjects"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.focus_mode.selective",
+      "label": "Selective",
+      "node": "camera",
+      "field": "focus_mode",
+      "group": "focus_mode",
+      "phrases": {
+        "flux": "selective focus on a chosen detail",
+        "qwen": "selective focus on a chosen detail"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.extreme_close_up",
+      "label": "Extreme close-up",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "an extreme close-up photograph",
+        "qwen": "an extreme close-up photograph"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.close_up",
+      "label": "Close-up",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "a close-up photograph",
+        "qwen": "a close-up photograph"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.medium",
+      "label": "Medium",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "a medium shot",
+        "qwen": "a medium shot"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.three_quarter",
+      "label": "Three-quarter",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "a three-quarter-length shot",
+        "qwen": "a three-quarter-length shot"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.full_body",
+      "label": "Full-body",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "a full-body shot",
+        "qwen": "a full-body shot"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.wide",
+      "label": "Wide",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "a wide shot showing the subject and setting",
+        "qwen": "a wide shot showing the subject and setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.framing.extreme_wide",
+      "label": "Extreme-wide",
+      "node": "camera",
+      "field": "framing",
+      "group": "framing",
+      "phrases": {
+        "flux": "an extreme-wide shot emphasizing the setting",
+        "qwen": "an extreme-wide shot emphasizing the setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.straight_on",
+      "label": "Straight-on",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "camera looking straight toward the subject",
+        "qwen": "camera looking straight toward the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.left_oblique",
+      "label": "Left oblique",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "camera viewing from the subject's left oblique side",
+        "qwen": "camera viewing from the subject's left oblique side"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.right_oblique",
+      "label": "Right oblique",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "camera viewing from the subject's right oblique side",
+        "qwen": "camera viewing from the subject's right oblique side"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.side_on",
+      "label": "Side-on",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "camera viewing the subject side-on",
+        "qwen": "camera viewing the subject side-on"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.rear_oblique",
+      "label": "Rear oblique",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "camera viewing from a rear oblique position",
+        "qwen": "camera viewing from a rear oblique position"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.point_of_view",
+      "label": "POV",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "a first-person point-of-view photograph",
+        "qwen": "compose the image as a first-person point-of-view photograph"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.horizontal_view.over_the_shoulder",
+      "label": "Over-the-shoulder",
+      "node": "camera",
+      "field": "horizontal_view",
+      "group": "horizontal_view",
+      "phrases": {
+        "flux": "an over-the-shoulder photographic viewpoint",
+        "qwen": "compose the image from an over-the-shoulder photographic viewpoint"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.lens_type.rectilinear",
+      "label": "Rectilinear",
+      "node": "camera",
+      "field": "lens_type",
+      "group": "lens_type",
+      "phrases": {
+        "flux": "using a rectilinear lens",
+        "qwen": "using a rectilinear lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.lens_type.fisheye",
+      "label": "Fisheye",
+      "node": "camera",
+      "field": "lens_type",
+      "group": "lens_type",
+      "phrases": {
+        "flux": "using a fisheye lens",
+        "qwen": "using a fisheye lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.lens_type.macro",
+      "label": "Macro",
+      "node": "camera",
+      "field": "lens_type",
+      "group": "lens_type",
+      "phrases": {
+        "flux": "using a macro lens",
+        "qwen": "using a macro lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.lens_type.tilt_shift",
+      "label": "Tilt-shift",
+      "node": "camera",
+      "field": "lens_type",
+      "group": "lens_type",
+      "phrases": {
+        "flux": "using a tilt-shift lens",
+        "qwen": "using a tilt-shift lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.lens_type.anamorphic",
+      "label": "Anamorphic",
+      "node": "camera",
+      "field": "lens_type",
+      "group": "lens_type",
+      "phrases": {
+        "flux": "using an anamorphic still-photography lens",
+        "qwen": "using an anamorphic still-photography lens"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.bokeh",
+      "label": "Bokeh",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "bokeh",
+      "phrases": {
+        "flux": "visible optical bokeh",
+        "qwen": "visible optical bokeh"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.lens_flare",
+      "label": "Lens flare",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "lens_flare",
+      "phrases": {
+        "flux": "a natural lens flare",
+        "qwen": "a natural lens flare"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.motion_blur",
+      "label": "Motion blur",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "motion_blur",
+      "phrases": {
+        "flux": "controlled subject motion blur in the still image",
+        "qwen": "controlled subject motion blur in the still image"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.chromatic_aberration",
+      "label": "Chromatic aberration",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "chromatic_aberration",
+      "phrases": {
+        "flux": "subtle chromatic aberration at high-contrast edges",
+        "qwen": "subtle chromatic aberration at high-contrast edges"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.vignette",
+      "label": "Vignette",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "vignette",
+      "phrases": {
+        "flux": "a gentle optical vignette",
+        "qwen": "a gentle optical vignette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.optical_effects.starburst",
+      "label": "Starburst",
+      "node": "camera",
+      "field": "optical_effects",
+      "group": "starburst",
+      "phrases": {
+        "flux": "starburst highlights from the lens aperture",
+        "qwen": "starburst highlights from the lens aperture"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.subject_framing.centered",
+      "label": "Centered",
+      "node": "camera",
+      "field": "subject_framing",
+      "group": "subject_framing",
+      "phrases": {
+        "flux": "the subject centered in the frame",
+        "qwen": "the subject centered in the frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.subject_framing.off_center",
+      "label": "Off-center",
+      "node": "camera",
+      "field": "subject_framing",
+      "group": "subject_framing",
+      "phrases": {
+        "flux": "the subject placed off-center in the frame",
+        "qwen": "the subject placed off-center in the frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.subject_framing.tight_headroom",
+      "label": "Tight headroom",
+      "node": "camera",
+      "field": "subject_framing",
+      "group": "subject_framing",
+      "phrases": {
+        "flux": "tight headroom around the subject",
+        "qwen": "tight headroom around the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.subject_framing.generous_space",
+      "label": "Generous space",
+      "node": "camera",
+      "field": "subject_framing",
+      "group": "subject_framing",
+      "phrases": {
+        "flux": "generous space around the subject",
+        "qwen": "generous space around the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "camera.subject_framing.environmental",
+      "label": "Environmental",
+      "node": "camera",
+      "field": "subject_framing",
+      "group": "subject_framing",
+      "phrases": {
+        "flux": "the subject framed within the surrounding environment",
+        "qwen": "the subject framed within the surrounding environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bags_accessories.handbag",
+      "label": "Handbag",
+      "node": "clothing",
+      "field": "bags_accessories",
+      "group": "bags_accessories",
+      "phrases": {
+        "flux": "carrying a structured handbag",
+        "qwen": "carrying a structured handbag"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bags_accessories.backpack",
+      "label": "Backpack",
+      "node": "clothing",
+      "field": "bags_accessories",
+      "group": "bags_accessories",
+      "phrases": {
+        "flux": "wearing a backpack",
+        "qwen": "wearing a backpack"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bags_accessories.crossbody_bag",
+      "label": "Crossbody bag",
+      "node": "clothing",
+      "field": "bags_accessories",
+      "group": "bags_accessories",
+      "phrases": {
+        "flux": "wearing a crossbody bag",
+        "qwen": "wearing a crossbody bag"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bags_accessories.clutch",
+      "label": "Clutch",
+      "node": "clothing",
+      "field": "bags_accessories",
+      "group": "bags_accessories",
+      "phrases": {
+        "flux": "holding a small clutch",
+        "qwen": "holding a small clutch"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bags_accessories.umbrella",
+      "label": "Umbrella",
+      "node": "clothing",
+      "field": "bags_accessories",
+      "group": "bags_accessories",
+      "phrases": {
+        "flux": "carrying an umbrella",
+        "qwen": "carrying an umbrella"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.belt.slim",
+      "label": "Slim belt",
+      "node": "clothing",
+      "field": "belt",
+      "group": "belt",
+      "phrases": {
+        "flux": "wearing a slim belt",
+        "qwen": "wearing a slim belt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.belt.wide",
+      "label": "Wide belt",
+      "node": "clothing",
+      "field": "belt",
+      "group": "belt",
+      "phrases": {
+        "flux": "wearing a wide belt",
+        "qwen": "wearing a wide belt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.belt.utility",
+      "label": "Utility belt",
+      "node": "clothing",
+      "field": "belt",
+      "group": "belt",
+      "phrases": {
+        "flux": "wearing a utility belt",
+        "qwen": "wearing a utility belt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.belt.chain",
+      "label": "Chain belt",
+      "node": "clothing",
+      "field": "belt",
+      "group": "belt",
+      "phrases": {
+        "flux": "wearing a chain belt",
+        "qwen": "wearing a chain belt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.jeans",
+      "label": "Jeans",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing denim jeans",
+        "qwen": "wearing denim jeans"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.tailored_trousers",
+      "label": "Tailored trousers",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing tailored trousers",
+        "qwen": "wearing tailored trousers"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.shorts",
+      "label": "Shorts",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing shorts",
+        "qwen": "wearing shorts"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.midi_skirt",
+      "label": "Midi skirt",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing a midi skirt",
+        "qwen": "wearing a midi skirt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.miniskirt",
+      "label": "Miniskirt",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing a miniskirt",
+        "qwen": "wearing a miniskirt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bottom.leggings",
+      "label": "Leggings",
+      "node": "clothing",
+      "field": "bottom",
+      "group": "bottom",
+      "phrases": {
+        "flux": "wearing fitted leggings",
+        "qwen": "wearing fitted leggings"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bra.balconette",
+      "label": "Balconette bra",
+      "node": "clothing",
+      "field": "bra",
+      "group": "bra",
+      "phrases": {
+        "flux": "wearing a balconette bra",
+        "qwen": "wearing a balconette bra"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bra.sports",
+      "label": "Sports bra",
+      "node": "clothing",
+      "field": "bra",
+      "group": "bra",
+      "phrases": {
+        "flux": "wearing a sports bra",
+        "qwen": "wearing a sports bra"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bra.bralette",
+      "label": "Lace bralette",
+      "node": "clothing",
+      "field": "bra",
+      "group": "bra",
+      "phrases": {
+        "flux": "wearing a lace bralette",
+        "qwen": "wearing a lace bralette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.bra.strapless",
+      "label": "Strapless bra",
+      "node": "clothing",
+      "field": "bra",
+      "group": "bra",
+      "phrases": {
+        "flux": "wearing a strapless bra",
+        "qwen": "wearing a strapless bra"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_modifiers.topless",
+      "label": "Topless",
+      "node": "clothing",
+      "field": "clothing_modifiers",
+      "group": "topless",
+      "phrases": {
+        "flux": "the adult subject is topless",
+        "qwen": "the adult subject is topless"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_modifiers.bottomless",
+      "label": "Bottomless",
+      "node": "clothing",
+      "field": "clothing_modifiers",
+      "group": "bottomless",
+      "phrases": {
+        "flux": "the adult subject is bottomless",
+        "qwen": "the adult subject is bottomless"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_modifiers.partially_undressed",
+      "label": "Partially undressed",
+      "node": "clothing",
+      "field": "clothing_modifiers",
+      "group": "partially_undressed",
+      "phrases": {
+        "flux": "the adult subject is partially undressed",
+        "qwen": "the adult subject is partially undressed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_modifiers.underwear_visible",
+      "label": "Underwear visible",
+      "node": "clothing",
+      "field": "clothing_modifiers",
+      "group": "underwear_visible",
+      "phrases": {
+        "flux": "the adult subject's underwear is visible",
+        "qwen": "the adult subject's underwear is visible"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_modifiers.open_unfastened",
+      "label": "Open / unfastened",
+      "node": "clothing",
+      "field": "clothing_modifiers",
+      "group": "open_unfastened",
+      "phrases": {
+        "flux": "the adult subject's clothing is open or unfastened",
+        "qwen": "the adult subject's clothing is open or unfastened"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_state.fully_clothed",
+      "label": "Fully clothed",
+      "node": "clothing",
+      "field": "clothing_state",
+      "group": "clothing_state",
+      "phrases": {
+        "flux": "the adult subject is fully clothed",
+        "qwen": "the adult subject is fully clothed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_state.keep_source_clothing",
+      "label": "Keep source clothing",
+      "node": "clothing",
+      "field": "clothing_state",
+      "group": "clothing_state",
+      "phrases": {
+        "flux": "keep the adult subject's clothing from the source image unchanged",
+        "qwen": "preserve the adult subject's clothing from the source image"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_state.use_reference_clothing",
+      "label": "Use reference clothing",
+      "node": "clothing",
+      "field": "clothing_state",
+      "group": "clothing_state",
+      "phrases": {
+        "flux": "dress the adult subject in the clothing shown in the reference image",
+        "qwen": "replace the adult subject's clothing with the clothing from the reference image"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.clothing_state.nude",
+      "label": "Nude",
+      "node": "clothing",
+      "field": "clothing_state",
+      "group": "clothing_state",
+      "phrases": {
+        "flux": "the adult subject is nude",
+        "qwen": "the adult subject is nude"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.condition.pristine",
+      "label": "Pristine",
+      "node": "clothing",
+      "field": "condition",
+      "group": "condition",
+      "phrases": {
+        "flux": "the clothing looks pristine",
+        "qwen": "the clothing looks pristine"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.condition.new",
+      "label": "New",
+      "node": "clothing",
+      "field": "condition",
+      "group": "condition",
+      "phrases": {
+        "flux": "the clothing looks newly made",
+        "qwen": "the clothing looks newly made"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.condition.lived_in",
+      "label": "Lived-in",
+      "node": "clothing",
+      "field": "condition",
+      "group": "condition",
+      "phrases": {
+        "flux": "the clothing has a lived-in character",
+        "qwen": "the clothing has a lived-in character"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.condition.weathered",
+      "label": "Weathered",
+      "node": "clothing",
+      "field": "condition",
+      "group": "condition",
+      "phrases": {
+        "flux": "the clothing looks naturally weathered",
+        "qwen": "the clothing looks naturally weathered"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.condition.distressed",
+      "label": "Distressed",
+      "node": "clothing",
+      "field": "condition",
+      "group": "condition",
+      "phrases": {
+        "flux": "the clothing has intentional distressed details",
+        "qwen": "the clothing has intentional distressed details"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.black",
+      "label": "Black",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit is predominantly black",
+        "qwen": "the outfit is predominantly black"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.white",
+      "label": "White",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit is predominantly white",
+        "qwen": "the outfit is predominantly white"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.red",
+      "label": "Red",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit is predominantly red",
+        "qwen": "the outfit is predominantly red"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.blue",
+      "label": "Blue",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit is predominantly blue",
+        "qwen": "the outfit is predominantly blue"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.green",
+      "label": "Green",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit is predominantly green",
+        "qwen": "the outfit is predominantly green"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.dominant_color.earth_tones",
+      "label": "Earth tones",
+      "node": "clothing",
+      "field": "dominant_color",
+      "group": "dominant_color",
+      "phrases": {
+        "flux": "the outfit uses dominant earth tones",
+        "qwen": "the outfit uses dominant earth tones"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.facewear.glasses",
+      "label": "Glasses",
+      "node": "clothing",
+      "field": "facewear",
+      "group": "facewear",
+      "phrases": {
+        "flux": "wearing eyeglasses",
+        "qwen": "wearing eyeglasses"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.facewear.sunglasses",
+      "label": "Sunglasses",
+      "node": "clothing",
+      "field": "facewear",
+      "group": "facewear",
+      "phrases": {
+        "flux": "wearing sunglasses",
+        "qwen": "wearing sunglasses"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.facewear.half_mask",
+      "label": "Half mask",
+      "node": "clothing",
+      "field": "facewear",
+      "group": "facewear",
+      "phrases": {
+        "flux": "wearing a decorative half mask",
+        "qwen": "wearing a decorative half mask"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.facewear.veil",
+      "label": "Veil",
+      "node": "clothing",
+      "field": "facewear",
+      "group": "facewear",
+      "phrases": {
+        "flux": "wearing a sheer face veil",
+        "qwen": "wearing a sheer face veil"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.fit.skin_tight",
+      "label": "Skin-tight",
+      "node": "clothing",
+      "field": "fit",
+      "group": "fit",
+      "phrases": {
+        "flux": "a skin-tight fit",
+        "qwen": "a skin-tight fit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.fit.fitted",
+      "label": "Fitted",
+      "node": "clothing",
+      "field": "fit",
+      "group": "fit",
+      "phrases": {
+        "flux": "a fitted silhouette",
+        "qwen": "a fitted silhouette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.fit.tailored",
+      "label": "Tailored",
+      "node": "clothing",
+      "field": "fit",
+      "group": "fit",
+      "phrases": {
+        "flux": "a precisely tailored fit",
+        "qwen": "a precisely tailored fit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.fit.relaxed",
+      "label": "Relaxed",
+      "node": "clothing",
+      "field": "fit",
+      "group": "fit",
+      "phrases": {
+        "flux": "a relaxed fit",
+        "qwen": "a relaxed fit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.fit.oversized",
+      "label": "Oversized",
+      "node": "clothing",
+      "field": "fit",
+      "group": "fit",
+      "phrases": {
+        "flux": "an oversized fit",
+        "qwen": "an oversized fit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.sneakers",
+      "label": "Sneakers",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing sneakers",
+        "qwen": "wearing sneakers"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.ankle_boots",
+      "label": "Ankle boots",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing ankle boots",
+        "qwen": "wearing ankle boots"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.high_heels",
+      "label": "High heels",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing high heels",
+        "qwen": "wearing high heels"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.loafers",
+      "label": "Loafers",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing loafers",
+        "qwen": "wearing loafers"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.sandals",
+      "label": "Sandals",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing sandals",
+        "qwen": "wearing sandals"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.footwear.knee_high_boots",
+      "label": "Knee-high boots",
+      "node": "clothing",
+      "field": "footwear",
+      "group": "footwear",
+      "phrases": {
+        "flux": "wearing knee-high boots",
+        "qwen": "wearing knee-high boots"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.gloves.leather",
+      "label": "Leather gloves",
+      "node": "clothing",
+      "field": "gloves",
+      "group": "gloves",
+      "phrases": {
+        "flux": "wearing leather gloves",
+        "qwen": "wearing leather gloves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.gloves.lace",
+      "label": "Lace gloves",
+      "node": "clothing",
+      "field": "gloves",
+      "group": "gloves",
+      "phrases": {
+        "flux": "wearing lace gloves",
+        "qwen": "wearing lace gloves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.gloves.fingerless",
+      "label": "Fingerless gloves",
+      "node": "clothing",
+      "field": "gloves",
+      "group": "gloves",
+      "phrases": {
+        "flux": "wearing fingerless gloves",
+        "qwen": "wearing fingerless gloves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.gloves.opera",
+      "label": "Opera gloves",
+      "node": "clothing",
+      "field": "gloves",
+      "group": "gloves",
+      "phrases": {
+        "flux": "wearing long opera gloves",
+        "qwen": "wearing long opera gloves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.headwear.wide_brim_hat",
+      "label": "Wide-brim hat",
+      "node": "clothing",
+      "field": "headwear",
+      "group": "headwear",
+      "phrases": {
+        "flux": "wearing a wide-brim hat",
+        "qwen": "wearing a wide-brim hat"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.headwear.beanie",
+      "label": "Beanie",
+      "node": "clothing",
+      "field": "headwear",
+      "group": "headwear",
+      "phrases": {
+        "flux": "wearing a knit beanie",
+        "qwen": "wearing a knit beanie"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.headwear.baseball_cap",
+      "label": "Baseball cap",
+      "node": "clothing",
+      "field": "headwear",
+      "group": "headwear",
+      "phrases": {
+        "flux": "wearing a baseball cap",
+        "qwen": "wearing a baseball cap"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.headwear.headscarf",
+      "label": "Headscarf",
+      "node": "clothing",
+      "field": "headwear",
+      "group": "headwear",
+      "phrases": {
+        "flux": "wearing a draped headscarf",
+        "qwen": "wearing a draped headscarf"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.hosiery.sheer_tights",
+      "label": "Sheer tights",
+      "node": "clothing",
+      "field": "hosiery",
+      "group": "hosiery",
+      "phrases": {
+        "flux": "wearing sheer tights",
+        "qwen": "wearing sheer tights"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.hosiery.opaque_tights",
+      "label": "Opaque tights",
+      "node": "clothing",
+      "field": "hosiery",
+      "group": "hosiery",
+      "phrases": {
+        "flux": "wearing opaque tights",
+        "qwen": "wearing opaque tights"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.hosiery.thigh_highs",
+      "label": "Thigh-high stockings",
+      "node": "clothing",
+      "field": "hosiery",
+      "group": "hosiery",
+      "phrases": {
+        "flux": "wearing thigh-high stockings",
+        "qwen": "wearing thigh-high stockings"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.hosiery.fishnets",
+      "label": "Fishnets",
+      "node": "clothing",
+      "field": "hosiery",
+      "group": "hosiery",
+      "phrases": {
+        "flux": "wearing fishnet hosiery",
+        "qwen": "wearing fishnet hosiery"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.jewelry.stud_earrings",
+      "label": "Stud earrings",
+      "node": "clothing",
+      "field": "jewelry",
+      "group": "jewelry",
+      "phrases": {
+        "flux": "wearing stud earrings",
+        "qwen": "wearing stud earrings"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.jewelry.hoop_earrings",
+      "label": "Hoop earrings",
+      "node": "clothing",
+      "field": "jewelry",
+      "group": "jewelry",
+      "phrases": {
+        "flux": "wearing hoop earrings",
+        "qwen": "wearing hoop earrings"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.jewelry.pendant_necklace",
+      "label": "Pendant necklace",
+      "node": "clothing",
+      "field": "jewelry",
+      "group": "jewelry",
+      "phrases": {
+        "flux": "wearing a pendant necklace",
+        "qwen": "wearing a pendant necklace"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.jewelry.bracelets",
+      "label": "Bracelets",
+      "node": "clothing",
+      "field": "jewelry",
+      "group": "jewelry",
+      "phrases": {
+        "flux": "wearing stacked bracelets",
+        "qwen": "wearing stacked bracelets"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.jewelry.rings",
+      "label": "Rings",
+      "node": "clothing",
+      "field": "jewelry",
+      "group": "jewelry",
+      "phrases": {
+        "flux": "wearing several rings",
+        "qwen": "wearing several rings"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.cotton",
+      "label": "Cotton",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from natural cotton",
+        "qwen": "made from natural cotton"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.silk",
+      "label": "Silk",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from lustrous silk",
+        "qwen": "made from lustrous silk"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.denim",
+      "label": "Denim",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from structured denim",
+        "qwen": "made from structured denim"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.leather",
+      "label": "Leather",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from supple leather",
+        "qwen": "made from supple leather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.linen",
+      "label": "Linen",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from textured linen",
+        "qwen": "made from textured linen"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.velvet",
+      "label": "Velvet",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made from rich velvet",
+        "qwen": "made from rich velvet"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.material.lace",
+      "label": "Lace",
+      "node": "clothing",
+      "field": "material",
+      "group": "material",
+      "phrases": {
+        "flux": "made with delicate lace",
+        "qwen": "made with delicate lace"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.neckwear.scarf",
+      "label": "Scarf",
+      "node": "clothing",
+      "field": "neckwear",
+      "group": "neckwear",
+      "phrases": {
+        "flux": "wearing a scarf around the neck",
+        "qwen": "wearing a scarf around the neck"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.neckwear.necktie",
+      "label": "Necktie",
+      "node": "clothing",
+      "field": "neckwear",
+      "group": "neckwear",
+      "phrases": {
+        "flux": "wearing a neatly tied necktie",
+        "qwen": "wearing a neatly tied necktie"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.neckwear.bow_tie",
+      "label": "Bow tie",
+      "node": "clothing",
+      "field": "neckwear",
+      "group": "neckwear",
+      "phrases": {
+        "flux": "wearing a bow tie",
+        "qwen": "wearing a bow tie"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.neckwear.choker",
+      "label": "Choker",
+      "node": "clothing",
+      "field": "neckwear",
+      "group": "neckwear",
+      "phrases": {
+        "flux": "wearing a close-fitting choker",
+        "qwen": "wearing a close-fitting choker"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outerwear.blazer",
+      "label": "Blazer",
+      "node": "clothing",
+      "field": "outerwear",
+      "group": "outerwear",
+      "phrases": {
+        "flux": "wearing a tailored blazer",
+        "qwen": "wearing a tailored blazer"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outerwear.leather_jacket",
+      "label": "Leather jacket",
+      "node": "clothing",
+      "field": "outerwear",
+      "group": "outerwear",
+      "phrases": {
+        "flux": "wearing a leather jacket",
+        "qwen": "wearing a leather jacket"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outerwear.trench_coat",
+      "label": "Trench coat",
+      "node": "clothing",
+      "field": "outerwear",
+      "group": "outerwear",
+      "phrases": {
+        "flux": "wearing a trench coat",
+        "qwen": "wearing a trench coat"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outerwear.denim_jacket",
+      "label": "Denim jacket",
+      "node": "clothing",
+      "field": "outerwear",
+      "group": "outerwear",
+      "phrases": {
+        "flux": "wearing a denim jacket",
+        "qwen": "wearing a denim jacket"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outerwear.cape",
+      "label": "Cape",
+      "node": "clothing",
+      "field": "outerwear",
+      "group": "outerwear",
+      "phrases": {
+        "flux": "wearing a flowing cape",
+        "qwen": "wearing a flowing cape"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_snippets.layered",
+      "label": "Layered",
+      "node": "clothing",
+      "field": "outfit_snippets",
+      "group": "layered",
+      "phrases": {
+        "flux": "a thoughtfully layered outfit",
+        "qwen": "a thoughtfully layered outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_snippets.monochrome",
+      "label": "Monochrome",
+      "node": "clothing",
+      "field": "outfit_snippets",
+      "group": "monochrome",
+      "phrases": {
+        "flux": "a monochrome outfit",
+        "qwen": "a monochrome outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_snippets.color_blocked",
+      "label": "Color-blocked",
+      "node": "clothing",
+      "field": "outfit_snippets",
+      "group": "color_blocked",
+      "phrases": {
+        "flux": "a color-blocked outfit",
+        "qwen": "a color-blocked outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_snippets.coordinated",
+      "label": "Coordinated",
+      "node": "clothing",
+      "field": "outfit_snippets",
+      "group": "coordinated",
+      "phrases": {
+        "flux": "a carefully coordinated outfit",
+        "qwen": "a carefully coordinated outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_snippets.mismatched",
+      "label": "Eclectic mix",
+      "node": "clothing",
+      "field": "outfit_snippets",
+      "group": "mismatched",
+      "phrases": {
+        "flux": "an eclectic mix of garments",
+        "qwen": "an eclectic mix of garments"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.dress",
+      "label": "Dress",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a complete dress",
+        "qwen": "wearing a complete dress"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.suit",
+      "label": "Suit",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a tailored suit",
+        "qwen": "wearing a tailored suit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.uniform",
+      "label": "Uniform",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a coordinated uniform",
+        "qwen": "wearing a coordinated uniform"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.costume",
+      "label": "Costume",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a complete costume",
+        "qwen": "wearing a complete costume"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.swimwear",
+      "label": "Swimwear",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a coordinated swimwear outfit",
+        "qwen": "wearing a coordinated swimwear outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.sleepwear",
+      "label": "Sleepwear",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a coordinated sleepwear outfit",
+        "qwen": "wearing a coordinated sleepwear outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.streetwear",
+      "label": "Streetwear",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a layered streetwear outfit",
+        "qwen": "wearing a layered streetwear outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.outfit_type.activewear",
+      "label": "Activewear",
+      "node": "clothing",
+      "field": "outfit_type",
+      "group": "outfit_type",
+      "phrases": {
+        "flux": "wearing a coordinated activewear outfit",
+        "qwen": "wearing a coordinated activewear outfit"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.solid",
+      "label": "Solid",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with a solid color pattern",
+        "qwen": "with a solid color pattern"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.stripes",
+      "label": "Stripes",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with a striped pattern",
+        "qwen": "with a striped pattern"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.plaid",
+      "label": "Plaid",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with a plaid pattern",
+        "qwen": "with a plaid pattern"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.floral",
+      "label": "Floral",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with a floral pattern",
+        "qwen": "with a floral pattern"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.geometric",
+      "label": "Geometric",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with a geometric pattern",
+        "qwen": "with a geometric pattern"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.pattern.animal_print",
+      "label": "Animal print",
+      "node": "clothing",
+      "field": "pattern",
+      "group": "pattern",
+      "phrases": {
+        "flux": "with an animal-inspired print",
+        "qwen": "with an animal-inspired print"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.secondary_color.white",
+      "label": "White",
+      "node": "clothing",
+      "field": "secondary_color",
+      "group": "secondary_color",
+      "phrases": {
+        "flux": "with white as the secondary outfit color",
+        "qwen": "with white as the secondary outfit color"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.secondary_color.black",
+      "label": "Black",
+      "node": "clothing",
+      "field": "secondary_color",
+      "group": "secondary_color",
+      "phrases": {
+        "flux": "with black as the secondary outfit color",
+        "qwen": "with black as the secondary outfit color"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.secondary_color.gold",
+      "label": "Gold",
+      "node": "clothing",
+      "field": "secondary_color",
+      "group": "secondary_color",
+      "phrases": {
+        "flux": "with gold as the secondary outfit color",
+        "qwen": "with gold as the secondary outfit color"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.secondary_color.silver",
+      "label": "Silver",
+      "node": "clothing",
+      "field": "secondary_color",
+      "group": "secondary_color",
+      "phrases": {
+        "flux": "with silver as the secondary outfit color",
+        "qwen": "with silver as the secondary outfit color"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.secondary_color.pastel",
+      "label": "Pastel",
+      "node": "clothing",
+      "field": "secondary_color",
+      "group": "secondary_color",
+      "phrases": {
+        "flux": "with soft pastel secondary colors",
+        "qwen": "with soft pastel secondary colors"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.sleeves.sleeveless",
+      "label": "Sleeveless",
+      "node": "clothing",
+      "field": "sleeves",
+      "group": "sleeves",
+      "phrases": {
+        "flux": "with a sleeveless cut",
+        "qwen": "with a sleeveless cut"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.sleeves.short",
+      "label": "Short sleeves",
+      "node": "clothing",
+      "field": "sleeves",
+      "group": "sleeves",
+      "phrases": {
+        "flux": "with short sleeves",
+        "qwen": "with short sleeves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.sleeves.long",
+      "label": "Long sleeves",
+      "node": "clothing",
+      "field": "sleeves",
+      "group": "sleeves",
+      "phrases": {
+        "flux": "with long sleeves",
+        "qwen": "with long sleeves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.sleeves.rolled",
+      "label": "Rolled sleeves",
+      "node": "clothing",
+      "field": "sleeves",
+      "group": "sleeves",
+      "phrases": {
+        "flux": "with sleeves rolled to the forearms",
+        "qwen": "with sleeves rolled to the forearms"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.sleeves.puffed",
+      "label": "Puffed sleeves",
+      "node": "clothing",
+      "field": "sleeves",
+      "group": "sleeves",
+      "phrases": {
+        "flux": "with sculpted puffed sleeves",
+        "qwen": "with sculpted puffed sleeves"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.t_shirt",
+      "label": "T-shirt",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a fitted T-shirt",
+        "qwen": "wearing a fitted T-shirt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.button_up",
+      "label": "Button-up shirt",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a button-up shirt",
+        "qwen": "wearing a button-up shirt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.blouse",
+      "label": "Blouse",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a flowing blouse",
+        "qwen": "wearing a flowing blouse"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.sweater",
+      "label": "Sweater",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a knit sweater",
+        "qwen": "wearing a knit sweater"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.crop_top",
+      "label": "Crop top",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a crop top",
+        "qwen": "wearing a crop top"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.top.tank_top",
+      "label": "Tank top",
+      "node": "clothing",
+      "field": "top",
+      "group": "top",
+      "phrases": {
+        "flux": "wearing a tank top",
+        "qwen": "wearing a tank top"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.underwear.briefs",
+      "label": "Briefs",
+      "node": "clothing",
+      "field": "underwear",
+      "group": "underwear",
+      "phrases": {
+        "flux": "wearing fitted briefs",
+        "qwen": "wearing fitted briefs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.underwear.boxer_briefs",
+      "label": "Boxer briefs",
+      "node": "clothing",
+      "field": "underwear",
+      "group": "underwear",
+      "phrases": {
+        "flux": "wearing boxer briefs",
+        "qwen": "wearing boxer briefs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.underwear.high_waist_briefs",
+      "label": "High-waist briefs",
+      "node": "clothing",
+      "field": "underwear",
+      "group": "underwear",
+      "phrases": {
+        "flux": "wearing high-waist briefs",
+        "qwen": "wearing high-waist briefs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.underwear.thong",
+      "label": "Thong",
+      "node": "clothing",
+      "field": "underwear",
+      "group": "underwear",
+      "phrases": {
+        "flux": "wearing a thong",
+        "qwen": "wearing a thong"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.waist.high_waisted",
+      "label": "High-waisted",
+      "node": "clothing",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "with a high waistline",
+        "qwen": "with a high waistline"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.waist.mid_rise",
+      "label": "Mid-rise",
+      "node": "clothing",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "with a mid-rise waistline",
+        "qwen": "with a mid-rise waistline"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.waist.low_rise",
+      "label": "Low-rise",
+      "node": "clothing",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "with a low-rise waistline",
+        "qwen": "with a low-rise waistline"
+      },
+      "builtin": true
+    },
+    {
+      "id": "clothing.waist.cinched",
+      "label": "Cinched",
+      "node": "clothing",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "with a cinched waist",
+        "qwen": "with a cinched waist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.architecture.modern",
+      "label": "Modern",
+      "node": "environment",
+      "field": "architecture",
+      "group": "architecture",
+      "phrases": {
+        "flux": "modern architecture with clean forms",
+        "qwen": "modern architecture with clean forms"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.architecture.industrial",
+      "label": "Industrial",
+      "node": "environment",
+      "field": "architecture",
+      "group": "architecture",
+      "phrases": {
+        "flux": "industrial architecture with exposed structure",
+        "qwen": "industrial architecture with exposed structure"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.architecture.gothic",
+      "label": "Gothic",
+      "node": "environment",
+      "field": "architecture",
+      "group": "architecture",
+      "phrases": {
+        "flux": "Gothic architecture with pointed forms",
+        "qwen": "Gothic architecture with pointed forms"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.architecture.art_deco",
+      "label": "Art Deco",
+      "node": "environment",
+      "field": "architecture",
+      "group": "architecture",
+      "phrases": {
+        "flux": "Art Deco architecture with geometric ornament",
+        "qwen": "Art Deco architecture with geometric ornament"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.architecture.vernacular",
+      "label": "Vernacular",
+      "node": "environment",
+      "field": "architecture",
+      "group": "architecture",
+      "phrases": {
+        "flux": "local vernacular architecture",
+        "qwen": "local vernacular architecture"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.atmospheric_conditions.crisp_air",
+      "label": "Crisp air",
+      "node": "environment",
+      "field": "atmospheric_conditions",
+      "group": "atmospheric_conditions",
+      "phrases": {
+        "flux": "crisp, clear air",
+        "qwen": "crisp, clear air"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.atmospheric_conditions.haze",
+      "label": "Haze",
+      "node": "environment",
+      "field": "atmospheric_conditions",
+      "group": "atmospheric_conditions",
+      "phrases": {
+        "flux": "a soft atmospheric haze",
+        "qwen": "a soft atmospheric haze"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.atmospheric_conditions.fog",
+      "label": "Fog",
+      "node": "environment",
+      "field": "atmospheric_conditions",
+      "group": "atmospheric_conditions",
+      "phrases": {
+        "flux": "layers of natural fog",
+        "qwen": "layers of natural fog"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.atmospheric_conditions.dust",
+      "label": "Dust",
+      "node": "environment",
+      "field": "atmospheric_conditions",
+      "group": "atmospheric_conditions",
+      "phrases": {
+        "flux": "fine dust suspended in the air",
+        "qwen": "fine dust suspended in the air"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.atmospheric_conditions.humid",
+      "label": "Humid",
+      "node": "environment",
+      "field": "atmospheric_conditions",
+      "group": "atmospheric_conditions",
+      "phrases": {
+        "flux": "a visibly humid atmosphere",
+        "qwen": "a visibly humid atmosphere"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.warm_earth",
+      "label": "Warm earth",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a warm earth-tone palette",
+        "qwen": "a warm earth-tone palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.cool_blue",
+      "label": "Cool blue",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a cool blue palette",
+        "qwen": "a cool blue palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.pastel",
+      "label": "Pastel",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a soft pastel palette",
+        "qwen": "a soft pastel palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.jewel_tones",
+      "label": "Jewel tones",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a rich jewel-tone palette",
+        "qwen": "a rich jewel-tone palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.monochrome",
+      "label": "Monochrome",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a restrained monochrome palette",
+        "qwen": "a restrained monochrome palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.color_palette.vibrant",
+      "label": "Vibrant",
+      "node": "environment",
+      "field": "color_palette",
+      "group": "color_palette",
+      "phrases": {
+        "flux": "a vibrant multicolor palette",
+        "qwen": "a vibrant multicolor palette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.crowd_level.solitary",
+      "label": "Solitary",
+      "node": "environment",
+      "field": "crowd_level",
+      "group": "crowd_level",
+      "phrases": {
+        "flux": "a solitary setting",
+        "qwen": "a solitary setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.crowd_level.few_people",
+      "label": "Few people",
+      "node": "environment",
+      "field": "crowd_level",
+      "group": "crowd_level",
+      "phrases": {
+        "flux": "a few people in the setting",
+        "qwen": "a few people in the setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.crowd_level.small_group",
+      "label": "Small group",
+      "node": "environment",
+      "field": "crowd_level",
+      "group": "crowd_level",
+      "phrases": {
+        "flux": "a small group in the setting",
+        "qwen": "a small group in the setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.crowd_level.busy",
+      "label": "Busy",
+      "node": "environment",
+      "field": "crowd_level",
+      "group": "crowd_level",
+      "phrases": {
+        "flux": "a busy setting with many people",
+        "qwen": "a busy setting with many people"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.crowd_level.crowded",
+      "label": "Crowded",
+      "node": "environment",
+      "field": "crowd_level",
+      "group": "crowd_level",
+      "phrases": {
+        "flux": "a crowded setting",
+        "qwen": "a crowded setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.pristine",
+      "label": "Pristine",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "a pristine environment",
+        "qwen": "a pristine environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.lived_in",
+      "label": "Lived-in",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "a lived-in environment",
+        "qwen": "a lived-in environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.weathered",
+      "label": "Weathered",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "a naturally weathered environment",
+        "qwen": "a naturally weathered environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.overgrown",
+      "label": "Overgrown",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "an overgrown environment",
+        "qwen": "an overgrown environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.ruined",
+      "label": "Ruined",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "a ruined environment",
+        "qwen": "a ruined environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_condition.futuristic",
+      "label": "Futuristic",
+      "node": "environment",
+      "field": "environment_condition",
+      "group": "environment_condition",
+      "phrases": {
+        "flux": "a futuristic environment",
+        "qwen": "a futuristic environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_snippets.symmetrical_layout",
+      "label": "Symmetrical layout",
+      "node": "environment",
+      "field": "environment_snippets",
+      "group": "symmetrical_layout",
+      "phrases": {
+        "flux": "a symmetrically arranged setting",
+        "qwen": "a symmetrically arranged setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_snippets.layered_depth",
+      "label": "Layered depth",
+      "node": "environment",
+      "field": "environment_snippets",
+      "group": "layered_depth",
+      "phrases": {
+        "flux": "a setting with clear foreground, midground, and background layers",
+        "qwen": "a setting with clear foreground, midground, and background layers"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_snippets.intimate_scale",
+      "label": "Intimate scale",
+      "node": "environment",
+      "field": "environment_snippets",
+      "group": "intimate_scale",
+      "phrases": {
+        "flux": "an intimate human-scale setting",
+        "qwen": "an intimate human-scale setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_snippets.monumental_scale",
+      "label": "Monumental scale",
+      "node": "environment",
+      "field": "environment_snippets",
+      "group": "monumental_scale",
+      "phrases": {
+        "flux": "a monumental large-scale setting",
+        "qwen": "a monumental large-scale setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.environment_snippets.organic_layout",
+      "label": "Organic layout",
+      "node": "environment",
+      "field": "environment_snippets",
+      "group": "organic_layout",
+      "phrases": {
+        "flux": "an organically arranged setting",
+        "qwen": "an organically arranged setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.sofa",
+      "label": "Sofa",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "a sofa in the scene",
+        "qwen": "a sofa in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.armchair",
+      "label": "Armchair",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "an armchair in the scene",
+        "qwen": "an armchair in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.table",
+      "label": "Table",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "a table in the scene",
+        "qwen": "a table in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.bed",
+      "label": "Bed",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "a bed in the scene",
+        "qwen": "a bed in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.desk",
+      "label": "Desk",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "a working desk in the scene",
+        "qwen": "a working desk in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.furniture.shelving",
+      "label": "Shelving",
+      "node": "environment",
+      "field": "furniture",
+      "group": "furniture",
+      "phrases": {
+        "flux": "open shelving in the scene",
+        "qwen": "open shelving in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.home",
+      "label": "Home",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "inside or around a lived-in home",
+        "qwen": "inside or around a lived-in home"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.city_street",
+      "label": "City street",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "on a city street",
+        "qwen": "on a city street"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.workplace",
+      "label": "Workplace",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "in a working environment",
+        "qwen": "in a working environment"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.forest",
+      "label": "Forest",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "in a forest",
+        "qwen": "in a forest"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.coast",
+      "label": "Coast",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "along a coast",
+        "qwen": "along a coast"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.mountains",
+      "label": "Mountains",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "in mountainous terrain",
+        "qwen": "in mountainous terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.desert",
+      "label": "Desert",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "in a desert",
+        "qwen": "in a desert"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.location_type.garden",
+      "label": "Garden",
+      "node": "environment",
+      "field": "location_type",
+      "group": "location_type",
+      "phrases": {
+        "flux": "in a cultivated garden",
+        "qwen": "in a cultivated garden"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.serene",
+      "label": "Serene",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a serene mood",
+        "qwen": "a serene mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.joyful",
+      "label": "Joyful",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a joyful mood",
+        "qwen": "a joyful mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.mysterious",
+      "label": "Mysterious",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a mysterious mood",
+        "qwen": "a mysterious mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.tense",
+      "label": "Tense",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a tense mood",
+        "qwen": "a tense mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.romantic",
+      "label": "Romantic",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a romantic mood",
+        "qwen": "a romantic mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.melancholic",
+      "label": "Melancholic",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a melancholic mood",
+        "qwen": "a melancholic mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.mood.triumphant",
+      "label": "Triumphant",
+      "node": "environment",
+      "field": "mood",
+      "group": "mood",
+      "phrases": {
+        "flux": "a triumphant mood",
+        "qwen": "a triumphant mood"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.mountains",
+      "label": "Mountains",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "distant mountain forms",
+        "qwen": "distant mountain forms"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.river",
+      "label": "River",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "a flowing river",
+        "qwen": "a flowing river"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.lake",
+      "label": "Lake",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "a calm lake",
+        "qwen": "a calm lake"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.waterfall",
+      "label": "Waterfall",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "a cascading waterfall",
+        "qwen": "a cascading waterfall"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.cliffs",
+      "label": "Cliffs",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "dramatic cliffs",
+        "qwen": "dramatic cliffs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.natural_features.caves",
+      "label": "Caves",
+      "node": "environment",
+      "field": "natural_features",
+      "group": "natural_features",
+      "phrases": {
+        "flux": "natural cave formations",
+        "qwen": "natural cave formations"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.ancient",
+      "label": "Ancient",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "an ancient historical period",
+        "qwen": "an ancient historical period"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.medieval",
+      "label": "Medieval",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "a medieval period setting",
+        "qwen": "a medieval period setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.victorian",
+      "label": "Victorian",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "a Victorian-era setting",
+        "qwen": "a Victorian-era setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.mid_century",
+      "label": "Mid-century",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "a mid-century setting",
+        "qwen": "a mid-century setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.contemporary",
+      "label": "Contemporary",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "a contemporary setting",
+        "qwen": "a contemporary setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.period.near_future",
+      "label": "Near future",
+      "node": "environment",
+      "field": "period",
+      "group": "period",
+      "phrases": {
+        "flux": "a near-future setting",
+        "qwen": "a near-future setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.potted_plants",
+      "label": "Potted plants",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "potted plants throughout the scene",
+        "qwen": "potted plants throughout the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.wildflowers",
+      "label": "Wildflowers",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "clusters of wildflowers",
+        "qwen": "clusters of wildflowers"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.trees",
+      "label": "Trees",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "mature trees",
+        "qwen": "mature trees"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.vines",
+      "label": "Vines",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "trailing vines",
+        "qwen": "trailing vines"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.grasses",
+      "label": "Grasses",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "textured natural grasses",
+        "qwen": "textured natural grasses"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.plants_nature.moss",
+      "label": "Moss",
+      "node": "environment",
+      "field": "plants_nature",
+      "group": "plants_nature",
+      "phrases": {
+        "flux": "soft moss across surfaces",
+        "qwen": "soft moss across surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.books",
+      "label": "Books",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "books arranged in the scene",
+        "qwen": "books arranged in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.mirror",
+      "label": "Mirror",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "a mirror in the scene",
+        "qwen": "a mirror in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.artwork",
+      "label": "Artwork",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "displayed artwork in the scene",
+        "qwen": "displayed artwork in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.tools",
+      "label": "Tools",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "purposeful tools in the scene",
+        "qwen": "purposeful tools in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.tableware",
+      "label": "Tableware",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "tableware arranged in the scene",
+        "qwen": "tableware arranged in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.props.electronics",
+      "label": "Electronics",
+      "node": "environment",
+      "field": "props",
+      "group": "props",
+      "phrases": {
+        "flux": "consumer electronics in the scene",
+        "qwen": "consumer electronics in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.scene_type.indoor",
+      "label": "Indoor",
+      "node": "environment",
+      "field": "scene_type",
+      "group": "scene_type",
+      "phrases": {
+        "flux": "an indoor scene",
+        "qwen": "an indoor scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.scene_type.outdoor",
+      "label": "Outdoor",
+      "node": "environment",
+      "field": "scene_type",
+      "group": "scene_type",
+      "phrases": {
+        "flux": "an outdoor scene",
+        "qwen": "an outdoor scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.scene_type.mixed",
+      "label": "Mixed",
+      "node": "environment",
+      "field": "scene_type",
+      "group": "scene_type",
+      "phrases": {
+        "flux": "a scene spanning indoor and outdoor space",
+        "qwen": "a scene spanning indoor and outdoor space"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.scene_type.studio",
+      "label": "Studio",
+      "node": "environment",
+      "field": "scene_type",
+      "group": "scene_type",
+      "phrases": {
+        "flux": "a purpose-built studio setting",
+        "qwen": "a purpose-built studio setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.scene_type.abstract",
+      "label": "Abstract",
+      "node": "environment",
+      "field": "scene_type",
+      "group": "scene_type",
+      "phrases": {
+        "flux": "an abstract spatial setting",
+        "qwen": "an abstract spatial setting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.season.spring",
+      "label": "Spring",
+      "node": "environment",
+      "field": "season",
+      "group": "season",
+      "phrases": {
+        "flux": "the setting is in spring",
+        "qwen": "the setting is in spring"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.season.summer",
+      "label": "Summer",
+      "node": "environment",
+      "field": "season",
+      "group": "season",
+      "phrases": {
+        "flux": "the setting is in summer",
+        "qwen": "the setting is in summer"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.season.autumn",
+      "label": "Autumn",
+      "node": "environment",
+      "field": "season",
+      "group": "season",
+      "phrases": {
+        "flux": "the setting is in autumn",
+        "qwen": "the setting is in autumn"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.season.winter",
+      "label": "Winter",
+      "node": "environment",
+      "field": "season",
+      "group": "season",
+      "phrases": {
+        "flux": "the setting is in winter",
+        "qwen": "the setting is in winter"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.surface_condition.dry",
+      "label": "Dry",
+      "node": "environment",
+      "field": "surface_condition",
+      "group": "surface_condition",
+      "phrases": {
+        "flux": "dry ground and surfaces",
+        "qwen": "dry ground and surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.surface_condition.wet",
+      "label": "Wet",
+      "node": "environment",
+      "field": "surface_condition",
+      "group": "surface_condition",
+      "phrases": {
+        "flux": "wet ground and surfaces",
+        "qwen": "wet ground and surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.surface_condition.muddy",
+      "label": "Muddy",
+      "node": "environment",
+      "field": "surface_condition",
+      "group": "surface_condition",
+      "phrases": {
+        "flux": "muddy ground",
+        "qwen": "muddy ground"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.surface_condition.icy",
+      "label": "Icy",
+      "node": "environment",
+      "field": "surface_condition",
+      "group": "surface_condition",
+      "phrases": {
+        "flux": "icy ground and surfaces",
+        "qwen": "icy ground and surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.surface_condition.dusty",
+      "label": "Dusty",
+      "node": "environment",
+      "field": "surface_condition",
+      "group": "surface_condition",
+      "phrases": {
+        "flux": "dusty ground and surfaces",
+        "qwen": "dusty ground and surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.flat",
+      "label": "Flat",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "flat terrain",
+        "qwen": "flat terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.rolling_hills",
+      "label": "Rolling hills",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "gently rolling hills",
+        "qwen": "gently rolling hills"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.rocky",
+      "label": "Rocky",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "rocky terrain",
+        "qwen": "rocky terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.sandy",
+      "label": "Sandy",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "sandy terrain",
+        "qwen": "sandy terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.snowy",
+      "label": "Snowy",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "snow-covered terrain",
+        "qwen": "snow-covered terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.terrain.wetland",
+      "label": "Wetland",
+      "node": "environment",
+      "field": "terrain",
+      "group": "terrain",
+      "phrases": {
+        "flux": "marshy wetland terrain",
+        "qwen": "marshy wetland terrain"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.dawn",
+      "label": "Dawn",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place at dawn",
+        "qwen": "the scene takes place at dawn"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.morning",
+      "label": "Morning",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place in the morning",
+        "qwen": "the scene takes place in the morning"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.midday",
+      "label": "Midday",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place at midday",
+        "qwen": "the scene takes place at midday"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.afternoon",
+      "label": "Afternoon",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place in the afternoon",
+        "qwen": "the scene takes place in the afternoon"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.dusk",
+      "label": "Dusk",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place at dusk",
+        "qwen": "the scene takes place at dusk"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.evening",
+      "label": "Evening",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place in the evening",
+        "qwen": "the scene takes place in the evening"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.time_of_day.night",
+      "label": "Night",
+      "node": "environment",
+      "field": "time_of_day",
+      "group": "time_of_day",
+      "phrases": {
+        "flux": "the scene takes place at night",
+        "qwen": "the scene takes place at night"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.clear",
+      "label": "Clear",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "clear weather",
+        "qwen": "clear weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.overcast",
+      "label": "Overcast",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "overcast weather",
+        "qwen": "overcast weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.rainy",
+      "label": "Rainy",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "rainy weather",
+        "qwen": "rainy weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.snowy",
+      "label": "Snowy",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "snowy weather",
+        "qwen": "snowy weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.windy",
+      "label": "Windy",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "windy weather",
+        "qwen": "windy weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.stormy",
+      "label": "Stormy",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "stormy weather",
+        "qwen": "stormy weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "environment.weather.misty",
+      "label": "Misty",
+      "node": "environment",
+      "field": "weather",
+      "group": "weather",
+      "phrases": {
+        "flux": "misty weather",
+        "qwen": "misty weather"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.young_adult_18_plus",
+      "label": "Young adult 18+",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "a young adult age 18 to 24",
+        "qwen": "a young adult age 18 to 24"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.20s",
+      "label": "20s",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an adult in their 20s",
+        "qwen": "an adult in their 20s"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.30s",
+      "label": "30s",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an adult in their 30s",
+        "qwen": "an adult in their 30s"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.40s",
+      "label": "40s",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an adult in their 40s",
+        "qwen": "an adult in their 40s"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.50s",
+      "label": "50s",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an adult in their 50s",
+        "qwen": "an adult in their 50s"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.60s",
+      "label": "60s",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an adult in their 60s",
+        "qwen": "an adult in their 60s"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.age_group.elderly",
+      "label": "Elderly",
+      "node": "identity",
+      "field": "age_group",
+      "group": "age_group",
+      "phrases": {
+        "flux": "an elderly adult",
+        "qwen": "an elderly adult"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_snippets.long_limbs",
+      "label": "Long limbs",
+      "node": "identity",
+      "field": "body_snippets",
+      "group": "proportions",
+      "phrases": {
+        "flux": "long limbs",
+        "qwen": "long limbs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_snippets.broad_frame",
+      "label": "Broad frame",
+      "node": "identity",
+      "field": "body_snippets",
+      "group": "frame",
+      "phrases": {
+        "flux": "a broad frame",
+        "qwen": "a broad frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_snippets.compact_frame",
+      "label": "Compact frame",
+      "node": "identity",
+      "field": "body_snippets",
+      "group": "frame",
+      "phrases": {
+        "flux": "a compact frame",
+        "qwen": "a compact frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_snippets.visible_muscle_tone",
+      "label": "Visible muscle tone",
+      "node": "identity",
+      "field": "body_snippets",
+      "group": "definition",
+      "phrases": {
+        "flux": "visible muscle tone",
+        "qwen": "visible muscle tone"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_snippets.soft_contours",
+      "label": "Soft contours",
+      "node": "identity",
+      "field": "body_snippets",
+      "group": "contour",
+      "phrases": {
+        "flux": "soft body contours",
+        "qwen": "soft body contours"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_type.slender",
+      "label": "Slender",
+      "node": "identity",
+      "field": "body_type",
+      "group": "body_type",
+      "phrases": {
+        "flux": "a slender adult build",
+        "qwen": "a slender adult build"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_type.athletic",
+      "label": "Athletic",
+      "node": "identity",
+      "field": "body_type",
+      "group": "body_type",
+      "phrases": {
+        "flux": "an athletic adult build",
+        "qwen": "an athletic adult build"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_type.average",
+      "label": "Average",
+      "node": "identity",
+      "field": "body_type",
+      "group": "body_type",
+      "phrases": {
+        "flux": "an average adult build",
+        "qwen": "an average adult build"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_type.curvy",
+      "label": "Curvy",
+      "node": "identity",
+      "field": "body_type",
+      "group": "body_type",
+      "phrases": {
+        "flux": "a curvy adult build",
+        "qwen": "a curvy adult build"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.body_type.muscular",
+      "label": "Muscular",
+      "node": "identity",
+      "field": "body_type",
+      "group": "body_type",
+      "phrases": {
+        "flux": "a muscular adult build",
+        "qwen": "a muscular adult build"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.chest_breasts.flat_chest",
+      "label": "Flat chest",
+      "node": "identity",
+      "field": "chest_breasts",
+      "group": "chest_breasts",
+      "phrases": {
+        "flux": "a flat chest",
+        "qwen": "a flat chest"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.chest_breasts.small_chest",
+      "label": "Small chest",
+      "node": "identity",
+      "field": "chest_breasts",
+      "group": "chest_breasts",
+      "phrases": {
+        "flux": "a small chest",
+        "qwen": "a small chest"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.chest_breasts.medium_chest",
+      "label": "Medium chest",
+      "node": "identity",
+      "field": "chest_breasts",
+      "group": "chest_breasts",
+      "phrases": {
+        "flux": "a medium chest",
+        "qwen": "a medium chest"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.chest_breasts.full_chest",
+      "label": "Full chest",
+      "node": "identity",
+      "field": "chest_breasts",
+      "group": "chest_breasts",
+      "phrases": {
+        "flux": "a full chest",
+        "qwen": "a full chest"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.neutral",
+      "label": "Neutral",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a neutral expression",
+        "qwen": "a neutral expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.gentle_smile",
+      "label": "Gentle smile",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a gentle smile",
+        "qwen": "a gentle smile"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.joyful",
+      "label": "Joyful",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a joyful expression",
+        "qwen": "a joyful expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.serious",
+      "label": "Serious",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a serious expression",
+        "qwen": "a serious expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.confident",
+      "label": "Confident",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a confident expression",
+        "qwen": "a confident expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.surprised",
+      "label": "Surprised",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a surprised expression",
+        "qwen": "a surprised expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.expression.pensive",
+      "label": "Pensive",
+      "node": "identity",
+      "field": "expression",
+      "group": "expression",
+      "phrases": {
+        "flux": "a pensive expression",
+        "qwen": "a pensive expression"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_color.brown",
+      "label": "Brown",
+      "node": "identity",
+      "field": "eye_color",
+      "group": "eye_color",
+      "phrases": {
+        "flux": "brown eyes",
+        "qwen": "brown eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_color.blue",
+      "label": "Blue",
+      "node": "identity",
+      "field": "eye_color",
+      "group": "eye_color",
+      "phrases": {
+        "flux": "blue eyes",
+        "qwen": "blue eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_color.green",
+      "label": "Green",
+      "node": "identity",
+      "field": "eye_color",
+      "group": "eye_color",
+      "phrases": {
+        "flux": "green eyes",
+        "qwen": "green eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_color.hazel",
+      "label": "Hazel",
+      "node": "identity",
+      "field": "eye_color",
+      "group": "eye_color",
+      "phrases": {
+        "flux": "hazel eyes",
+        "qwen": "hazel eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_color.gray",
+      "label": "Gray",
+      "node": "identity",
+      "field": "eye_color",
+      "group": "eye_color",
+      "phrases": {
+        "flux": "gray eyes",
+        "qwen": "gray eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_shape.almond",
+      "label": "Almond",
+      "node": "identity",
+      "field": "eye_shape",
+      "group": "eye_shape",
+      "phrases": {
+        "flux": "almond-shaped eyes",
+        "qwen": "almond-shaped eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_shape.round",
+      "label": "Round",
+      "node": "identity",
+      "field": "eye_shape",
+      "group": "eye_shape",
+      "phrases": {
+        "flux": "round eyes",
+        "qwen": "round eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_shape.hooded",
+      "label": "Hooded",
+      "node": "identity",
+      "field": "eye_shape",
+      "group": "eye_shape",
+      "phrases": {
+        "flux": "hooded eyes",
+        "qwen": "hooded eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_shape.deep_set",
+      "label": "Deep-set",
+      "node": "identity",
+      "field": "eye_shape",
+      "group": "eye_shape",
+      "phrases": {
+        "flux": "deep-set eyes",
+        "qwen": "deep-set eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.eye_shape.upturned",
+      "label": "Upturned",
+      "node": "identity",
+      "field": "eye_shape",
+      "group": "eye_shape",
+      "phrases": {
+        "flux": "upturned eyes",
+        "qwen": "upturned eyes"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.high_cheekbones",
+      "label": "High cheekbones",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "high cheekbones",
+        "qwen": "high cheekbones"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.strong_jaw",
+      "label": "Strong jaw",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "a strong jawline",
+        "qwen": "a strong jawline"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.soft_features",
+      "label": "Soft features",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "soft facial features",
+        "qwen": "soft facial features"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.aquiline_nose",
+      "label": "Aquiline nose",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "an aquiline nose",
+        "qwen": "an aquiline nose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.full_lips",
+      "label": "Full lips",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "full lips",
+        "qwen": "full lips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.facial_features.dimples",
+      "label": "Dimples",
+      "node": "identity",
+      "field": "facial_features",
+      "group": "facial_features",
+      "phrases": {
+        "flux": "visible dimples",
+        "qwen": "visible dimples"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.gaze.at_camera",
+      "label": "At camera",
+      "node": "identity",
+      "field": "gaze",
+      "group": "gaze",
+      "phrases": {
+        "flux": "looking directly at the camera",
+        "qwen": "looking directly at the camera"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.gaze.off_camera",
+      "label": "Off camera",
+      "node": "identity",
+      "field": "gaze",
+      "group": "gaze",
+      "phrases": {
+        "flux": "looking just off camera",
+        "qwen": "looking just off camera"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.gaze.upward",
+      "label": "Upward",
+      "node": "identity",
+      "field": "gaze",
+      "group": "gaze",
+      "phrases": {
+        "flux": "gazing upward",
+        "qwen": "gazing upward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.gaze.downward",
+      "label": "Downward",
+      "node": "identity",
+      "field": "gaze",
+      "group": "gaze",
+      "phrases": {
+        "flux": "gazing downward",
+        "qwen": "gazing downward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.gaze.distant",
+      "label": "Distant",
+      "node": "identity",
+      "field": "gaze",
+      "group": "gaze",
+      "phrases": {
+        "flux": "a distant, contemplative gaze",
+        "qwen": "a distant, contemplative gaze"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.black",
+      "label": "Black",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "black hair",
+        "qwen": "black hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.dark_brown",
+      "label": "Dark brown",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "dark brown hair",
+        "qwen": "dark brown hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.blonde",
+      "label": "Blonde",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "blonde hair",
+        "qwen": "blonde hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.auburn",
+      "label": "Auburn",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "auburn hair",
+        "qwen": "auburn hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.silver",
+      "label": "Silver",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "silver hair",
+        "qwen": "silver hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_color.vivid_color",
+      "label": "Vivid color",
+      "node": "identity",
+      "field": "hair_color",
+      "group": "hair_color",
+      "phrases": {
+        "flux": "vividly colored hair",
+        "qwen": "vividly colored hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_length.buzzed",
+      "label": "Buzzed",
+      "node": "identity",
+      "field": "hair_length",
+      "group": "hair_length",
+      "phrases": {
+        "flux": "buzzed hair",
+        "qwen": "buzzed hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_length.short",
+      "label": "Short",
+      "node": "identity",
+      "field": "hair_length",
+      "group": "hair_length",
+      "phrases": {
+        "flux": "short hair",
+        "qwen": "short hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_length.shoulder_length",
+      "label": "Shoulder-length",
+      "node": "identity",
+      "field": "hair_length",
+      "group": "hair_length",
+      "phrases": {
+        "flux": "shoulder-length hair",
+        "qwen": "shoulder-length hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_length.long",
+      "label": "Long",
+      "node": "identity",
+      "field": "hair_length",
+      "group": "hair_length",
+      "phrases": {
+        "flux": "long hair",
+        "qwen": "long hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_length.very_long",
+      "label": "Very long",
+      "node": "identity",
+      "field": "hair_length",
+      "group": "hair_length",
+      "phrases": {
+        "flux": "very long hair",
+        "qwen": "very long hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.bob",
+      "label": "Bob",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "a clean bob haircut",
+        "qwen": "a clean bob haircut"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.ponytail",
+      "label": "Ponytail",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "hair tied in a ponytail",
+        "qwen": "hair tied in a ponytail"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.braids",
+      "label": "Braids",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "neatly braided hair",
+        "qwen": "neatly braided hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.bun",
+      "label": "Bun",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "hair gathered in a bun",
+        "qwen": "hair gathered in a bun"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.undercut",
+      "label": "Undercut",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "a styled undercut",
+        "qwen": "a styled undercut"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_style.loose_layers",
+      "label": "Loose layers",
+      "node": "identity",
+      "field": "hair_style",
+      "group": "hair_style",
+      "phrases": {
+        "flux": "hair in loose layered styling",
+        "qwen": "hair in loose layered styling"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_texture.straight",
+      "label": "Straight",
+      "node": "identity",
+      "field": "hair_texture",
+      "group": "hair_texture",
+      "phrases": {
+        "flux": "straight hair",
+        "qwen": "straight hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_texture.wavy",
+      "label": "Wavy",
+      "node": "identity",
+      "field": "hair_texture",
+      "group": "hair_texture",
+      "phrases": {
+        "flux": "wavy hair",
+        "qwen": "wavy hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_texture.curly",
+      "label": "Curly",
+      "node": "identity",
+      "field": "hair_texture",
+      "group": "hair_texture",
+      "phrases": {
+        "flux": "curly hair",
+        "qwen": "curly hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_texture.coily",
+      "label": "Coily",
+      "node": "identity",
+      "field": "hair_texture",
+      "group": "hair_texture",
+      "phrases": {
+        "flux": "coily hair",
+        "qwen": "coily hair"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hair_texture.locs",
+      "label": "Locs",
+      "node": "identity",
+      "field": "hair_texture",
+      "group": "hair_texture",
+      "phrases": {
+        "flux": "textured locs",
+        "qwen": "textured locs"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.height.very_short",
+      "label": "Very short",
+      "node": "identity",
+      "field": "height",
+      "group": "height",
+      "phrases": {
+        "flux": "a very short adult stature",
+        "qwen": "a very short adult stature"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.height.short",
+      "label": "Short",
+      "node": "identity",
+      "field": "height",
+      "group": "height",
+      "phrases": {
+        "flux": "a short adult stature",
+        "qwen": "a short adult stature"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.height.average",
+      "label": "Average",
+      "node": "identity",
+      "field": "height",
+      "group": "height",
+      "phrases": {
+        "flux": "an average adult height",
+        "qwen": "an average adult height"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.height.tall",
+      "label": "Tall",
+      "node": "identity",
+      "field": "height",
+      "group": "height",
+      "phrases": {
+        "flux": "a tall adult stature",
+        "qwen": "a tall adult stature"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.height.very_tall",
+      "label": "Very tall",
+      "node": "identity",
+      "field": "height",
+      "group": "height",
+      "phrases": {
+        "flux": "a very tall adult stature",
+        "qwen": "a very tall adult stature"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hips_butt.narrow_hips",
+      "label": "Narrow hips",
+      "node": "identity",
+      "field": "hips_butt",
+      "group": "hips_butt",
+      "phrases": {
+        "flux": "narrow hips",
+        "qwen": "narrow hips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hips_butt.balanced_hips",
+      "label": "Balanced hips",
+      "node": "identity",
+      "field": "hips_butt",
+      "group": "hips_butt",
+      "phrases": {
+        "flux": "balanced hips",
+        "qwen": "balanced hips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hips_butt.wide_hips",
+      "label": "Wide hips",
+      "node": "identity",
+      "field": "hips_butt",
+      "group": "hips_butt",
+      "phrases": {
+        "flux": "wide hips",
+        "qwen": "wide hips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.hips_butt.rounded_butt",
+      "label": "Rounded butt",
+      "node": "identity",
+      "field": "hips_butt",
+      "group": "hips_butt",
+      "phrases": {
+        "flux": "a rounded butt",
+        "qwen": "a rounded butt"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.mouth.closed",
+      "label": "Closed",
+      "node": "identity",
+      "field": "mouth",
+      "group": "mouth",
+      "phrases": {
+        "flux": "the mouth gently closed",
+        "qwen": "the mouth gently closed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.mouth.slightly_open",
+      "label": "Slightly open",
+      "node": "identity",
+      "field": "mouth",
+      "group": "mouth",
+      "phrases": {
+        "flux": "the mouth slightly open",
+        "qwen": "the mouth slightly open"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.mouth.broad_smile",
+      "label": "Broad smile",
+      "node": "identity",
+      "field": "mouth",
+      "group": "mouth",
+      "phrases": {
+        "flux": "a broad smile",
+        "qwen": "a broad smile"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.mouth.parted_lips",
+      "label": "Parted lips",
+      "node": "identity",
+      "field": "mouth",
+      "group": "mouth",
+      "phrases": {
+        "flux": "softly parted lips",
+        "qwen": "softly parted lips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.mouth.pressed_lips",
+      "label": "Pressed lips",
+      "node": "identity",
+      "field": "mouth",
+      "group": "mouth",
+      "phrases": {
+        "flux": "firmly pressed lips",
+        "qwen": "firmly pressed lips"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_details.freckles",
+      "label": "Freckles",
+      "node": "identity",
+      "field": "skin_details",
+      "group": "skin_details",
+      "phrases": {
+        "flux": "natural freckles",
+        "qwen": "natural freckles"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_details.beauty_marks",
+      "label": "Beauty marks",
+      "node": "identity",
+      "field": "skin_details",
+      "group": "skin_details",
+      "phrases": {
+        "flux": "distinct beauty marks",
+        "qwen": "distinct beauty marks"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_details.visible_pores",
+      "label": "Visible pores",
+      "node": "identity",
+      "field": "skin_details",
+      "group": "skin_details",
+      "phrases": {
+        "flux": "natural visible skin texture",
+        "qwen": "natural visible skin texture"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_details.scars",
+      "label": "Scars",
+      "node": "identity",
+      "field": "skin_details",
+      "group": "skin_details",
+      "phrases": {
+        "flux": "visible healed scars",
+        "qwen": "visible healed scars"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_details.tattoos",
+      "label": "Tattoos",
+      "node": "identity",
+      "field": "skin_details",
+      "group": "skin_details",
+      "phrases": {
+        "flux": "visible tattoos",
+        "qwen": "visible tattoos"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.porcelain",
+      "label": "Porcelain",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "porcelain skin",
+        "qwen": "porcelain skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.fair",
+      "label": "Fair",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "fair skin",
+        "qwen": "fair skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.light_brown",
+      "label": "Light brown",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "light brown skin",
+        "qwen": "light brown skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.medium_brown",
+      "label": "Medium brown",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "medium brown skin",
+        "qwen": "medium brown skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.deep_brown",
+      "label": "Deep brown",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "deep brown skin",
+        "qwen": "deep brown skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.skin_tone.ebony",
+      "label": "Ebony",
+      "node": "identity",
+      "field": "skin_tone",
+      "group": "skin_tone",
+      "phrases": {
+        "flux": "rich ebony skin",
+        "qwen": "rich ebony skin"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.subject_type.single_person",
+      "label": "Single person",
+      "node": "identity",
+      "field": "subject_type",
+      "group": "subject_type",
+      "phrases": {
+        "flux": "a single adult person",
+        "qwen": "a single adult person"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.subject_type.couple",
+      "label": "Couple",
+      "node": "identity",
+      "field": "subject_type",
+      "group": "subject_type",
+      "phrases": {
+        "flux": "two adult people as the main subjects",
+        "qwen": "two adult people as the main subjects"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.subject_type.group",
+      "label": "Group",
+      "node": "identity",
+      "field": "subject_type",
+      "group": "subject_type",
+      "phrases": {
+        "flux": "a group of adult people",
+        "qwen": "a group of adult people"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.subject_type.fantasy_humanoid",
+      "label": "Fantasy humanoid",
+      "node": "identity",
+      "field": "subject_type",
+      "group": "subject_type",
+      "phrases": {
+        "flux": "an adult fantasy humanoid",
+        "qwen": "an adult fantasy humanoid"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.subject_type.anthropomorphic_character",
+      "label": "Anthropomorphic character",
+      "node": "identity",
+      "field": "subject_type",
+      "group": "subject_type",
+      "phrases": {
+        "flux": "an adult anthropomorphic character",
+        "qwen": "an adult anthropomorphic character"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.waist.straight_waist",
+      "label": "Straight waist",
+      "node": "identity",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "a straight waist",
+        "qwen": "a straight waist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.waist.defined_waist",
+      "label": "Defined waist",
+      "node": "identity",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "a defined waist",
+        "qwen": "a defined waist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.waist.narrow_waist",
+      "label": "Narrow waist",
+      "node": "identity",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "a narrow waist",
+        "qwen": "a narrow waist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.waist.soft_waist",
+      "label": "Soft waist",
+      "node": "identity",
+      "field": "waist",
+      "group": "waist",
+      "phrases": {
+        "flux": "a softly contoured waist",
+        "qwen": "a softly contoured waist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.weight_build.lean",
+      "label": "Lean",
+      "node": "identity",
+      "field": "weight_build",
+      "group": "weight_build",
+      "phrases": {
+        "flux": "a lean body composition",
+        "qwen": "a lean body composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.weight_build.light",
+      "label": "Light",
+      "node": "identity",
+      "field": "weight_build",
+      "group": "weight_build",
+      "phrases": {
+        "flux": "a light body composition",
+        "qwen": "a light body composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.weight_build.medium",
+      "label": "Medium",
+      "node": "identity",
+      "field": "weight_build",
+      "group": "weight_build",
+      "phrases": {
+        "flux": "a medium body composition",
+        "qwen": "a medium body composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.weight_build.solid",
+      "label": "Solid",
+      "node": "identity",
+      "field": "weight_build",
+      "group": "weight_build",
+      "phrases": {
+        "flux": "a solid body composition",
+        "qwen": "a solid body composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "identity.weight_build.heavy",
+      "label": "Heavy",
+      "node": "identity",
+      "field": "weight_build",
+      "group": "weight_build",
+      "phrases": {
+        "flux": "a heavy body composition",
+        "qwen": "a heavy body composition"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_color.white",
+      "label": "White",
+      "node": "lighting",
+      "field": "fill_color",
+      "group": "fill_color",
+      "phrases": {
+        "flux": "white fill light",
+        "qwen": "white fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_color.warm_amber",
+      "label": "Warm amber",
+      "node": "lighting",
+      "field": "fill_color",
+      "group": "fill_color",
+      "phrases": {
+        "flux": "warm amber fill light",
+        "qwen": "warm amber fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_color.cool_blue",
+      "label": "Cool blue",
+      "node": "lighting",
+      "field": "fill_color",
+      "group": "fill_color",
+      "phrases": {
+        "flux": "cool blue fill light",
+        "qwen": "cool blue fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_color.cyan",
+      "label": "Cyan",
+      "node": "lighting",
+      "field": "fill_color",
+      "group": "fill_color",
+      "phrases": {
+        "flux": "cyan fill light",
+        "qwen": "cyan fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_color.magenta",
+      "label": "Magenta",
+      "node": "lighting",
+      "field": "fill_color",
+      "group": "fill_color",
+      "phrases": {
+        "flux": "magenta fill light",
+        "qwen": "magenta fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_light.reflector",
+      "label": "Reflector",
+      "node": "lighting",
+      "field": "fill_light",
+      "group": "fill_light",
+      "phrases": {
+        "flux": "a reflector providing fill light",
+        "qwen": "a reflector providing fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_light.softbox",
+      "label": "Softbox",
+      "node": "lighting",
+      "field": "fill_light",
+      "group": "fill_light",
+      "phrases": {
+        "flux": "a softbox providing fill light",
+        "qwen": "a softbox providing fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_light.ambient",
+      "label": "Ambient",
+      "node": "lighting",
+      "field": "fill_light",
+      "group": "fill_light",
+      "phrases": {
+        "flux": "ambient light providing gentle fill",
+        "qwen": "ambient light providing gentle fill"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_light.bounce_card",
+      "label": "Bounce card",
+      "node": "lighting",
+      "field": "fill_light",
+      "group": "fill_light",
+      "phrases": {
+        "flux": "a bounce card providing fill light",
+        "qwen": "a bounce card providing fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.fill_light.colored_fill",
+      "label": "Colored fill",
+      "node": "lighting",
+      "field": "fill_light",
+      "group": "fill_light",
+      "phrases": {
+        "flux": "a colored light providing fill",
+        "qwen": "a colored light providing fill"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.light_elevation.low",
+      "label": "Low",
+      "node": "lighting",
+      "field": "light_elevation",
+      "group": "light_elevation",
+      "phrases": {
+        "flux": "the primary light is set at a low elevation",
+        "qwen": "the primary light is set at a low elevation"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.light_elevation.level",
+      "label": "Level",
+      "node": "lighting",
+      "field": "light_elevation",
+      "group": "light_elevation",
+      "phrases": {
+        "flux": "the primary light is level with the subject",
+        "qwen": "the primary light is level with the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.light_elevation.high",
+      "label": "High",
+      "node": "lighting",
+      "field": "light_elevation",
+      "group": "light_elevation",
+      "phrases": {
+        "flux": "the primary light is set at a high elevation",
+        "qwen": "the primary light is set at a high elevation"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.rim_light",
+      "label": "Rim light",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "rim_light",
+      "phrases": {
+        "flux": "a defined rim light outlining the subject",
+        "qwen": "a defined rim light outlining the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.backlight",
+      "label": "Backlight",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "backlight",
+      "phrases": {
+        "flux": "strong backlighting behind the subject",
+        "qwen": "strong backlighting behind the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.three_point",
+      "label": "Three-point lighting",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "three_point",
+      "phrases": {
+        "flux": "a classic three-point lighting setup",
+        "qwen": "a classic three-point lighting setup"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.rembrandt",
+      "label": "Rembrandt lighting",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "rembrandt",
+      "phrases": {
+        "flux": "a Rembrandt lighting pattern across the face",
+        "qwen": "a Rembrandt lighting pattern across the face"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.chiaroscuro",
+      "label": "Chiaroscuro",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "chiaroscuro",
+      "phrases": {
+        "flux": "dramatic chiaroscuro lighting",
+        "qwen": "dramatic chiaroscuro lighting"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.volumetric",
+      "label": "Volumetric light",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "volumetric",
+      "phrases": {
+        "flux": "visible volumetric light through the scene",
+        "qwen": "visible volumetric light through the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.god_rays",
+      "label": "God rays",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "god_rays",
+      "phrases": {
+        "flux": "defined rays of light through the atmosphere",
+        "qwen": "defined rays of light through the atmosphere"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.caustics",
+      "label": "Caustics",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "caustics",
+      "phrases": {
+        "flux": "optical caustic patterns across surfaces",
+        "qwen": "optical caustic patterns across surfaces"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.bounced",
+      "label": "Bounced light",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "bounced",
+      "phrases": {
+        "flux": "soft bounced light shaping the subject",
+        "qwen": "soft bounced light shaping the subject"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.colored_gels",
+      "label": "Colored gels",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "colored_gels",
+      "phrases": {
+        "flux": "studio lights modified with colored gels",
+        "qwen": "studio lights modified with colored gels"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.lighting_techniques.silhouette",
+      "label": "Silhouette",
+      "node": "lighting",
+      "field": "lighting_techniques",
+      "group": "silhouette",
+      "phrases": {
+        "flux": "the subject rendered as a strong light-defined silhouette",
+        "qwen": "the subject rendered as a strong light-defined silhouette"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.mixed_temperature.warm_key_cool_fill",
+      "label": "Warm key / cool fill",
+      "node": "lighting",
+      "field": "mixed_temperature",
+      "group": "mixed_temperature",
+      "phrases": {
+        "flux": "a warm key light balanced by a cool fill light",
+        "qwen": "a warm key light balanced by a cool fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.mixed_temperature.cool_key_warm_fill",
+      "label": "Cool key / warm fill",
+      "node": "lighting",
+      "field": "mixed_temperature",
+      "group": "mixed_temperature",
+      "phrases": {
+        "flux": "a cool key light balanced by a warm fill light",
+        "qwen": "a cool key light balanced by a warm fill light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.mixed_temperature.warm_practicals_cool_ambient",
+      "label": "Warm practicals / cool ambient",
+      "node": "lighting",
+      "field": "mixed_temperature",
+      "group": "mixed_temperature",
+      "phrases": {
+        "flux": "warm practical lights within cool ambient light",
+        "qwen": "warm practical lights within cool ambient light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.mixed_temperature.daylight_tungsten",
+      "label": "Daylight / tungsten",
+      "node": "lighting",
+      "field": "mixed_temperature",
+      "group": "mixed_temperature",
+      "phrases": {
+        "flux": "a deliberate mix of daylight and tungsten color temperatures",
+        "qwen": "a deliberate mix of daylight and tungsten color temperatures"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.practical_lights.lamps",
+      "label": "Lamps",
+      "node": "lighting",
+      "field": "practical_lights",
+      "group": "practical_lights",
+      "phrases": {
+        "flux": "visible lamps acting as practical lights",
+        "qwen": "visible lamps acting as practical lights"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.practical_lights.candles",
+      "label": "Candles",
+      "node": "lighting",
+      "field": "practical_lights",
+      "group": "practical_lights",
+      "phrases": {
+        "flux": "visible candles acting as practical lights",
+        "qwen": "visible candles acting as practical lights"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.practical_lights.neon_signs",
+      "label": "Neon signs",
+      "node": "lighting",
+      "field": "practical_lights",
+      "group": "practical_lights",
+      "phrases": {
+        "flux": "visible neon signs acting as practical lights",
+        "qwen": "visible neon signs acting as practical lights"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.practical_lights.string_lights",
+      "label": "String lights",
+      "node": "lighting",
+      "field": "practical_lights",
+      "group": "practical_lights",
+      "phrases": {
+        "flux": "visible string lights in the scene",
+        "qwen": "visible string lights in the scene"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.practical_lights.screens",
+      "label": "Screens",
+      "node": "lighting",
+      "field": "practical_lights",
+      "group": "practical_lights",
+      "phrases": {
+        "flux": "visible screens contributing practical light",
+        "qwen": "visible screens contributing practical light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.white",
+      "label": "White",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "white primary light",
+        "qwen": "white primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.warm_amber",
+      "label": "Warm amber",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "warm amber primary light",
+        "qwen": "warm amber primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.cool_blue",
+      "label": "Cool blue",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "cool blue primary light",
+        "qwen": "cool blue primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.red",
+      "label": "Red",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "red primary light",
+        "qwen": "red primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.green",
+      "label": "Green",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "green primary light",
+        "qwen": "green primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_color.magenta",
+      "label": "Magenta",
+      "node": "lighting",
+      "field": "primary_color",
+      "group": "primary_color",
+      "phrases": {
+        "flux": "magenta primary light",
+        "qwen": "magenta primary light"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.front",
+      "label": "Front (camera side)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the camera-side front of the image frame",
+        "qwen": "the primary light comes from the camera-side front of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.front_left",
+      "label": "Front-left (frame left)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the camera-side front-left of the image frame",
+        "qwen": "the primary light comes from the camera-side front-left of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.front_right",
+      "label": "Front-right (frame right)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the camera-side front-right of the image frame",
+        "qwen": "the primary light comes from the camera-side front-right of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.side_left",
+      "label": "Side-left (frame left)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the left edge of the image frame",
+        "qwen": "the primary light comes from the left edge of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.side_right",
+      "label": "Side-right (frame right)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the right edge of the image frame",
+        "qwen": "the primary light comes from the right edge of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.back",
+      "label": "Back (far side)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the far-side back of the image frame",
+        "qwen": "the primary light comes from the far-side back of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.back_left",
+      "label": "Back-left (frame left)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the far-side back-left of the image frame",
+        "qwen": "the primary light comes from the far-side back-left of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.back_right",
+      "label": "Back-right (frame right)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from the far-side back-right of the image frame",
+        "qwen": "the primary light comes from the far-side back-right of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.above",
+      "label": "Above (frame top)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from above the top edge of the image frame",
+        "qwen": "the primary light comes from above the top edge of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_direction.below",
+      "label": "Below (frame bottom)",
+      "node": "lighting",
+      "field": "primary_direction",
+      "group": "primary_direction",
+      "phrases": {
+        "flux": "the primary light comes from below the bottom edge of the image frame",
+        "qwen": "the primary light comes from below the bottom edge of the image frame"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.sun",
+      "label": "Sun",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "sunlight as the primary light source",
+        "qwen": "sunlight as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.window",
+      "label": "Window",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "window light as the primary light source",
+        "qwen": "window light as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.softbox",
+      "label": "Softbox",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "a softbox as the primary light source",
+        "qwen": "a softbox as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.spotlight",
+      "label": "Spotlight",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "a focused spotlight as the primary light source",
+        "qwen": "a focused spotlight as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.firelight",
+      "label": "Firelight",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "firelight as the primary light source",
+        "qwen": "firelight as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.primary_light.neon",
+      "label": "Neon",
+      "node": "lighting",
+      "field": "primary_light",
+      "group": "primary_light",
+      "phrases": {
+        "flux": "neon fixtures as the primary light source",
+        "qwen": "neon fixtures as the primary light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_count.one",
+      "label": "One",
+      "node": "lighting",
+      "field": "source_count",
+      "group": "source_count",
+      "phrases": {
+        "flux": "one visible or implied light source",
+        "qwen": "one visible or implied light source"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_count.two",
+      "label": "Two",
+      "node": "lighting",
+      "field": "source_count",
+      "group": "source_count",
+      "phrases": {
+        "flux": "two distinct light sources",
+        "qwen": "two distinct light sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_count.three",
+      "label": "Three",
+      "node": "lighting",
+      "field": "source_count",
+      "group": "source_count",
+      "phrases": {
+        "flux": "three distinct light sources",
+        "qwen": "three distinct light sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_count.multiple",
+      "label": "Multiple",
+      "node": "lighting",
+      "field": "source_count",
+      "group": "source_count",
+      "phrases": {
+        "flux": "multiple coordinated light sources",
+        "qwen": "multiple coordinated light sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_nature.natural",
+      "label": "Natural",
+      "node": "lighting",
+      "field": "source_nature",
+      "group": "source_nature",
+      "phrases": {
+        "flux": "light from natural sources",
+        "qwen": "light from natural sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_nature.artificial",
+      "label": "Artificial",
+      "node": "lighting",
+      "field": "source_nature",
+      "group": "source_nature",
+      "phrases": {
+        "flux": "light from artificial sources",
+        "qwen": "light from artificial sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "lighting.source_nature.mixed",
+      "label": "Mixed",
+      "node": "lighting",
+      "field": "source_nature",
+      "group": "source_nature",
+      "phrases": {
+        "flux": "a mix of natural and artificial light sources",
+        "qwen": "a mix of natural and artificial light sources"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.balance_contact.even_balance",
+      "label": "Even balance",
+      "node": "pose",
+      "field": "balance_contact",
+      "group": "balance_contact",
+      "phrases": {
+        "flux": "body weight balanced evenly",
+        "qwen": "body weight balanced evenly"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.balance_contact.left_weighted",
+      "label": "Left-weighted",
+      "node": "pose",
+      "field": "balance_contact",
+      "group": "balance_contact",
+      "phrases": {
+        "flux": "body weight carried on the subject's left side",
+        "qwen": "body weight carried on the subject's left side"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.balance_contact.right_weighted",
+      "label": "Right-weighted",
+      "node": "pose",
+      "field": "balance_contact",
+      "group": "balance_contact",
+      "phrases": {
+        "flux": "body weight carried on the subject's right side",
+        "qwen": "body weight carried on the subject's right side"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.balance_contact.single_point",
+      "label": "Single contact",
+      "node": "pose",
+      "field": "balance_contact",
+      "group": "balance_contact",
+      "phrases": {
+        "flux": "the pose balanced on a single contact point",
+        "qwen": "the pose balanced on a single contact point"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.balance_contact.supported",
+      "label": "Supported",
+      "node": "pose",
+      "field": "balance_contact",
+      "group": "balance_contact",
+      "phrases": {
+        "flux": "the body supported against a nearby surface",
+        "qwen": "the body supported against a nearby surface"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.standing",
+      "label": "Standing",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject stands",
+        "qwen": "the subject stands"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.seated",
+      "label": "Seated",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject is seated",
+        "qwen": "the subject is seated"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.kneeling",
+      "label": "Kneeling",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject kneels",
+        "qwen": "the subject kneels"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.crouching",
+      "label": "Crouching",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject crouches",
+        "qwen": "the subject crouches"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.lying",
+      "label": "Lying",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject lies down",
+        "qwen": "the subject lies down"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.on_all_fours",
+      "label": "On all fours",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject is on all fours",
+        "qwen": "the subject is on all fours"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.base_pose.airborne",
+      "label": "Airborne",
+      "node": "pose",
+      "field": "base_pose",
+      "group": "base_pose",
+      "phrases": {
+        "flux": "the subject is airborne",
+        "qwen": "the subject is airborne"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_up",
+      "label": "↑ Head up / feet down",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head is at the top of the image frame and the feet are at the bottom",
+        "qwen": "the head is at the top of the image frame and the feet are at the bottom"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_upper_right",
+      "label": "↗ Head upper-right / feet lower-left",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the upper-right of the image frame and the feet toward the lower-left",
+        "qwen": "the head points toward the upper-right of the image frame and the feet toward the lower-left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_right",
+      "label": "→ Head right / feet left",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the right edge of the image frame and the feet toward the left edge",
+        "qwen": "the head points toward the right edge of the image frame and the feet toward the left edge"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_lower_right",
+      "label": "↘ Head lower-right / feet upper-left",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the lower-right of the image frame and the feet toward the upper-left",
+        "qwen": "the head points toward the lower-right of the image frame and the feet toward the upper-left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_down",
+      "label": "↓ Head down / feet up",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head is at the bottom of the image frame and the feet are at the top",
+        "qwen": "the head is at the bottom of the image frame and the feet are at the top"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_lower_left",
+      "label": "↙ Head lower-left / feet upper-right",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the lower-left of the image frame and the feet toward the upper-right",
+        "qwen": "the head points toward the lower-left of the image frame and the feet toward the upper-right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_left",
+      "label": "← Head left / feet right",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the left edge of the image frame and the feet toward the right edge",
+        "qwen": "the head points toward the left edge of the image frame and the feet toward the right edge"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.body_axis.head_upper_left",
+      "label": "↖ Head upper-left / feet lower-right",
+      "node": "pose",
+      "field": "body_axis",
+      "group": "body_axis",
+      "phrases": {
+        "flux": "the head points toward the upper-left of the image frame and the feet toward the lower-right",
+        "qwen": "the head points toward the upper-left of the image frame and the feet toward the lower-right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.depth_orientation.head_closer",
+      "label": "Head closer",
+      "node": "pose",
+      "field": "depth_orientation",
+      "group": "depth_orientation",
+      "phrases": {
+        "flux": "the subject's head is closer to the camera than the feet",
+        "qwen": "the subject's head is closer to the camera than the feet"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.depth_orientation.feet_closer",
+      "label": "Feet closer",
+      "node": "pose",
+      "field": "depth_orientation",
+      "group": "depth_orientation",
+      "phrases": {
+        "flux": "the subject's feet are closer to the camera than the head",
+        "qwen": "the subject's feet are closer to the camera than the head"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.depth_orientation.parallel",
+      "label": "Parallel",
+      "node": "pose",
+      "field": "depth_orientation",
+      "group": "depth_orientation",
+      "phrases": {
+        "flux": "the subject's head and feet lie nearly parallel to the camera plane",
+        "qwen": "the subject's head and feet lie nearly parallel to the camera plane"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.front",
+      "label": "Front",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject faces the camera",
+        "qwen": "the subject faces the camera"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.three_quarter_left",
+      "label": "Three-quarter left (subject's left)",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject turns three-quarter toward the subject's anatomical left",
+        "qwen": "the subject turns three-quarter toward the subject's anatomical left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.three_quarter_right",
+      "label": "Three-quarter right (subject's right)",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject turns three-quarter toward the subject's anatomical right",
+        "qwen": "the subject turns three-quarter toward the subject's anatomical right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.profile_left",
+      "label": "Profile left (subject's left)",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject faces in profile toward the subject's anatomical left",
+        "qwen": "the subject faces in profile toward the subject's anatomical left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.profile_right",
+      "label": "Profile right (subject's right)",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject faces in profile toward the subject's anatomical right",
+        "qwen": "the subject faces in profile toward the subject's anatomical right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.back_three_quarter",
+      "label": "Back three-quarter",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject is shown from a back three-quarter view",
+        "qwen": "the subject is shown from a back three-quarter view"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.facing_direction.back",
+      "label": "Back",
+      "node": "pose",
+      "field": "facing_direction",
+      "group": "facing_direction",
+      "phrases": {
+        "flux": "the subject faces away from the camera",
+        "qwen": "the subject faces away from the camera"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.upright",
+      "label": "Upright",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the head held upright",
+        "qwen": "the head held upright"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.tilted_left",
+      "label": "Tilted left",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the head tilted to the subject's left",
+        "qwen": "the head tilted to the subject's left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.tilted_right",
+      "label": "Tilted right",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the head tilted to the subject's right",
+        "qwen": "the head tilted to the subject's right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.chin_up",
+      "label": "Chin up",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the chin lifted",
+        "qwen": "the chin lifted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.chin_down",
+      "label": "Chin down",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the chin lowered",
+        "qwen": "the chin lowered"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.head_position.turned_back",
+      "label": "Turned back",
+      "node": "pose",
+      "field": "head_position",
+      "group": "head_position",
+      "phrases": {
+        "flux": "the head turned back over a shoulder",
+        "qwen": "the head turned back over a shoulder"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.hips_pelvis.level",
+      "label": "Level",
+      "node": "pose",
+      "field": "hips_pelvis",
+      "group": "hips_pelvis",
+      "phrases": {
+        "flux": "the hips level",
+        "qwen": "the hips level"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.hips_pelvis.shifted_left",
+      "label": "Shifted left",
+      "node": "pose",
+      "field": "hips_pelvis",
+      "group": "hips_pelvis",
+      "phrases": {
+        "flux": "the hips shifted to the subject's left",
+        "qwen": "the hips shifted to the subject's left"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.hips_pelvis.shifted_right",
+      "label": "Shifted right",
+      "node": "pose",
+      "field": "hips_pelvis",
+      "group": "hips_pelvis",
+      "phrases": {
+        "flux": "the hips shifted to the subject's right",
+        "qwen": "the hips shifted to the subject's right"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.hips_pelvis.tilted",
+      "label": "Tilted",
+      "node": "pose",
+      "field": "hips_pelvis",
+      "group": "hips_pelvis",
+      "phrases": {
+        "flux": "the pelvis tilted",
+        "qwen": "the pelvis tilted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.hips_pelvis.rotated",
+      "label": "Rotated",
+      "node": "pose",
+      "field": "hips_pelvis",
+      "group": "hips_pelvis",
+      "phrases": {
+        "flux": "the hips rotated through the pose",
+        "qwen": "the hips rotated through the pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.phone_near_face",
+      "label": "Phone near face",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm holds a phone near the face",
+        "qwen": "the subject's left arm holds a phone near the face"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.raised",
+      "label": "Raised",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm is raised",
+        "qwen": "the subject's left arm is raised"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm is extended",
+        "qwen": "the subject's left arm is extended"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm is bent",
+        "qwen": "the subject's left arm is bent"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.resting",
+      "label": "Resting",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm rests naturally",
+        "qwen": "the subject's left arm rests naturally"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_arm.behind_back",
+      "label": "Behind back",
+      "node": "pose",
+      "field": "left_arm",
+      "group": "left_arm",
+      "phrases": {
+        "flux": "the subject's left arm reaches behind the back",
+        "qwen": "the subject's left arm reaches behind the back"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.tiptoe",
+      "label": "Tiptoe",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is balanced on tiptoe",
+        "qwen": "the subject's left foot is balanced on tiptoe"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.planted",
+      "label": "Planted",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is planted",
+        "qwen": "the subject's left foot is planted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.lifted",
+      "label": "Lifted",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is lifted",
+        "qwen": "the subject's left foot is lifted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.pointed",
+      "label": "Pointed",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is pointed",
+        "qwen": "the subject's left foot is pointed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.flexed",
+      "label": "Flexed",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is flexed",
+        "qwen": "the subject's left foot is flexed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_foot.turned_out",
+      "label": "Turned out",
+      "node": "pose",
+      "field": "left_foot",
+      "group": "left_foot",
+      "phrases": {
+        "flux": "the subject's left foot is turned outward",
+        "qwen": "the subject's left foot is turned outward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.phone_near_face",
+      "label": "Phone near face",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand holds a phone near the face",
+        "qwen": "the subject's left hand holds a phone near the face"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.raised",
+      "label": "Raised",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand is raised",
+        "qwen": "the subject's left hand is raised"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand reaches outward",
+        "qwen": "the subject's left hand reaches outward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand bends gently at the wrist",
+        "qwen": "the subject's left hand bends gently at the wrist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.resting",
+      "label": "Resting",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand rests naturally",
+        "qwen": "the subject's left hand rests naturally"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.behind_back",
+      "label": "Behind back",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand rests behind the back",
+        "qwen": "the subject's left hand rests behind the back"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.open_palm",
+      "label": "Open palm",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand shows an open palm",
+        "qwen": "the subject's left hand shows an open palm"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_hand.fist",
+      "label": "Fist",
+      "node": "pose",
+      "field": "left_hand",
+      "group": "left_hand",
+      "phrases": {
+        "flux": "the subject's left hand forms a fist",
+        "qwen": "the subject's left hand forms a fist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.one_knee_down",
+      "label": "One knee down",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg has one knee down",
+        "qwen": "the subject's left leg has one knee down"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.planted",
+      "label": "Planted",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg is planted firmly",
+        "qwen": "the subject's left leg is planted firmly"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.lifted",
+      "label": "Lifted",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg is lifted",
+        "qwen": "the subject's left leg is lifted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.crossed",
+      "label": "Crossed",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg crosses the other leg",
+        "qwen": "the subject's left leg crosses the other leg"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg is bent",
+        "qwen": "the subject's left leg is bent"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.left_leg.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "left_leg",
+      "group": "left_leg",
+      "phrases": {
+        "flux": "the subject's left leg is extended",
+        "qwen": "the subject's left leg is extended"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.neck.long",
+      "label": "Elongated",
+      "node": "pose",
+      "field": "neck",
+      "group": "neck",
+      "phrases": {
+        "flux": "the neck gently elongated",
+        "qwen": "the neck gently elongated"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.neck.relaxed",
+      "label": "Relaxed",
+      "node": "pose",
+      "field": "neck",
+      "group": "neck",
+      "phrases": {
+        "flux": "the neck relaxed",
+        "qwen": "the neck relaxed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.neck.forward",
+      "label": "Forward",
+      "node": "pose",
+      "field": "neck",
+      "group": "neck",
+      "phrases": {
+        "flux": "the neck reaching slightly forward",
+        "qwen": "the neck reaching slightly forward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.neck.arched",
+      "label": "Arched",
+      "node": "pose",
+      "field": "neck",
+      "group": "neck",
+      "phrases": {
+        "flux": "the neck softly arched",
+        "qwen": "the neck softly arched"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.contrapposto",
+      "label": "Contrapposto",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "contrapposto",
+      "phrases": {
+        "flux": "a relaxed contrapposto pose",
+        "qwen": "a relaxed contrapposto pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.dynamic_action",
+      "label": "Dynamic action",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "dynamic_action",
+      "phrases": {
+        "flux": "a dynamic action pose",
+        "qwen": "a dynamic action pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.relaxed",
+      "label": "Relaxed",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "relaxed",
+      "phrases": {
+        "flux": "a relaxed natural pose",
+        "qwen": "a relaxed natural pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.formal",
+      "label": "Formal",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "formal",
+      "phrases": {
+        "flux": "a composed formal pose",
+        "qwen": "a composed formal pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.twisting",
+      "label": "Twisting",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "twisting",
+      "phrases": {
+        "flux": "the body twisting through the pose",
+        "qwen": "the body twisting through the pose"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.pose_snippets.leaning",
+      "label": "Leaning",
+      "node": "pose",
+      "field": "pose_snippets",
+      "group": "leaning",
+      "phrases": {
+        "flux": "the subject leaning naturally",
+        "qwen": "the subject leaning naturally"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.phone_near_face",
+      "label": "Phone near face",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm holds a phone near the face",
+        "qwen": "the subject's right arm holds a phone near the face"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.raised",
+      "label": "Raised",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm is raised",
+        "qwen": "the subject's right arm is raised"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm is extended",
+        "qwen": "the subject's right arm is extended"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm is bent",
+        "qwen": "the subject's right arm is bent"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.resting",
+      "label": "Resting",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm rests naturally",
+        "qwen": "the subject's right arm rests naturally"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_arm.behind_back",
+      "label": "Behind back",
+      "node": "pose",
+      "field": "right_arm",
+      "group": "right_arm",
+      "phrases": {
+        "flux": "the subject's right arm reaches behind the back",
+        "qwen": "the subject's right arm reaches behind the back"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.tiptoe",
+      "label": "Tiptoe",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is balanced on tiptoe",
+        "qwen": "the subject's right foot is balanced on tiptoe"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.planted",
+      "label": "Planted",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is planted",
+        "qwen": "the subject's right foot is planted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.lifted",
+      "label": "Lifted",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is lifted",
+        "qwen": "the subject's right foot is lifted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.pointed",
+      "label": "Pointed",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is pointed",
+        "qwen": "the subject's right foot is pointed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.flexed",
+      "label": "Flexed",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is flexed",
+        "qwen": "the subject's right foot is flexed"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_foot.turned_out",
+      "label": "Turned out",
+      "node": "pose",
+      "field": "right_foot",
+      "group": "right_foot",
+      "phrases": {
+        "flux": "the subject's right foot is turned outward",
+        "qwen": "the subject's right foot is turned outward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.phone_near_face",
+      "label": "Phone near face",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand holds a phone near the face",
+        "qwen": "the subject's right hand holds a phone near the face"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.raised",
+      "label": "Raised",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand is raised",
+        "qwen": "the subject's right hand is raised"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand reaches outward",
+        "qwen": "the subject's right hand reaches outward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand bends gently at the wrist",
+        "qwen": "the subject's right hand bends gently at the wrist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.resting",
+      "label": "Resting",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand rests naturally",
+        "qwen": "the subject's right hand rests naturally"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.behind_back",
+      "label": "Behind back",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand rests behind the back",
+        "qwen": "the subject's right hand rests behind the back"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.open_palm",
+      "label": "Open palm",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand shows an open palm",
+        "qwen": "the subject's right hand shows an open palm"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_hand.fist",
+      "label": "Fist",
+      "node": "pose",
+      "field": "right_hand",
+      "group": "right_hand",
+      "phrases": {
+        "flux": "the subject's right hand forms a fist",
+        "qwen": "the subject's right hand forms a fist"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.one_knee_down",
+      "label": "One knee down",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg has one knee down",
+        "qwen": "the subject's right leg has one knee down"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.planted",
+      "label": "Planted",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg is planted firmly",
+        "qwen": "the subject's right leg is planted firmly"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.lifted",
+      "label": "Lifted",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg is lifted",
+        "qwen": "the subject's right leg is lifted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.crossed",
+      "label": "Crossed",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg crosses the other leg",
+        "qwen": "the subject's right leg crosses the other leg"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.bent",
+      "label": "Bent",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg is bent",
+        "qwen": "the subject's right leg is bent"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.right_leg.extended",
+      "label": "Extended",
+      "node": "pose",
+      "field": "right_leg",
+      "group": "right_leg",
+      "phrases": {
+        "flux": "the subject's right leg is extended",
+        "qwen": "the subject's right leg is extended"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.shoulders.level",
+      "label": "Level",
+      "node": "pose",
+      "field": "shoulders",
+      "group": "shoulders",
+      "phrases": {
+        "flux": "the shoulders level",
+        "qwen": "the shoulders level"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.shoulders.angled",
+      "label": "Angled",
+      "node": "pose",
+      "field": "shoulders",
+      "group": "shoulders",
+      "phrases": {
+        "flux": "the shoulders set at an angle",
+        "qwen": "the shoulders set at an angle"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.shoulders.raised",
+      "label": "Raised",
+      "node": "pose",
+      "field": "shoulders",
+      "group": "shoulders",
+      "phrases": {
+        "flux": "the shoulders raised",
+        "qwen": "the shoulders raised"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.shoulders.dropped",
+      "label": "Dropped",
+      "node": "pose",
+      "field": "shoulders",
+      "group": "shoulders",
+      "phrases": {
+        "flux": "the shoulders relaxed downward",
+        "qwen": "the shoulders relaxed downward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.shoulders.one_forward",
+      "label": "One forward",
+      "node": "pose",
+      "field": "shoulders",
+      "group": "shoulders",
+      "phrases": {
+        "flux": "one shoulder turned forward",
+        "qwen": "one shoulder turned forward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.upright",
+      "label": "Upright",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the torso upright with a straight spine",
+        "qwen": "the torso upright with a straight spine"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.arched",
+      "label": "Arched",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the spine gently arched",
+        "qwen": "the spine gently arched"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.curled",
+      "label": "Curled",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the torso curled inward",
+        "qwen": "the torso curled inward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.twisted",
+      "label": "Twisted",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the torso twisted",
+        "qwen": "the torso twisted"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.leaning_forward",
+      "label": "Leaning forward",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the torso leaning forward",
+        "qwen": "the torso leaning forward"
+      },
+      "builtin": true
+    },
+    {
+      "id": "pose.torso_spine.leaning_back",
+      "label": "Leaning back",
+      "node": "pose",
+      "field": "torso_spine",
+      "group": "torso_spine",
+      "phrases": {
+        "flux": "the torso leaning back",
+        "qwen": "the torso leaning back"
+      },
+      "builtin": true
+    }
+  ]
+}
