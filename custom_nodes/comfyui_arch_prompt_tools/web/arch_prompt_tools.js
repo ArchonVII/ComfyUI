@@ -611,6 +611,32 @@ async function refreshFieldOptions(context, fieldKey) {
   context.options.set(fieldKey, fresh);
 }
 
+async function executeOptionMutation(
+  context,
+  action,
+  optionId,
+  payload,
+  fieldKey,
+  dependencies = {},
+) {
+  const mutation = buildOptionMutation(
+    action,
+    optionId,
+    payload,
+    fieldKey,
+  );
+  const request = dependencies.request || requestJson;
+  const refresh = dependencies.refresh || refreshFieldOptions;
+  const requestOptions = { method: mutation.method };
+  if (mutation.payload !== null) {
+    requestOptions.headers = { "Content-Type": "application/json" };
+    requestOptions.body = JSON.stringify(mutation.payload);
+  }
+  const response = await request(mutation.path, requestOptions);
+  await refresh(context, mutation.refresh_field);
+  return response;
+}
+
 function renderError(context, message, allowReset = false) {
   context.body.replaceChildren();
   const box = makeElement("div", message, "arch-pt-error");
@@ -813,18 +839,13 @@ function showOptionEditor(context, field, target, sourceOption = null) {
           lora: parsedLora,
           lora_enabled: loraEnabled.checked,
         });
-        const mutation = buildOptionMutation(
+        await executeOptionMutation(
+          context,
           editingUser ? "update" : "create",
           editingUser ? sourceOption.id : null,
           payload,
           field.key,
         );
-        await requestJson(mutation.path, {
-          method: mutation.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(mutation.payload),
-        });
-        await refreshFieldOptions(context, mutation.refresh_field);
         setStatus(context, editingUser ? "User option updated." : "User option saved.");
         renderSections(context);
       } catch (error) {
@@ -875,16 +896,13 @@ function optionRow(context, field, option, editorTarget) {
       makeButton("Delete option", `Delete saved option ${option.label}`, async () => {
         if (!confirm(`Delete user option “${option.label}”? Existing workflow copies will remain.`)) return;
         try {
-          const mutation = buildOptionMutation(
+          await executeOptionMutation(
+            context,
             "delete",
             option.id,
             null,
             field.key,
           );
-          await requestJson(mutation.path, {
-            method: mutation.method,
-          });
-          await refreshFieldOptions(context, mutation.refresh_field);
           setStatus(context, "User option deleted; existing copied chips were not changed.");
           renderSections(context);
         } catch (error) {
@@ -1196,6 +1214,7 @@ export {
   createEmptyState,
   editFragmentText,
   editorRestoreDecision,
+  executeOptionMutation,
   focusedNodeKey,
   optionsQuery,
   removeFragmentById,

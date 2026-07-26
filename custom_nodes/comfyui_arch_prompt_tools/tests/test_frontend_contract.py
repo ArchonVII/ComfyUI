@@ -10,6 +10,9 @@ PACKAGE_DIR = Path(__file__).parents[1]
 FRONTEND = PACKAGE_DIR / "web" / "arch_prompt_tools.js"
 INIT = PACKAGE_DIR / "__init__.py"
 SCHEMAS = json.loads((PACKAGE_DIR / "data" / "schemas.json").read_text(encoding="utf-8"))
+BUILTIN_OPTIONS = json.loads(
+    (PACKAGE_DIR / "data" / "builtin_options.json").read_text(encoding="utf-8")
+)["options"]
 
 
 def frontend_source() -> str:
@@ -83,6 +86,7 @@ def test_frontend_supports_copied_chip_crud_user_option_crud_and_lora_state():
     assert "confirm(" in source
     assert "Built-in · protected" in source
     assert "renderOptionManagement" in source
+    assert source.count("executeOptionMutation(") >= 3
 
 
 def test_frontend_guards_async_restore_and_serializes_text_as_it_is_edited():
@@ -388,6 +392,284 @@ assert.equal(deleteRequest.refresh_field, "left_hand");
         text=True,
         encoding="utf-8",
         timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_actual_production_render_lifecycle_crud_and_reset_wiring(tmp_path):
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is not available for the portable frontend integration test")
+
+    source = frontend_source().replace(
+        'import { app } from "/scripts/app.js";', ""
+    ).replace('import { api } from "/scripts/api.js";', "")
+    age_option = next(
+        option
+        for option in BUILTIN_OPTIONS
+        if option["node"] == "identity" and option["field"] == "age_group"
+    )
+    script = (
+        r"""
+import assert from "node:assert/strict";
+
+class FakeElement {
+  constructor(tag) {
+    this.tagName = tag.toUpperCase();
+    this.childNodes = [];
+    this.dataset = {};
+    this.style = {};
+    this.attributes = {};
+    this.listeners = {};
+    this.className = "";
+    this.textContent = "";
+    this.value = "";
+    this.checked = false;
+    this.disabled = false;
+    this.classList = {
+      toggle: (name, enabled) => {
+        const names = new Set(this.className.split(/\s+/u).filter(Boolean));
+        if (enabled) names.add(name); else names.delete(name);
+        this.className = [...names].join(" ");
+      },
+    };
+  }
+  append(...children) {
+    for (const child of children) {
+      if (child?.tagName === "#FRAGMENT") this.childNodes.push(...child.childNodes);
+      else this.childNodes.push(child);
+    }
+  }
+  appendChild(child) { this.append(child); return child; }
+  replaceChildren(...children) { this.childNodes = []; this.append(...children); }
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  addEventListener(name, listener) { this.listeners[name] = listener; }
+}
+
+const document = {
+  createElement: (tag) => new FakeElement(tag),
+  createDocumentFragment: () => new FakeElement("#fragment"),
+};
+const scheduled = [];
+const setTimeout = (callback) => { scheduled.push(callback); return scheduled.length; };
+const confirm = () => true;
+const registeredExtensions = [];
+const app = {
+  canvas: {},
+  registerExtension: (extension) => registeredExtensions.push(extension),
+  extensionManager: {toast: {add() {}}},
+};
+let fetchCalls = [];
+const api = {
+  async fetchApi(path, options = {}) {
+    fetchCalls.push({path, options});
+    const payload = path.endsWith("/schema")
+      ? REAL_SCHEMA
+      : {version: 1, options: [ROUTE_OPTION]};
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json() { return payload; },
+    };
+  },
+};
+
+function all(root, predicate) {
+  const found = [];
+  const visit = (item) => {
+    if (!item || typeof item !== "object") return;
+    if (predicate(item)) found.push(item);
+    for (const child of item.childNodes || []) visit(child);
+  };
+  visit(root);
+  return found;
+}
+"""
+        + f"\nconst REAL_SCHEMA = {json.dumps(SCHEMAS, ensure_ascii=False)};\n"
+        + f"\nconst SOURCE_OPTION = {json.dumps(age_option, ensure_ascii=False)};\n"
+        + r"""
+const ROUTE_OPTION = {
+  ...SOURCE_OPTION,
+  builtin: true,
+  lora: SOURCE_OPTION.lora || null,
+  lora_enabled: Boolean(SOURCE_OPTION.lora),
+};
+"""
+        + source
+        + r"""
+
+assert.equal(registeredExtensions.length, 1);
+assert.equal(focusedNodeKey("ArchPtCombine"), null);
+
+const ageField = REAL_SCHEMA.nodes
+  .find((item) => item.key === "identity")
+  .sections.flatMap((section) => section.fields)
+  .find((field) => field.key === "age_group");
+const hiddenState = {
+  name: "state_json",
+  value: serializeState(createEmptyState("identity", "flux")),
+  callback() {},
+};
+const renderNode = {
+  dirty: 0,
+  setDirtyCanvas() { this.dirty += 1; },
+};
+const renderContext = {
+  node: renderNode,
+  nodeKey: "identity",
+  stateWidget: hiddenState,
+  familyWidget: {name: "model_family", value: "flux"},
+  state: createEmptyState("identity", "flux"),
+  family: "flux",
+  options: new Map([["age_group", [ROUTE_OPTION]]]),
+  schemaNode: {
+    key: "identity",
+    sections: [{key: "core", label: "Core", fields: [ageField]}],
+  },
+  body: new FakeElement("div"),
+  status: new FakeElement("div"),
+  invalid: false,
+};
+const renderedField = renderField(renderContext, ageField);
+const quickButtons = all(
+  renderedField,
+  (item) => item.tagName === "BUTTON" && item.textContent === ROUTE_OPTION.label,
+);
+assert.ok(quickButtons.length >= 1);
+assert.ok(all(renderedField, (item) => item.tagName === "SUMMARY" && item.textContent === "Manage choices").length);
+quickButtons[0].listeners.click({preventDefault() {}, stopPropagation() {}});
+const renderedState = JSON.parse(hiddenState.value);
+assert.equal(renderedState.fields.age_group.fragments.length, 1);
+assert.equal(renderedState.fields.age_group.fragments[0].source_option_id, ROUTE_OPTION.id);
+
+function FakeNodeType() {
+  this.widgets = [
+    {name: "model_family", value: "flux", callback() {}},
+    {
+      name: "state_json",
+      value: serializeState(createEmptyState("identity", "flux")),
+      callback() {},
+    },
+  ];
+  this.size = [420, 200];
+  this.domWidgets = 0;
+}
+FakeNodeType.prototype.addDOMWidget = function () {
+  this.domWidgets += 1;
+  return {};
+};
+FakeNodeType.prototype.setDirtyCanvas = function () {};
+FakeNodeType.prototype.setSize = function (size) { this.size = size; };
+extendFocusedNode(FakeNodeType, "identity");
+const lifecycleNode = new FakeNodeType();
+lifecycleNode.onNodeCreated();
+lifecycleNode.onNodeCreated();
+assert.equal(lifecycleNode.domWidgets, 1);
+await Promise.resolve();
+await Promise.resolve();
+lifecycleNode.onConfigure({});
+assert.equal(scheduled.length, 1);
+const fetchesBeforeConfigureReload = fetchCalls.length;
+await scheduled.shift()();
+assert.ok(fetchCalls.length > fetchesBeforeConfigureReload);
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(lifecycleNode.domWidgets, 1);
+
+const mutationContext = {};
+const requests = [];
+const refreshes = [];
+const dependencies = {
+  request: async (path, options) => {
+    requests.push({path, options});
+    return {ok: true};
+  },
+  refresh: async (_context, field) => { refreshes.push(field); },
+};
+const optionPayload = buildUserOptionPayload({
+  label: "Custom age",
+  node: "identity",
+  field: "age_group",
+  group: "age_group",
+  model_family: "flux",
+  phrase: "an adult subject",
+  lora: null,
+  lora_enabled: false,
+});
+await executeOptionMutation(mutationContext, "create", null, optionPayload, "age_group", dependencies);
+await executeOptionMutation(mutationContext, "update", "user.age/one", optionPayload, "age_group", dependencies);
+await executeOptionMutation(mutationContext, "delete", "user.age/one", null, "age_group", dependencies);
+assert.deepEqual(requests.map((item) => [item.options.method, item.path]), [
+  ["POST", "/arch-prompt-tools/options"],
+  ["PATCH", "/arch-prompt-tools/options/user.age%2Fone"],
+  ["DELETE", "/arch-prompt-tools/options/user.age%2Fone"],
+]);
+assert.deepEqual(JSON.parse(requests[0].options.body), optionPayload);
+assert.deepEqual(JSON.parse(requests[1].options.body), optionPayload);
+assert.equal("body" in requests[2].options, false);
+assert.deepEqual(refreshes, ["age_group", "age_group", "age_group"]);
+let failureRefreshes = 0;
+await assert.rejects(
+  executeOptionMutation(
+    mutationContext,
+    "create",
+    null,
+    optionPayload,
+    "age_group",
+    {
+      request: async () => { throw new Error("write failed"); },
+      refresh: async () => { failureRefreshes += 1; },
+    },
+  ),
+  /write failed/u,
+);
+assert.equal(failureRefreshes, 0);
+
+const invalidRaw = '{"version":2,"node":"identity","model_family":"flux","fields":{}}';
+let invalidWrites = 0;
+const invalidContext = {
+  node: {setDirtyCanvas() {}},
+  nodeKey: "identity",
+  stateWidget: {
+    value: invalidRaw,
+    callback() { invalidWrites += 1; },
+  },
+  familyWidget: {value: "flux"},
+  family: "flux",
+  state: null,
+  schemaNode: null,
+  options: new Map(),
+  body: new FakeElement("div"),
+  status: new FakeElement("div"),
+  invalid: false,
+  loadGeneration: 0,
+};
+await initializeContext(invalidContext);
+assert.equal(invalidContext.stateWidget.value, invalidRaw);
+assert.equal(invalidWrites, 0);
+const resetButtons = all(
+  invalidContext.body,
+  (item) => item.tagName === "BUTTON" && item.textContent === "Reset saved state",
+);
+assert.equal(resetButtons.length, 1);
+resetButtons[0].listeners.click({preventDefault() {}, stopPropagation() {}});
+assert.equal(invalidWrites, 1);
+assert.equal(
+  invalidContext.stateWidget.value,
+  '{"version":1,"node":"identity","model_family":"flux","fields":{}}',
+);
+"""
+    )
+    test_file = tmp_path / "production_frontend_integration.mjs"
+    test_file.write_text(script, encoding="utf-8")
+    result = subprocess.run(
+        [node, str(test_file)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
