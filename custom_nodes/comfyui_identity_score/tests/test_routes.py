@@ -4,13 +4,75 @@ import json
 import sys
 from uuid import uuid4
 
+import numpy as np
 import pytest
 from aiohttp import web
+from aiohttp.test_utils import TestClient, TestServer
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from comfyui_identity_score import routes
+from comfyui_identity_score.experiment_service import (
+    IDENTITY_LAB_BASE_IMAGE, IDENTITY_LAB_LORA_1, IDENTITY_LAB_LORA_2, IDENTITY_LAB_LORA_3,
+    IDENTITY_LAB_MODEL, IDENTITY_LAB_REFERENCE_IMAGE, IDENTITY_LAB_SAMPLER, IDENTITY_LAB_SCORE, ExperimentService,
+)
+
+
+class RouteFolderPaths:
+    def __init__(self, root):
+        self.root = root
+
+    def get_filename_list(self, category):
+        return {"diffusion_models": ["flux-9b.safetensors"], "checkpoints": [], "loras": []}.get(category, [])
+
+    def get_user_directory(self):
+        return str(self.root / "user")
+
+    def get_output_directory(self):
+        return str(self.root / "output")
+
+
+def api_workflow():
+    pairs = [(IDENTITY_LAB_BASE_IMAGE, "LoadImage"), (IDENTITY_LAB_REFERENCE_IMAGE, "LoadImage"), (IDENTITY_LAB_MODEL, "UNETLoader"), (IDENTITY_LAB_LORA_1, "LoraLoader"), (IDENTITY_LAB_LORA_2, "LoraLoader"), (IDENTITY_LAB_LORA_3, "LoraLoader"), (IDENTITY_LAB_SAMPLER, "KSampler"), (IDENTITY_LAB_SCORE, "DualIdentityScore")]
+    return {str(index): {"class_type": kind, "inputs": {}, "_meta": {"title": title}} for index, (title, kind) in enumerate(pairs, 1)}
+
+
+def test_aiohttp_handlers_create_detail_queue_retry_and_completed_png(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=RouteFolderPaths(tmp_path))
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+
+    async def exercise():
+        app = web.Application()
+        app.router.add_post("/experiments", routes._validated(routes.post_experiment))
+        app.router.add_get("/experiments/{experiment_id}", routes._validated(routes.get_experiment))
+        app.router.add_post("/runs/{run_id}/queued", routes._validated(routes.post_mark_queued))
+        app.router.add_get("/runs/{run_id}/output", routes._validated(routes.get_output))
+        client = TestClient(TestServer(app))
+        await client.start_server()
+        try:
+            payload = {"name": "roundtrip", "mode": "face_swap", "checkpoints": ["flux-9b.safetensors"], "seeds": [7], "stages": ["baseline"], "workflow": api_workflow()}
+            create = await client.post("/experiments", json=payload)
+            assert create.status == 200
+            created = await create.json()
+            experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+            detail = await client.get(f"/experiments/{experiment_id}")
+            assert detail.status == 200
+            assert (await detail.json())["experiment"]["settings"]["workflow_template"] == payload["workflow"]
+            service.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path="identity_lab/results/temp.png")
+            service.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error="retry")
+            queued = await client.post(f"/runs/{run_id}/queued", json={"experiment_id": experiment_id})
+            assert queued.status == 200 and (await queued.json())["state"] == "queued"
+            service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+            output = await client.get(f"/runs/{run_id}/output")
+            assert output.status == 200
+            assert output.headers["Content-Type"].startswith("image/png")
+            assert output.headers["X-Content-Type-Options"] == "nosniff"
+            assert (await output.read()).startswith(b"\x89PNG")
+        finally:
+            await client.close()
+
+    asyncio.run(exercise())
 
 
 def test_payload_validators_reject_non_objects_bad_ids_modes_states_and_traversal():
