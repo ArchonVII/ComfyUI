@@ -252,6 +252,7 @@ def test_store_refuses_embeddings_or_image_bytes_in_completion_data(store, plann
         {"thumbnail_b64": "iVBORw0KGgo="},
         {"image_data-uri": "payload"},
         {"preview": "data:image/png;base64,iVBORw0KGgo="},
+        {"preview": " \tDATA:IMAGE/png;base64,iVBORw0KGgo="},
     ],
 )
 def test_store_rejects_image_payload_encodings_but_allows_paths(store, planned_run, image_payload):

@@ -347,7 +347,7 @@ def _encode_json(value: Any, *, label: str, reject_embeddings: bool = False) -> 
 def _reject_sensitive_completion_data(value: Any) -> None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         raise ValueError("identity report must not contain image bytes")
-    if isinstance(value, str) and value.lower().startswith("data:image/"):
+    if isinstance(value, str) and value.lstrip().lower().startswith("data:image/"):
         raise ValueError("identity report must not contain image payloads")
     if isinstance(value, Mapping):
         for key, item in value.items():
