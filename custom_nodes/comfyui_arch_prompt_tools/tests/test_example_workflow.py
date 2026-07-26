@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import re
+from importlib.metadata import version as package_version
 from pathlib import Path
 
 from custom_nodes.comfyui_arch_prompt_tools import (
@@ -38,6 +39,8 @@ ALLOWED_TYPES = {
     "PreviewAny",
     "MarkdownNote",
 }
+FRONTEND_FOCUSED_MINIMUM = (420, 640)
+LAYOUT_GUTTER = 40
 
 
 def load_workflow():
@@ -61,6 +64,38 @@ def input_definitions(node_class):
     }
 
 
+def node_rectangle(node):
+    width, height = node["size"]
+    if node["type"] in FOCUSED_TYPES:
+        width = max(width, FRONTEND_FOCUSED_MINIMUM[0])
+        height = max(height, FRONTEND_FOCUSED_MINIMUM[1])
+    x, y = node["pos"]
+    return (x, y, x + width, y + height)
+
+
+def group_rectangle(group):
+    x, y, width, height = group["bounding"]
+    return (x, y, x + width, y + height)
+
+
+def contains(outer, inner):
+    return (
+        outer[0] <= inner[0]
+        and outer[1] <= inner[1]
+        and outer[2] >= inner[2]
+        and outer[3] >= inner[3]
+    )
+
+
+def separated_with_gutter(first, second, gutter=LAYOUT_GUTTER):
+    return (
+        first[2] + gutter <= second[0]
+        or second[2] + gutter <= first[0]
+        or first[3] + gutter <= second[1]
+        or second[3] + gutter <= first[1]
+    )
+
+
 def test_readme_and_exactly_one_arch_pt_example_workflow_exist():
     assert README.is_file()
     matching = sorted(WORKFLOW_DIR.glob("*Arch PT Prompt Builder*.json"))
@@ -71,7 +106,9 @@ def test_workflow_is_current_editor_format_with_unique_graph_identifiers():
     workflow = load_workflow()
     assert workflow["version"] == 0.4
     assert workflow["revision"] == 0
-    assert workflow["extra"]["frontendVersion"] == "1.45.19"
+    assert workflow["extra"]["frontendVersion"] == package_version(
+        "comfyui_frontend_package"
+    )
     assert workflow["extra"]["workflowRendererVersion"] == "LG"
     assert workflow["extra"]["arch_pt_prompt_builder"]["version"] == 1
     assert isinstance(workflow["id"], str) and workflow["id"]
@@ -163,7 +200,9 @@ def test_every_focused_node_starts_blank_and_defaults_to_flux():
 def test_all_six_bundles_and_both_text_inputs_feed_the_combiner():
     workflow = load_workflow()
     by_id = nodes_by_id(workflow)
-    combine = next(node for node in workflow["nodes"] if node["type"] == COMBINE_TYPE)
+    combine = next(
+        node for node in workflow["nodes"] if node["type"] == COMBINE_TYPE
+    )
     inputs = {item["name"]: item for item in combine["inputs"]}
     combine_schema = COMBINE_CLASS.INPUT_TYPES()
     combine_definitions = input_definitions(COMBINE_CLASS)
@@ -204,10 +243,53 @@ def test_all_six_bundles_and_both_text_inputs_feed_the_combiner():
         assert link[5] == combine_definitions[input_name][0]
 
 
+def test_initial_graph_contributes_no_text_and_combines_to_an_empty_prompt():
+    workflow = load_workflow()
+    by_id = nodes_by_id(workflow)
+    links = {link[0]: link for link in workflow["links"]}
+    combine = next(
+        node for node in workflow["nodes"] if node["type"] == COMBINE_TYPE
+    )
+    combine_inputs = {item["name"]: item for item in combine["inputs"]}
+
+    text_values = {}
+    for input_name in ("base_prompt", "extra_prompt"):
+        source = by_id[links[combine_inputs[input_name]["link"]][1]]
+        assert source["type"] == "PrimitiveStringMultiline"
+        assert source["widgets_values"] == [""]
+        text_values[input_name] = source["widgets_values"][0]
+
+    bundles = {}
+    for node_type, node_key in FOCUSED_TYPES.items():
+        source = next(node for node in workflow["nodes"] if node["type"] == node_type)
+        source_link = links[combine_inputs[node_key]["link"]]
+        assert source_link[1] == source["id"]
+        model_family, state_json = source["widgets_values"]
+        state = json.loads(state_json)
+        assert state["fields"] == {}
+        prompt, bundle = FOCUSED_CLASSES[node_type]().build(
+            model_family,
+            state_json,
+        )
+        assert prompt == ""
+        bundles[node_key] = bundle
+
+    positive_prompt, _, _ = COMBINE_CLASS().combine(
+        combine["widgets_values"][0],
+        combine["widgets_values"][1],
+        base_prompt=text_values["base_prompt"],
+        extra_prompt=text_values["extra_prompt"],
+        **bundles,
+    )
+    assert positive_prompt == ""
+
+
 def test_combiner_outputs_are_wired_to_three_named_previews():
     workflow = load_workflow()
     by_id = nodes_by_id(workflow)
-    combine = next(node for node in workflow["nodes"] if node["type"] == COMBINE_TYPE)
+    combine = next(
+        node for node in workflow["nodes"] if node["type"] == COMBINE_TYPE
+    )
     links = {link[0]: link for link in workflow["links"]}
     preview_titles = {
         "positive_prompt": "Combined positive prompt preview",
@@ -260,7 +342,7 @@ def test_every_link_and_slot_is_bidirectionally_consistent():
     assert referenced_outputs == referenced_inputs == link_ids
 
 
-def test_layout_is_grouped_color_coded_and_non_overlapping_by_lane():
+def test_layout_uses_frontend_minimums_gutters_and_full_group_containment():
     workflow = load_workflow()
     groups = {group["title"]: group for group in workflow["groups"]}
     assert set(groups) == {
@@ -279,16 +361,36 @@ def test_layout_is_grouped_color_coded_and_non_overlapping_by_lane():
         node for node in workflow["nodes"] if node["type"] != "MarkdownNote"
     ]
     assert all("color" in node and "bgcolor" in node for node in operational)
-    assert len({tuple(node["pos"]) for node in operational}) == len(operational)
+    for node in workflow["nodes"]:
+        if node["type"] in FOCUSED_TYPES:
+            assert node["size"][0] >= FRONTEND_FOCUSED_MINIMUM[0]
+            assert node["size"][1] >= FRONTEND_FOCUSED_MINIMUM[1]
 
-    focused = sorted(
-        (node for node in operational if node["type"] in FOCUSED_TYPES),
-        key=lambda node: node["pos"][1],
-    )
-    assert [node["pos"][1] for node in focused] == sorted(
-        node["pos"][1] for node in focused
-    )
-    assert all(node["pos"][0] == focused[0]["pos"][0] for node in focused)
+    rectangles = {
+        node["id"]: node_rectangle(node)
+        for node in workflow["nodes"]
+    }
+    for index, first in enumerate(workflow["nodes"]):
+        for second in workflow["nodes"][index + 1 :]:
+            assert separated_with_gutter(
+                rectangles[first["id"]],
+                rectangles[second["id"]],
+            ), f'{first["title"]!r} overlaps or crowds {second["title"]!r}'
+
+    group_rectangles = {
+        title: group_rectangle(group)
+        for title, group in groups.items()
+    }
+    for node in workflow["nodes"]:
+        containing_groups = [
+            title
+            for title, rectangle in group_rectangles.items()
+            if contains(rectangle, rectangles[node["id"]])
+        ]
+        assert len(containing_groups) == 1, (
+            f'{node["title"]!r} must be fully contained by exactly one group; '
+            f"got {containing_groups}"
+        )
 
 
 def test_visible_notes_explain_the_state_and_safety_contracts():
@@ -333,14 +435,29 @@ def test_native_helper_types_are_registered_in_local_installed_sources():
     assert frontend_spec is not None
     assert frontend_spec.submodule_search_locations
     frontend_root = Path(next(iter(frontend_spec.submodule_search_locations)))
-    core_assets = tuple((frontend_root / "static" / "assets").glob("core-*.js"))
-    assert core_assets
-    markdown_registration = re.compile(
-        r"registerNodeType\(\s*[`\"']MarkdownNote[`\"']"
-    )
-    assert any(
-        markdown_registration.search(asset.read_text(encoding="utf-8"))
-        for asset in core_assets
+    core_maps = tuple((frontend_root / "static" / "assets").glob("core-*.js.map"))
+    assert core_maps
+    note_sources = []
+    for source_map in core_maps:
+        payload = json.loads(source_map.read_text(encoding="utf-8"))
+        note_sources.extend(
+            content
+            for name, content in zip(
+                payload.get("sources", []),
+                payload.get("sourcesContent", []),
+            )
+            if name.replace("\\", "/").endswith("/extensions/core/noteNode.ts")
+            and isinstance(content, str)
+        )
+    assert len(note_sources) == 1
+    note_source = note_sources[0]
+    assert "class MarkdownNoteNode extends LGraphNode" in note_source
+    assert "ComfyWidgets.MARKDOWN(" in note_source
+    assert "this.isVirtualNode = true" in note_source
+    assert re.search(
+        r"LiteGraph\.registerNodeType\(\s*['\"]MarkdownNote['\"]\s*,\s*"
+        r"MarkdownNoteNode\s*\)",
+        note_source,
     )
 
 
