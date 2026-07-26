@@ -45,6 +45,9 @@ def test_frontend_uses_serialized_hidden_state_and_one_dom_editor():
     assert 'findWidget(node, "model_family")' in source
     assert "hideSerializedWidget" in source
     assert "serializeValue" in source
+    assert 'widget.type = "hidden"' in source
+    assert "widget.options.hidden = true" in source
+    assert "computeLayoutSize" in source
     assert "addDOMWidget" in source
     assert "_archPtEditorInstalled" in source
     assert "onConfigure" in source
@@ -87,6 +90,8 @@ def test_frontend_supports_copied_chip_crud_user_option_crud_and_lora_state():
     assert "Built-in · protected" in source
     assert "renderOptionManagement" in source
     assert source.count("executeOptionMutation(") >= 3
+    assert source.count("runMutationAction(") >= 3
+    assert "reportMutationResult" in source
 
 
 def test_frontend_guards_async_restore_and_serializes_text_as_it_is_edited():
@@ -405,11 +410,22 @@ def test_actual_production_render_lifecycle_crud_and_reset_wiring(tmp_path):
     source = frontend_source().replace(
         'import { app } from "/scripts/app.js";', ""
     ).replace('import { api } from "/scripts/api.js";', "")
-    age_option = next(
-        option
-        for option in BUILTIN_OPTIONS
-        if option["node"] == "identity" and option["field"] == "age_group"
-    )
+    integration_fields = {
+        ("identity", "age_group"),
+        ("identity", "hair_length"),
+        ("identity", "hair_texture"),
+        ("identity", "hair_color"),
+        ("identity", "body_snippets"),
+    }
+    integration_options = []
+    for location in integration_fields:
+        integration_options.append(
+            next(
+                option
+                for option in BUILTIN_OPTIONS
+                if (option["node"], option["field"]) == location
+            )
+        )
     script = (
         r"""
 import assert from "node:assert/strict";
@@ -427,6 +443,8 @@ class FakeElement {
     this.value = "";
     this.checked = false;
     this.disabled = false;
+    this.hidden = false;
+    this.open = false;
     this.classList = {
       toggle: (name, enabled) => {
         const names = new Set(this.className.split(/\s+/u).filter(Boolean));
@@ -445,11 +463,13 @@ class FakeElement {
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
   setAttribute(name, value) { this.attributes[name] = String(value); }
   addEventListener(name, listener) { this.listeners[name] = listener; }
+  focus() { document.activeElement = this; this.listeners.focus?.({target: this}); }
 }
 
 const document = {
   createElement: (tag) => new FakeElement(tag),
   createDocumentFragment: () => new FakeElement("#fragment"),
+  activeElement: null,
 };
 const scheduled = [];
 const setTimeout = (callback) => { scheduled.push(callback); return scheduled.length; };
@@ -466,7 +486,7 @@ const api = {
     fetchCalls.push({path, options});
     const payload = path.endsWith("/schema")
       ? REAL_SCHEMA
-      : {version: 1, options: [ROUTE_OPTION]};
+      : {version: 1, options: ROUTE_OPTIONS};
     return {
       ok: true,
       status: 200,
@@ -488,14 +508,15 @@ function all(root, predicate) {
 }
 """
         + f"\nconst REAL_SCHEMA = {json.dumps(SCHEMAS, ensure_ascii=False)};\n"
-        + f"\nconst SOURCE_OPTION = {json.dumps(age_option, ensure_ascii=False)};\n"
+        + f"\nconst SOURCE_OPTIONS = {json.dumps(integration_options, ensure_ascii=False)};\n"
         + r"""
-const ROUTE_OPTION = {
-  ...SOURCE_OPTION,
+const ROUTE_OPTIONS = SOURCE_OPTIONS.map((option) => ({
+  ...option,
   builtin: true,
-  lora: SOURCE_OPTION.lora || null,
-  lora_enabled: Boolean(SOURCE_OPTION.lora),
-};
+  lora: option.lora || null,
+  lora_enabled: Boolean(option.lora),
+}));
+const ROUTE_OPTION = ROUTE_OPTIONS.find((option) => option.field === "age_group");
 """
         + source
         + r"""
@@ -544,12 +565,173 @@ const renderedState = JSON.parse(hiddenState.value);
 assert.equal(renderedState.fields.age_group.fragments.length, 1);
 assert.equal(renderedState.fields.age_group.fragments[0].source_option_id, ROUTE_OPTION.id);
 
+const identitySchema = REAL_SCHEMA.nodes.find((item) => item.key === "identity");
+const appearanceSection = identitySchema.sections.find((section) => section.key === "appearance");
+const bodySection = identitySchema.sections.find((section) => section.key === "body_structure");
+const continuitySchema = {
+  key: "identity",
+  sections: [
+    {
+      ...appearanceSection,
+      fields: appearanceSection.fields.filter((field) =>
+        ["hair_length", "hair_texture", "hair_color"].includes(field.key),
+      ),
+    },
+    {
+      ...bodySection,
+      fields: bodySection.fields.filter((field) => field.key === "body_snippets"),
+    },
+  ],
+};
+const continuityWidget = {
+  name: "state_json",
+  value: serializeState(createEmptyState("identity", "flux")),
+  callback() {},
+};
+const continuityContext = {
+  node: {setDirtyCanvas() {}},
+  nodeKey: "identity",
+  editorId: "continuity",
+  stateWidget: continuityWidget,
+  familyWidget: {value: "flux"},
+  state: createEmptyState("identity", "flux"),
+  family: "flux",
+  options: new Map(
+    ["hair_length", "hair_texture", "hair_color", "body_snippets"].map(
+      (field) => [field, ROUTE_OPTIONS.filter((option) => option.field === field)],
+    ),
+  ),
+  schemaNode: continuitySchema,
+  body: new FakeElement("div"),
+  status: new FakeElement("div"),
+  invalid: false,
+};
+renderSections(continuityContext);
+let appearanceDetails = all(
+  continuityContext.body,
+  (item) => item.tagName === "DETAILS" && item.dataset.section === "appearance",
+)[0];
+appearanceDetails.open = true;
+appearanceDetails.listeners.toggle({target: appearanceDetails});
+for (const field of ["hair_length", "hair_texture", "hair_color"]) {
+  const option = ROUTE_OPTIONS.find((item) => item.field === field);
+  const button = all(
+    continuityContext.body,
+    (item) => item.tagName === "BUTTON" && item.textContent === option.label,
+  )[0];
+  assert.ok(button, `missing quick button for ${field}`);
+  button.listeners.click({preventDefault() {}, stopPropagation() {}});
+  appearanceDetails = all(
+    continuityContext.body,
+    (item) => item.tagName === "DETAILS" && item.dataset.section === "appearance",
+  )[0];
+  assert.equal(appearanceDetails.open, true);
+}
+const continuityState = JSON.parse(continuityWidget.value);
+assert.deepEqual(
+  ["hair_length", "hair_texture", "hair_color"].map(
+    (field) => continuityState.fields[field].fragments.length,
+  ),
+  [1, 1, 1],
+);
+let bodyDetails = all(
+  continuityContext.body,
+  (item) => item.tagName === "DETAILS" && item.dataset.section === "body_structure",
+)[0];
+bodyDetails.open = true;
+bodyDetails.listeners.toggle({target: bodyDetails});
+let searchInput = all(
+  continuityContext.body,
+  (item) => item.tagName === "INPUT" && item.type === "search",
+)[0];
+const snippetOption = ROUTE_OPTIONS.find((item) => item.field === "body_snippets");
+searchInput.value = snippetOption.label.slice(0, 3);
+searchInput.focus();
+searchInput.listeners.input({target: searchInput});
+const searchChoice = all(
+  continuityContext.body,
+  (item) => item.tagName === "BUTTON" && item.textContent === snippetOption.label,
+)[0];
+searchChoice.listeners.click({preventDefault() {}, stopPropagation() {}});
+bodyDetails = all(
+  continuityContext.body,
+  (item) => item.tagName === "DETAILS" && item.dataset.section === "body_structure",
+)[0];
+searchInput = all(
+  continuityContext.body,
+  (item) => item.tagName === "INPUT" && item.type === "search",
+)[0];
+assert.equal(bodyDetails.open, true);
+assert.equal(searchInput.value, snippetOption.label.slice(0, 3));
+assert.equal(document.activeElement, searchInput);
+
+const lightingSchema = REAL_SCHEMA.nodes.find((item) => item.key === "lighting");
+const illuminationSection = lightingSchema.sections.find(
+  (section) => section.key === "environment_illumination",
+);
+const brightnessField = illuminationSection.fields.find(
+  (field) => field.key === "environment_brightness",
+);
+const spectrumContext = {
+  node: {setDirtyCanvas() {}},
+  nodeKey: "lighting",
+  editorId: "lighting-test",
+  stateWidget: {
+    value: serializeState(createEmptyState("lighting", "flux")),
+    callback() {},
+  },
+  familyWidget: {value: "flux"},
+  state: createEmptyState("lighting", "flux"),
+  family: "flux",
+  options: new Map(),
+  schemaNode: {
+    key: "lighting",
+    sections: [{...illuminationSection, fields: [brightnessField]}],
+  },
+  body: new FakeElement("div"),
+  status: new FakeElement("div"),
+  invalid: false,
+};
+renderSections(spectrumContext);
+let spectrumEnable = all(
+  spectrumContext.body,
+  (item) => item.tagName === "INPUT" && item.type === "checkbox",
+)[0];
+spectrumEnable.checked = true;
+spectrumEnable.listeners.change({target: spectrumEnable});
+let spectrumSlider = all(
+  spectrumContext.body,
+  (item) => item.tagName === "INPUT" && item.type === "range",
+)[0];
+const describedId = spectrumSlider.attributes["aria-describedby"];
+let spectrumPhrase = all(
+  spectrumContext.body,
+  (item) => item.id === describedId,
+)[0];
+assert.ok(describedId);
+assert.ok(spectrumSlider.attributes["aria-valuetext"]);
+assert.equal(spectrumSlider.attributes["aria-valuetext"], spectrumPhrase.textContent);
+spectrumSlider.value = spectrumSlider.max;
+spectrumSlider.listeners.input({target: spectrumSlider});
+assert.equal(spectrumSlider.attributes["aria-valuetext"], spectrumPhrase.textContent);
+assert.match(spectrumSlider.attributes["aria-valuetext"], /\S/u);
+
 function FakeNodeType() {
+  const stateElement = new FakeElement("textarea");
   this.widgets = [
     {name: "model_family", value: "flux", callback() {}},
     {
       name: "state_json",
       value: serializeState(createEmptyState("identity", "flux")),
+      type: "customtext",
+      options: {},
+      element: stateElement,
+      inputEl: stateElement,
+      computeLayoutSize() {
+        return {minHeight: 50, maxHeight: 200, minWidth: 0};
+      },
+      computeSize() { return [320, 80]; },
+      serializeValue() { return this.value; },
       callback() {},
     },
   ];
@@ -567,6 +749,21 @@ const lifecycleNode = new FakeNodeType();
 lifecycleNode.onNodeCreated();
 lifecycleNode.onNodeCreated();
 assert.equal(lifecycleNode.domWidgets, 1);
+const lifecycleStateWidget = lifecycleNode.widgets.find((widget) => widget.name === "state_json");
+assert.equal(lifecycleStateWidget.type, "hidden");
+assert.equal(lifecycleStateWidget.options.hidden, true);
+assert.deepEqual(lifecycleStateWidget.computeLayoutSize(), {
+  minHeight: 0,
+  maxHeight: 0,
+  minWidth: 0,
+});
+assert.deepEqual(lifecycleStateWidget.computeSize(), [0, 0]);
+assert.equal(lifecycleStateWidget.element.hidden, true);
+assert.equal(lifecycleStateWidget.element.style.display, "none");
+assert.equal(
+  lifecycleStateWidget.serializeValue(),
+  '{"version":1,"node":"identity","model_family":"flux","fields":{}}',
+);
 await Promise.resolve();
 await Promise.resolve();
 lifecycleNode.onConfigure({});
@@ -598,9 +795,18 @@ const optionPayload = buildUserOptionPayload({
   lora: null,
   lora_enabled: false,
 });
-await executeOptionMutation(mutationContext, "create", null, optionPayload, "age_group", dependencies);
-await executeOptionMutation(mutationContext, "update", "user.age/one", optionPayload, "age_group", dependencies);
-await executeOptionMutation(mutationContext, "delete", "user.age/one", null, "age_group", dependencies);
+const createResult = await executeOptionMutation(
+  mutationContext, "create", null, optionPayload, "age_group", dependencies,
+);
+const updateResult = await executeOptionMutation(
+  mutationContext, "update", "user.age/one", optionPayload, "age_group", dependencies,
+);
+const deleteResult = await executeOptionMutation(
+  mutationContext, "delete", "user.age/one", null, "age_group", dependencies,
+);
+assert.equal(createResult.committed, true);
+assert.equal(updateResult.committed, true);
+assert.equal(deleteResult.committed, true);
 assert.deepEqual(requests.map((item) => [item.options.method, item.path]), [
   ["POST", "/arch-prompt-tools/options"],
   ["PATCH", "/arch-prompt-tools/options/user.age%2Fone"],
@@ -626,6 +832,95 @@ await assert.rejects(
   /write failed/u,
 );
 assert.equal(failureRefreshes, 0);
+
+let releaseMutationRequest;
+let guardedPostCount = 0;
+let guardedRefreshCount = 0;
+const guardedContext = {
+  pendingMutations: new Set(),
+  status: new FakeElement("div"),
+  retryRefreshButton: new FakeElement("button"),
+  pendingRefreshField: null,
+};
+const guardedButton = new FakeElement("button");
+const guardedAction = () =>
+  executeOptionMutation(
+    guardedContext,
+    "create",
+    null,
+    optionPayload,
+    "age_group",
+    {
+      request: async () => {
+        guardedPostCount += 1;
+        await new Promise((resolve) => { releaseMutationRequest = resolve; });
+        return {ok: true};
+      },
+      refresh: async () => {
+        guardedRefreshCount += 1;
+        throw new Error("refresh unavailable");
+      },
+    },
+  );
+const guardedFirst = runMutationAction(
+  guardedContext, "save:age_group", guardedButton, guardedAction,
+);
+const guardedSecond = await runMutationAction(
+  guardedContext, "save:age_group", guardedButton, guardedAction,
+);
+assert.equal(guardedSecond.skipped, true);
+assert.equal(guardedButton.disabled, true);
+assert.equal(guardedPostCount, 1);
+releaseMutationRequest();
+const guardedResult = await guardedFirst;
+assert.equal(guardedResult.committed, true);
+assert.equal(guardedResult.refresh_ok, false);
+assert.equal(guardedPostCount, 1);
+assert.equal(guardedRefreshCount, 1);
+assert.equal(guardedButton.disabled, false);
+reportMutationResult(guardedContext, guardedResult, "User option saved.");
+assert.match(guardedContext.status.textContent, /saved.*refresh/iu);
+assert.equal(guardedContext.pendingRefreshField, "age_group");
+assert.equal(guardedContext.retryRefreshButton.hidden, false);
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return {promise, resolve, reject};
+}
+const fluxDeferred = deferred();
+const qwenDeferred = deferred();
+const guardedRefreshContext = {
+  nodeKey: "identity",
+  family: "flux",
+  loadGeneration: 10,
+  refreshTokens: new Map(),
+  options: new Map([["hair_color", [{id: "original"}]]]),
+};
+const adversarialLoader = (_node, family) =>
+  family === "flux" ? fluxDeferred.promise : qwenDeferred.promise;
+const staleFlux = refreshFieldOptions(
+  guardedRefreshContext,
+  "hair_color",
+  {loader: adversarialLoader},
+);
+guardedRefreshContext.family = "qwen";
+guardedRefreshContext.loadGeneration += 1;
+const currentQwen = refreshFieldOptions(
+  guardedRefreshContext,
+  "hair_color",
+  {loader: adversarialLoader},
+);
+qwenDeferred.resolve([{id: "qwen-current"}]);
+const qwenRefreshResult = await currentQwen;
+assert.equal(qwenRefreshResult.applied, true);
+assert.deepEqual(guardedRefreshContext.options.get("hair_color"), [{id: "qwen-current"}]);
+fluxDeferred.resolve([{id: "flux-stale"}]);
+const fluxRefreshResult = await staleFlux;
+assert.equal(fluxRefreshResult.applied, false);
+assert.equal(fluxRefreshResult.stale, true);
+assert.deepEqual(guardedRefreshContext.options.get("hair_color"), [{id: "qwen-current"}]);
 
 const invalidRaw = '{"version":2,"node":"identity","model_family":"flux","fields":{}}';
 let invalidWrites = 0;

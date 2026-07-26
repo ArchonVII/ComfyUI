@@ -479,8 +479,24 @@ function hideSerializedWidget(node, name) {
   const widget = findWidget(node, name);
   if (!widget || widget._archPtHidden) return widget;
   widget._archPtHidden = true;
-  widget.type = "arch_pt_hidden";
-  widget.computeSize = () => [0, -4];
+  widget.type = "hidden";
+  widget.options ||= {};
+  widget.options.hidden = true;
+  widget.hidden = true;
+  widget.computeLayoutSize = () => ({
+    minHeight: 0,
+    maxHeight: 0,
+    minWidth: 0,
+  });
+  widget.computeSize = () => [0, 0];
+  for (const element of new Set([widget.element, widget.inputEl])) {
+    if (!element) continue;
+    element.hidden = true;
+    element.style ||= {};
+    element.style.display = "none";
+    element.setAttribute?.("aria-hidden", "true");
+    element.setAttribute?.("tabindex", "-1");
+  }
   const originalSerializeValue = widget.serializeValue;
   widget.serializeValue = function () {
     return originalSerializeValue
@@ -597,6 +613,49 @@ function setStatus(context, message, isError = false) {
   context.status.classList.toggle("arch-pt-error", isError);
 }
 
+function ensureUiState(context) {
+  context.uiState ||= {
+    openSections: new Set(),
+    searches: new Map(),
+    focusKey: null,
+  };
+  return context.uiState;
+}
+
+function trackUsefulFocus(context, element, key) {
+  element.dataset.uiKey = key;
+  element.addEventListener("focus", () => {
+    ensureUiState(context).focusKey = key;
+  });
+  return element;
+}
+
+function findUiKey(root, key) {
+  if (!root || !key) return null;
+  if (root.dataset?.uiKey === key) return root;
+  for (const child of root.childNodes || []) {
+    const match = findUiKey(child, key);
+    if (match) return match;
+  }
+  return null;
+}
+
+function restoreUsefulFocus(context) {
+  const key = ensureUiState(context).focusKey;
+  const element = findUiKey(context.body, key);
+  element?.focus?.({ preventScroll: true });
+}
+
+function configureDisclosure(context, details, key) {
+  const state = ensureUiState(context);
+  details.dataset.section = key;
+  details.open = state.openSections.has(key);
+  details.addEventListener("toggle", () => {
+    if (details.open) state.openSections.add(key);
+    else state.openSections.delete(key);
+  });
+}
+
 function optionsByField(options) {
   const grouped = new Map();
   for (const option of options) {
@@ -606,9 +665,31 @@ function optionsByField(options) {
   return grouped;
 }
 
-async function refreshFieldOptions(context, fieldKey) {
-  const fresh = await loadOptions(context.nodeKey, context.family, fieldKey);
+async function refreshFieldOptions(
+  context,
+  fieldKey,
+  dependencies = {},
+) {
+  const loader = dependencies.loader || loadOptions;
+  context.refreshTokens ||= new Map();
+  const token = (context.refreshTokens.get(fieldKey) || 0) + 1;
+  context.refreshTokens.set(fieldKey, token);
+  const family = context.family;
+  const loadGeneration = context.loadGeneration;
+  const stale = () =>
+    context.family !== family ||
+    context.loadGeneration !== loadGeneration ||
+    context.refreshTokens.get(fieldKey) !== token;
+  let fresh;
+  try {
+    fresh = await loader(context.nodeKey, family, fieldKey);
+  } catch (error) {
+    if (stale()) return { applied: false, stale: true };
+    throw error;
+  }
+  if (stale()) return { applied: false, stale: true };
   context.options.set(fieldKey, fresh);
+  return { applied: true, stale: false };
 }
 
 async function executeOptionMutation(
@@ -633,8 +714,73 @@ async function executeOptionMutation(
     requestOptions.body = JSON.stringify(mutation.payload);
   }
   const response = await request(mutation.path, requestOptions);
-  await refresh(context, mutation.refresh_field);
-  return response;
+  try {
+    const refreshResult = await refresh(context, mutation.refresh_field);
+    return {
+      committed: true,
+      refresh_ok: true,
+      refresh_field: mutation.refresh_field,
+      refresh_result: refreshResult,
+      response,
+    };
+  } catch (refreshError) {
+    return {
+      committed: true,
+      refresh_ok: false,
+      refresh_field: mutation.refresh_field,
+      refresh_error: refreshError,
+      response,
+    };
+  }
+}
+
+async function runMutationAction(context, key, button, action) {
+  context.pendingMutations ||= new Set();
+  if (context.pendingMutations.has(key)) return { skipped: true };
+  context.pendingMutations.add(key);
+  button.disabled = true;
+  try {
+    return await action();
+  } finally {
+    context.pendingMutations.delete(key);
+    button.disabled = false;
+  }
+}
+
+function reportMutationResult(context, result, committedMessage) {
+  if (!result.committed) return;
+  if (!result.refresh_ok) {
+    context.pendingRefreshField = result.refresh_field;
+    if (context.retryRefreshButton) context.retryRefreshButton.hidden = false;
+    setStatus(
+      context,
+      `${committedMessage} Choice refresh failed; use Retry choices. ${
+        result.refresh_error?.message || ""
+      }`.trim(),
+      true,
+    );
+    return;
+  }
+  context.pendingRefreshField = null;
+  if (context.retryRefreshButton) context.retryRefreshButton.hidden = true;
+  setStatus(context, committedMessage);
+  if (result.refresh_result?.applied !== false) renderSections(context);
+}
+
+async function retryPendingRefresh(context) {
+  const fieldKey = context.pendingRefreshField;
+  if (!fieldKey) return;
+  try {
+    const result = await refreshFieldOptions(context, fieldKey);
+    if (result.applied) {
+      context.pendingRefreshField = null;
+      context.retryRefreshButton.hidden = true;
+      setStatus(context, "Choices refreshed.");
+      renderSections(context);
+    }
+  } catch (error) {
+    setStatus(context, `Choice refresh still unavailable: ${error.message}`, true);
+  }
 }
 
 function renderError(context, message, allowReset = false) {
@@ -696,6 +842,7 @@ function renderChips(context, field, target) {
     text.value = fragment.text;
     text.title = `Copied from ${fragment.label}; edit affects this workflow only`;
     text.setAttribute("aria-label", `Edit copied ${fragment.label} text`);
+    trackUsefulFocus(context, text, `chip:${fragment.instance_id}`);
     text.addEventListener("input", () => {
       try {
         markDirty(context, editFragmentText(context.state, fragment.instance_id, text.value));
@@ -719,6 +866,7 @@ function renderChips(context, field, target) {
       toggle.checked = fragment.lora_enabled;
       toggle.title = "Request this associated LoRA (metadata only in this phase)";
       toggle.setAttribute("aria-label", `Enable LoRA associated with ${fragment.label}`);
+      trackUsefulFocus(context, toggle, `lora:${fragment.instance_id}`);
       toggle.addEventListener("change", () =>
         commitAndRender(
           context,
@@ -757,15 +905,17 @@ function selectOption(context, option) {
 function renderButtonOptions(context, field, target) {
   const row = makeElement("div", "", "arch-pt-row");
   const options = context.options.get(field.key) || [];
+  const models = buttonChoiceModels(options, context.state, context.family);
   const buttons = createChoiceButtons(
     document,
-    buttonChoiceModels(options, context.state, context.family),
+    models,
     (optionId) => {
       const option = options.find((item) => item.id === optionId);
       if (option) selectOption(context, option);
     },
   );
-  for (const button of buttons) {
+  for (const [index, button] of buttons.entries()) {
+    trackUsefulFocus(context, button, `option:${field.key}:${models[index].id}`);
     row.append(button);
   }
   if (!row.childNodes.length) row.append(makeElement("span", "No choices saved for this field.", "arch-pt-note"));
@@ -774,6 +924,7 @@ function renderButtonOptions(context, field, target) {
 
 function renderOptionManagement(context, field, target) {
   const details = document.createElement("details");
+  configureDisclosure(context, details, `manage:${field.key}`);
   const summary = document.createElement("summary");
   summary.textContent = "Manage choices";
   summary.title = `Create, duplicate, edit, or delete ${field.label} choices`;
@@ -825,33 +976,48 @@ function showOptionEditor(context, field, target, sourceOption = null) {
   loraRow.append(loraEnabled, makeElement("span", "LoRA association enabled by default"));
 
   const actions = makeElement("div", "", "arch-pt-actions");
-  actions.append(
-    makeButton("Save option", "Save option explicitly", async () => {
-      try {
-        const parsedLora = lora.value.trim() ? JSON.parse(lora.value) : null;
-        const payload = buildUserOptionPayload({
-          label: label.value,
-          node: context.nodeKey,
-          field: field.key,
-          group: group.value,
-          model_family: context.family,
-          phrase: phrase.value,
-          lora: parsedLora,
-          lora_enabled: loraEnabled.checked,
-        });
-        await executeOptionMutation(
+  const mutationKey = editingUser
+    ? `update:${sourceOption.id}`
+    : `create:${field.key}`;
+  const saveButton = makeButton("Save option", "Save option explicitly", async () => {
+    try {
+      const parsedLora = lora.value.trim() ? JSON.parse(lora.value) : null;
+      const payload = buildUserOptionPayload({
+        label: label.value,
+        node: context.nodeKey,
+        field: field.key,
+        group: group.value,
+        model_family: context.family,
+        phrase: phrase.value,
+        lora: parsedLora,
+        lora_enabled: loraEnabled.checked,
+      });
+      const result = await runMutationAction(
+        context,
+        mutationKey,
+        saveButton,
+        () =>
+          executeOptionMutation(
+            context,
+            editingUser ? "update" : "create",
+            editingUser ? sourceOption.id : null,
+            payload,
+            field.key,
+          ),
+      );
+      if (!result.skipped) {
+        reportMutationResult(
           context,
-          editingUser ? "update" : "create",
-          editingUser ? sourceOption.id : null,
-          payload,
-          field.key,
+          result,
+          editingUser ? "User option updated." : "User option saved.",
         );
-        setStatus(context, editingUser ? "User option updated." : "User option saved.");
-        renderSections(context);
-      } catch (error) {
-        setStatus(context, `Save failed: ${error.message}`, true);
       }
-    }),
+    } catch (error) {
+      setStatus(context, `Save failed: ${error.message}`, true);
+    }
+  });
+  actions.append(
+    saveButton,
     makeButton("Cancel", "Cancel option editing", () => target.replaceChildren()),
   );
   form.append(label, phrase, group, lora, loraRow, actions);
@@ -864,6 +1030,7 @@ function optionRow(context, field, option, editorTarget) {
     selectOption(context, option),
     "arch-pt-option-main",
   );
+  trackUsefulFocus(context, choose, `search-option:${field.key}:${option.id}`);
   choose.setAttribute("aria-pressed", String(optionSelected(context, option)));
   const protection = makeElement(
     "span",
@@ -889,26 +1056,38 @@ function optionRow(context, field, option, editorTarget) {
       ),
     );
   } else {
+    const deleteButton = makeButton("Delete option", `Delete saved option ${option.label}`, async () => {
+      if (!confirm(`Delete user option “${option.label}”? Existing workflow copies will remain.`)) return;
+      try {
+        const result = await runMutationAction(
+          context,
+          `delete:${option.id}`,
+          deleteButton,
+          () =>
+            executeOptionMutation(
+              context,
+              "delete",
+              option.id,
+              null,
+              field.key,
+            ),
+        );
+        if (!result.skipped) {
+          reportMutationResult(
+            context,
+            result,
+            "User option deleted; existing copied chips were not changed.",
+          );
+        }
+      } catch (error) {
+        setStatus(context, `Delete failed: ${error.message}`, true);
+      }
+    });
     row.append(
       makeButton("Edit option", `Edit saved option ${option.label}`, () =>
         showOptionEditor(context, field, editorTarget, option),
       ),
-      makeButton("Delete option", `Delete saved option ${option.label}`, async () => {
-        if (!confirm(`Delete user option “${option.label}”? Existing workflow copies will remain.`)) return;
-        try {
-          await executeOptionMutation(
-            context,
-            "delete",
-            option.id,
-            null,
-            field.key,
-          );
-          setStatus(context, "User option deleted; existing copied chips were not changed.");
-          renderSections(context);
-        } catch (error) {
-          setStatus(context, `Delete failed: ${error.message}`, true);
-        }
-      }),
+      deleteButton,
     );
   }
   return row;
@@ -917,8 +1096,10 @@ function optionRow(context, field, option, editorTarget) {
 function renderSearchable(context, field, target) {
   const input = document.createElement("input");
   input.type = "search";
+  input.value = ensureUiState(context).searches.get(field.key) || "";
   input.placeholder = `Search ${field.label.toLowerCase()}…`;
   input.setAttribute("aria-label", `Search ${field.label} options`);
+  trackUsefulFocus(context, input, `search:${field.key}`);
   const results = makeElement("div", "", "arch-pt-search-results");
   const editorTarget = makeElement("div");
   const renderResults = () => {
@@ -933,7 +1114,10 @@ function renderSearchable(context, field, target) {
     results.replaceChildren(...matches.map((option) => optionRow(context, field, option, editorTarget)));
     if (!matches.length) results.append(makeElement("span", "No matching choices.", "arch-pt-note"));
   };
-  input.addEventListener("input", renderResults);
+  input.addEventListener("input", () => {
+    ensureUiState(context).searches.set(field.key, input.value);
+    renderResults();
+  });
   const actions = makeElement("div", "", "arch-pt-actions");
   actions.append(
     makeButton("New option", `Create a user option for ${field.label}`, () =>
@@ -951,25 +1135,52 @@ function spectrumFragment(context, field) {
   );
 }
 
+function spectrumDescriptionId(context, field) {
+  const editorId = String(context.editorId || context.nodeKey || "editor")
+    .replace(/[^A-Za-z0-9_-]/gu, "-");
+  return `arch-pt-spectrum-${editorId}-${field.key}`;
+}
+
+function authoredSpectrumPhrase(field, family, value) {
+  return normalizeText(spectrumStop(field, Number(value)).phrases?.[family] || "");
+}
+
 function renderSpectrum(context, field, target) {
   const row = makeElement("div", "", "arch-pt-row");
+  const currentFragment = spectrumFragment(context, field);
   const enabled = document.createElement("input");
   enabled.type = "checkbox";
-  enabled.checked = Boolean(spectrumFragment(context, field));
+  enabled.checked = Boolean(currentFragment);
   enabled.setAttribute("aria-label", `Enable ${field.label}`);
+  trackUsefulFocus(context, enabled, `spectrum-enable:${field.key}`);
   const slider = document.createElement("input");
   slider.type = "range";
   slider.min = String(field.spectrum[0].minimum);
   slider.max = String(field.spectrum[field.spectrum.length - 1].maximum);
   slider.step = "0.001";
-  slider.value = String(spectrumValue(field, spectrumFragment(context, field)));
+  slider.value = String(spectrumValue(field, currentFragment));
   slider.disabled = !enabled.checked;
   slider.setAttribute("aria-label", `${field.label} semantic level`);
+  trackUsefulFocus(context, slider, `spectrum-slider:${field.key}`);
+  const phraseText =
+    currentFragment?.text || "Disabled — contributes nothing";
   const phrase = makeElement(
     "span",
-    spectrumFragment(context, field)?.text || "Disabled — contributes nothing",
+    phraseText,
     "arch-pt-note",
   );
+  phrase.id = spectrumDescriptionId(context, field);
+  slider.setAttribute("aria-describedby", phrase.id);
+  slider.setAttribute("aria-valuetext", phraseText);
+  slider.addEventListener("input", () => {
+    const semanticPhrase = authoredSpectrumPhrase(
+      field,
+      context.family,
+      slider.value,
+    );
+    phrase.textContent = semanticPhrase;
+    slider.setAttribute("aria-valuetext", semanticPhrase);
+  });
   const apply = () => {
     try {
       commitAndRender(
@@ -1006,6 +1217,7 @@ function renderSpecifics(context, field, target) {
       ? `Type ${field.label.toLowerCase()}…`
       : `Optional details not covered by ${field.label.toLowerCase()} choices…`;
   input.setAttribute("aria-label", `Additional specifics for ${field.label}`);
+  trackUsefulFocus(context, input, `specifics:${field.key}`);
   input.addEventListener("input", () => {
     try {
       markDirty(context, setSpecificsText(context.state, field.key, input.value));
@@ -1048,7 +1260,7 @@ function renderSections(context) {
   const fragment = document.createDocumentFragment();
   for (const section of context.schemaNode.sections) {
     const details = document.createElement("details");
-    details.dataset.section = section.key;
+    configureDisclosure(context, details, section.key);
     const summary = document.createElement("summary");
     summary.textContent = section.label;
     summary.title = `Show or hide ${section.label}`;
@@ -1058,6 +1270,7 @@ function renderSections(context) {
     fragment.append(details);
   }
   context.body.replaceChildren(fragment);
+  restoreUsefulFocus(context);
   context.node.setDirtyCanvas(true, true);
 }
 
@@ -1133,8 +1346,15 @@ function installEditor(node, nodeKey) {
   const status = makeElement("div", "", "arch-pt-status");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
+  const retryRefreshButton = makeButton(
+    "Retry choices",
+    "Retry refreshing the last saved field without repeating the mutation",
+    () => retryPendingRefresh(context),
+  );
+  retryRefreshButton.hidden = true;
   toolbar.append(
     status,
+    retryRefreshButton,
     makeButton("Retry", "Retry loading schema and choices", () => initializeContext(context)),
   );
   const body = makeElement("div");
@@ -1148,12 +1368,17 @@ function installEditor(node, nodeKey) {
     root,
     body,
     status,
+    retryRefreshButton,
     state: null,
     schemaNode: null,
     options: new Map(),
     family: currentFamily({ familyWidget }),
     invalid: false,
     loadGeneration: 0,
+    refreshTokens: new Map(),
+    pendingMutations: new Set(),
+    pendingRefreshField: null,
+    editorId: newInstanceId(),
   };
   node._archPtEditorContext = context;
   const domWidget = node.addDOMWidget("arch_pt_editor", "div", root, {
