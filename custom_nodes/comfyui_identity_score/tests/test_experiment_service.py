@@ -196,3 +196,37 @@ def test_record_run_cleans_files_and_marks_exact_run_failed_when_saving_or_compl
         service.record_run(experiment_id=experiment_id, run_id=db_run["id"], generated_image=np.zeros((2, 2, 3)), report={})
     assert service.store.get_run(db_run["id"])["state"] == "failed"
     assert not (Path(service.output_directory) / f"identity_lab/results/{db_run['id']}.png").exists()
+
+
+def test_record_run_retry_never_overwrites_or_deletes_a_completed_result(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "retry", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+    output = Path(service.output_directory) / f"identity_lab/results/{run_id}.png"
+    original = output.read_bytes()
+    monkeypatch.setattr(service, "_save_png", lambda *_args, **_kwargs: pytest.fail("completed run must be rejected before save"))
+
+    with pytest.raises(ValueError, match="recordable"):
+        service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.ones((2, 2, 3)), report={})
+
+    assert output.read_bytes() == original
+
+
+def test_record_run_conflict_never_deletes_a_preexisting_result_file(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "conflict", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    output = Path(service.output_directory) / f"identity_lab/results/{run_id}.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"someone-else-result")
+
+    with pytest.raises(FileExistsError):
+        service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+
+    assert output.read_bytes() == b"someone-else-result"
+    assert service.store.get_run(run_id)["state"] == "failed"

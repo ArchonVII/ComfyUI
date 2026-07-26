@@ -209,12 +209,35 @@ class ExperimentStore:
                 UPDATE runs
                 SET state = 'completed', output_path = ?, identity_report_json = ?, updated_at = ?, completed_at = ?
                 WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
-                    AND output_path IS NULL AND identity_report_json IS NULL
+                    AND (output_path IS NULL OR output_path = ?) AND identity_report_json IS NULL
                 """,
-                (normalized_path, report_json, now, now, run_id, experiment_id, run["state"], run["updated_at"]),
+                (normalized_path, report_json, now, now, run_id, experiment_id, run["state"], run["updated_at"], normalized_path),
             )
             if updated.rowcount != 1:
                 raise ValueError("run state changed concurrently")
+            return self._fetch_run(connection, run_id)
+
+    def claim_recorded_run(self, *, experiment_id: str, run_id: str, output_path: str) -> dict[str, Any]:
+        """Reserve one output path before a recorder creates its local file."""
+        normalized_path = _relative_output_path(output_path)
+        with self._connection() as connection:
+            self._fetch_experiment(connection, experiment_id)
+            run = self._fetch_run(connection, run_id)
+            if run["experiment_id"] != experiment_id:
+                raise ValueError("run does not belong to experiment")
+            if run["state"] not in {"planned", "queued", "running"} or run["output_path"] is not None or run["identity_report"] is not None:
+                raise ValueError("run is not recordable")
+            now = _utc_now()
+            updated = connection.execute(
+                """
+                UPDATE runs SET output_path = ?, updated_at = ?
+                WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
+                    AND output_path IS NULL AND identity_report_json IS NULL
+                """,
+                (normalized_path, now, run_id, experiment_id, run["state"], run["updated_at"]),
+            )
+            if updated.rowcount != 1:
+                raise ValueError("run is not recordable")
             return self._fetch_run(connection, run_id)
 
     def fail_recorded_run(self, *, experiment_id: str, run_id: str, error: str) -> dict[str, Any]:
@@ -231,7 +254,7 @@ class ExperimentStore:
             now = _utc_now()
             updated = connection.execute(
                 """
-                UPDATE runs SET state = 'failed', identity_report_json = ?, updated_at = ?
+                UPDATE runs SET state = 'failed', output_path = NULL, identity_report_json = ?, updated_at = ?
                 WHERE id = ? AND experiment_id = ? AND state = ? AND updated_at = ?
                 """,
                 (report_json, now, run_id, experiment_id, run["state"], run["updated_at"]),

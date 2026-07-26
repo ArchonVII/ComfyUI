@@ -189,6 +189,17 @@ def test_store_completes_and_fails_an_exact_queued_run_without_intermediate_tran
     assert store.fail_recorded_run(experiment_id=experiment["id"], run_id=failed["id"], error="image write failed")["state"] == "failed"
 
 
+def test_store_claims_one_exact_result_path_before_file_writes_and_rejects_competing_claims(store, planned_run):
+    experiment = store.create_experiment(name="Claim", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+
+    claimed = store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/result.png")
+
+    assert claimed["output_path"] == "identity_lab/results/result.png"
+    with pytest.raises(ValueError, match="recordable"):
+        store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/result.png")
+
+
 def test_store_completion_data_is_immutable_and_output_paths_are_relative(store, planned_run):
     experiment = store.create_experiment(name="Completion", mode="face_swap")
     run = store.create_run(experiment["id"], planned_run)

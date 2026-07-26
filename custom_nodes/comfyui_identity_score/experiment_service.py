@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path, PureWindowsPath
 import shutil
 import time
@@ -225,13 +226,20 @@ class ExperimentService:
     def record_run(self, *, experiment_id: str, run_id: str, generated_image: Any, report: dict[str, Any], prompt: Any = None, extra_pnginfo: Any = None, runtime_seconds: float | None = None) -> dict[str, Any]:
         relative = f"identity_lab/results/{run_id}.png"
         output = self.output_directory / relative
-        temporary = output.with_name(output.name + ".tmp")
+        self.store.claim_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative)
+        temporary = output.with_name(f".{output.name}.{uuid4().hex}.tmp")
         output.parent.mkdir(parents=True, exist_ok=True)
+        created_output = False
         try:
             self._save_png(generated_image, temporary, prompt=prompt, extra_pnginfo=extra_pnginfo)
+            descriptor = os.open(output, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(descriptor)
+            created_output = True
             temporary.replace(output)
         except BaseException as exc:
             temporary.unlink(missing_ok=True)
+            if created_output:
+                output.unlink(missing_ok=True)
             try:
                 self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"image save failed: {type(exc).__name__}: {exc}")
             except (KeyError, ValueError):
@@ -244,7 +252,8 @@ class ExperimentService:
         try:
             return self.store.complete_recorded_run(experiment_id=experiment_id, run_id=run_id, output_path=relative, identity_report=report)
         except BaseException as exc:
-            output.unlink(missing_ok=True)
+            if created_output:
+                output.unlink(missing_ok=True)
             try:
                 self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=f"record completion failed: {type(exc).__name__}: {exc}")
             except (KeyError, ValueError):

@@ -62,15 +62,48 @@ def test_plan_resume_archive_and_estimate_validators_reject_unknown_or_wrong_nes
 def test_active_run_helper_extracts_only_dual_identity_runs_from_live_queue_and_active_history():
     dual_prompt = {"4": {"class_type": "DualIdentityScore", "inputs": {"run_id": "queued-run"}}}
     completed_prompt = {"4": {"class_type": "DualIdentityScore", "inputs": {"run_id": "complete-run"}}}
-    prompt_server = type("PromptServer", (), {
-        "prompt_queue": type("Queue", (), {"get_current_queue": lambda self: ([(1, "prompt-id", dual_prompt, {}, [])], [])})(),
-        "history": {
-            "active": {"status": {"status_str": "running"}, "prompt": {"5": {"class_type": "DualIdentityScore", "inputs": {"run_id": "history-run"}}}},
-            "done": {"status": {"status_str": "success"}, "prompt": completed_prompt},
-        },
-    })()
+    class PromptQueue:
+        def get_current_queue(self):
+            return ([(1, "prompt-id", dual_prompt, {}, [])], [])
 
-    assert routes.active_identity_lab_run_ids(prompt_server) == {"queued-run", "history-run"}
+        def get_history(self):
+            return {
+                "active": {"status": {"status_str": "running"}, "prompt": {"5": {"class_type": "DualIdentityScore", "inputs": {"run_id": "history-run"}}}},
+                "done": {"status": {"status_str": "success"}, "prompt": completed_prompt},
+            }
+
+    prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
+
+    assert routes.active_identity_lab_run_ids(prompt_server) == {"queued-run", "history-run", "complete-run"}
+
+
+def test_active_run_helper_uses_prompt_queue_history_api_and_treats_history_as_active():
+    history_prompt = (1, "history-prompt", {"4": {"class_type": "DualIdentityScore", "inputs": {"experiment_id": "experiment", "run_id": "history-run"}}}, {}, [])
+
+    class PromptQueue:
+        def get_current_queue(self):
+            return ([], [])
+
+        def get_history(self):
+            return {"history-prompt": {"prompt": history_prompt, "status": {"status_str": "success"}}}
+
+    prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
+
+    assert routes.active_identity_lab_run_ids(prompt_server) == {"history-run"}
+
+
+def test_active_run_helper_fails_closed_when_prompt_queue_inspection_errors():
+    class PromptQueue:
+        def get_current_queue(self):
+            raise RuntimeError("queue locked")
+
+        def get_history(self):
+            return {}
+
+    prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
+
+    with pytest.raises(ValueError, match="unable to inspect"):
+        routes.active_identity_lab_run_ids(prompt_server)
 
 
 def test_wrapped_routes_translate_malformed_json_and_type_errors_to_bad_request():

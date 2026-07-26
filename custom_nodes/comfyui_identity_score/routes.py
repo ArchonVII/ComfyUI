@@ -61,25 +61,20 @@ def active_identity_lab_run_ids(prompt_server: Any | None = None) -> set[str]:
         server_module = sys.modules.get("server")
         prompt_server = getattr(getattr(server_module, "PromptServer", None), "instance", None)
     if prompt_server is None:
-        return set()
-    found: set[str] = set()
+        raise ValueError("unable to inspect ComfyUI queue/history")
     queue = getattr(prompt_server, "prompt_queue", None)
     get_current_queue = getattr(queue, "get_current_queue", None)
-    if callable(get_current_queue):
-        try:
-            found.update(_queued_run_ids(get_current_queue()))
-        except (AttributeError, KeyError, TypeError, ValueError):
-            pass
-    history = getattr(prompt_server, "history", {})
-    if isinstance(history, Mapping):
-        for record in history.values():
-            if not isinstance(record, Mapping):
-                continue
-            status = record.get("status")
-            status_text = status.get("status_str") if isinstance(status, Mapping) else record.get("status_str", status)
-            if str(status_text).lower() in {"pending", "queued", "running", "executing"}:
-                found.update(_queued_run_ids(record))
-    return found
+    get_history = getattr(queue, "get_history", None)
+    if not callable(get_current_queue) or not callable(get_history):
+        raise ValueError("unable to inspect ComfyUI queue/history")
+    try:
+        current = get_current_queue()
+        history = get_history()
+    except Exception as exc:
+        raise ValueError("unable to inspect ComfyUI queue/history") from exc
+    if not isinstance(history, Mapping):
+        raise ValueError("unable to inspect ComfyUI queue/history")
+    return _queued_run_ids(current) | _queued_run_ids(history)
 
 
 # Test seam for route-level resume handling; production keeps it local to PromptServer.
