@@ -47,9 +47,9 @@ const workflow = {{
   "1": {{ class_type: "LoadImage", inputs: {{ image: "locked-base.png" }}, _meta: {{ title: "IDENTITY_LAB_BASE_IMAGE" }} }},
   "2": {{ class_type: "LoadImage", inputs: {{ image: "locked-ref.png" }}, _meta: {{ title: "IDENTITY_LAB_REFERENCE_IMAGE" }} }},
   "3": {{ class_type: "UNETLoader", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_MODEL" }} }},
-  "4": {{ class_type: "LoraLoader", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_LORA_1" }} }},
-  "5": {{ class_type: "LoraLoader", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_LORA_2" }} }},
-  "6": {{ class_type: "LoraLoader", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_LORA_3" }} }},
+  "4": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-1.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_1" }} }},
+  "5": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-2.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_2" }} }},
+  "6": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-3.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_3" }} }},
   "7": {{ class_type: "KSampler", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_SAMPLER" }} }},
   "8": {{ class_type: "DualIdentityScore", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_SCORE" }} }},
   "9": {{ class_type: "ImageScaleToTotalPixels", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_PIXEL_BUDGET" }} }},
@@ -64,13 +64,16 @@ if (!api.estimatePreview(settings, 2).includes("runs")) throw new Error("estimat
 const patched = api.patchPrompt(workflow, {{ ...settings, experimentId: "exp", runId: "run", mode: "face_swap" }});
 if (patched["1"].inputs.image !== "locked-base.png" || patched["2"].inputs.image !== "locked-ref.png") throw new Error("locked image roles changed");
 if (patched["3"].inputs.unet_name !== "flux.safetensors" || patched["8"].inputs.run_id !== "run") throw new Error("stable role patch failed");
+if (patched["4"].inputs.lora_name !== "face.safetensors" || patched["5"].inputs.lora_name !== "default-2.safetensors" || patched["5"].inputs.strength_model !== 0 || patched["9"].inputs.megapixels !== 1.048576) throw new Error("inactive LoRA or megapixel patching is invalid");
 const duplicate = structuredClone(workflow); duplicate["9"] = structuredClone(duplicate["8"]);
 let rejected = false; try {{ api.patchPrompt(duplicate, {{...settings, experimentId: "exp", runId: "run", mode: "face_swap" }}); }} catch {{ rejected = true; }}
 if (!rejected) throw new Error("duplicate roles were accepted");
 const normalized = api.normalizeReport({{ identity_report: {{ active_score: {{ cosine_similarity: 0.91 }}, reference_to_output: {{ cosine_similarity: 0.91 }}, base_to_output: {{ cosine_similarity: 0.20 }}, face_detection: {{ base: true, reference: true, generated: true }}, runtime_seconds: 12 }} }});
 if (normalized.activeScore !== 0.91 || normalized.referenceScore !== 0.91 || normalized.baseScore !== 0.2) throw new Error("persisted score schema was not normalized");
 const promotion = api.buildPromotionPayload([{{ plan: {{ checkpoint: "flux", seed: 7, loras: [["face", 0.7]] }} }}], "focused_refine", {{ steps: 30, cfg: 4, denoise: 0.8, pixelBudget: 1048576, sampler: "euler", scheduler: "simple" }});
-if (promotion.stages[0] !== "focused_refine" || promotion.loras[0][0] !== "face" || promotion.refine_settings.pixel_budget !== 1048576) throw new Error("promotion discarded selected candidates");
+if (promotion.stages[0] !== "focused_refine" || promotion.loras[0][0] !== "face" || promotion.refine_settings.pixel_budget !== 1.048576) throw new Error("promotion discarded selected candidates");
+const baselinePromotion = api.buildPromotionPayload([{{ plan: {{ checkpoint: "flux", seed: 7, loras: [] }} }}], "lora_single", settings);
+if (baselinePromotion.loras[0][0] !== "face.safetensors") throw new Error("baseline promotion lost persisted LoRA candidates");
 
 const calls = [];
 const fetchApi = async (path, options = {{}}) => {{
@@ -96,14 +99,14 @@ const fetchApi = async (path, options = {{}}) => {{
     queueCalls.push(path);
     if (path === "/identity-lab/experiments/exp") {{ detailCalls++; return {{ok:true, json:async()=> detailCalls > 1 ? {{...persisted, runs:[{{...persisted.runs[0], state:"completed"}}]}} : persisted }}; }}
     if (path === "/prompt") return {{ok:true, json:async()=>({{prompt_id:"prompt-1"}})}};
-    if (path === "/history/prompt-1") return {{ok:true, json:async()=>({{prompt_id:"prompt-1", status:{{status_str:"success"}}}})}};
+    if (path === "/history/prompt-1") return {{ok:true, json:async()=>({{ "prompt-1": {{prompt_id:"prompt-1", status:{{status_str:"success"}}}} }})}};
     return {{ok:true, json:async()=>({{state:"queued"}})}};
   }};
   const serial = new api.SerialQueue({{ fetchApi: queueFetch, graphToPrompt: async () => {{ throw new Error("persisted workflow must be used"); }}, pollMs: 0, maxPolls: 3 }});
   await serial.run("exp");
   if (queueCalls.filter((path) => path === "/prompt").length !== 1 || !queueCalls.includes("/history/prompt-1")) throw new Error("serial queue did not persist and poll one prompt");
   const failureCalls = []; let failedRecorded = false;
-  const failingQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ failureCalls.push(path); if (path === "/identity-lab/experiments/bad") return {{ok:true, json:async()=> failedRecorded ? {{...persisted, runs:[{{...persisted.runs[0], state:"failed"}}]}} : persisted}}; if (path === "/prompt") return {{ok:true, json:async()=>({{prompt_id:"bad-prompt"}})}}; if (path === "/history/bad-prompt") return {{ok:true, json:async()=>({{status:{{status_str:"error"}}}})}}; if (path.endsWith("/failed")) {{ failedRecorded = true; return {{ok:true, json:async()=>({{state:"failed"}})}}; }} return {{ok:true, json:async()=>({{}})}}; }}, maxPolls: 1 }});
+  const failingQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ failureCalls.push(path); if (path === "/identity-lab/experiments/bad") return {{ok:true, json:async()=> failedRecorded ? {{...persisted, runs:[{{...persisted.runs[0], state:"failed"}}]}} : persisted}}; if (path === "/prompt") return {{ok:true, json:async()=>({{prompt_id:"bad-prompt"}})}}; if (path === "/history/bad-prompt") return {{ok:true, json:async()=>({{ "bad-prompt": {{status:{{status_str:"error"}}}} }})}}; if (path.endsWith("/failed")) {{ failedRecorded = true; return {{ok:true, json:async()=>({{state:"failed"}})}}; }} return {{ok:true, json:async()=>({{}})}}; }}, maxPolls: 1 }});
   await failingQueue.run("bad");
   if (!failureCalls.some((path) => path.endsWith("/runs/serial/failed"))) throw new Error("terminal execution failure was not recorded");
 }})().catch((error) => {{ console.error(error.stack || error.message); process.exit(1); }});

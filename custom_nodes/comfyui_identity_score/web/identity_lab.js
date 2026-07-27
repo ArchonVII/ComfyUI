@@ -42,6 +42,12 @@ function parseSeeds(value) {
   return raw.map((seed) => strictNumber(seed, "seed", { integer: true, min: 0 }));
 }
 
+function megapixels(value) {
+  const numeric = strictNumber(value, "pixel budget", { min: 0.01 });
+  // Older saved configurations use raw pixels; normalize explicitly to MP.
+  return numeric > 1000 ? numeric / 1_000_000 : numeric;
+}
+
 function parseSetup(raw) {
   const checkpoints = (Array.isArray(raw.checkpoints) ? raw.checkpoints : [raw.checkpoints]).filter(Boolean);
   if (!checkpoints.length || checkpoints.some((name) => typeof name !== "string" || !name.trim())) throw new Error("select at least one checkpoint");
@@ -54,7 +60,7 @@ function parseSetup(raw) {
     steps: strictNumber(raw.steps, "steps", { integer: true, min: 1 }),
     cfg: strictNumber(raw.cfg, "guidance", { min: 0 }),
     denoise: strictNumber(raw.denoise, "denoise", { min: 0, max: 1 }),
-    pixelBudget: strictNumber(raw.pixelBudget, "pixel budget", { integer: true, min: 1 }),
+    pixelBudget: megapixels(raw.pixelBudget),
     sampler: String(raw.sampler || "euler"), scheduler: String(raw.scheduler || "simple"),
   };
 }
@@ -90,13 +96,19 @@ function patchPrompt(workflow, settings) {
   if (roles.IDENTITY_LAB_MODEL[1].class_type === "CheckpointLoaderSimple") model.ckpt_name = model.unet_name;
   ["IDENTITY_LAB_LORA_1", "IDENTITY_LAB_LORA_2", "IDENTITY_LAB_LORA_3"].forEach((role, index) => {
     const inputs = roles[role][1].inputs ??= {}; const lora = settings.loras?.[index];
-    inputs.lora_name = lora?.name ?? ""; inputs.strength_model = lora?.strength ?? 0; inputs.strength_clip = lora?.strength ?? 0;
+    if (lora) inputs.lora_name = lora.name;
+    inputs.strength_model = lora?.strength ?? 0; inputs.strength_clip = lora?.strength ?? 0;
   });
   const sampler = roles.IDENTITY_LAB_SAMPLER[1].inputs ??= {};
   Object.assign(sampler, { seed: settings.seed ?? settings.seeds?.[0], steps: settings.steps, cfg: settings.cfg, sampler_name: settings.sampler, scheduler: settings.scheduler, denoise: settings.denoise });
-  Object.assign(roles.IDENTITY_LAB_PIXEL_BUDGET[1].inputs ??= {}, { total_pixels: settings.pixelBudget });
+  Object.assign(roles.IDENTITY_LAB_PIXEL_BUDGET[1].inputs ??= {}, { megapixels: settings.pixelBudget });
   Object.assign(roles.IDENTITY_LAB_SCORE[1].inputs ??= {}, { experiment_id: settings.experimentId, run_id: settings.runId, experiment_mode: settings.mode });
   return prompt;
+}
+
+function effectiveRunSettings(setup, plan = {}) {
+  const refine = plan.refine ?? {};
+  return { ...setup, ...refine, pixelBudget: refine.pixel_budget ?? refine.megapixels ?? setup.pixelBudget, checkpoint: plan.checkpoint ?? setup.checkpoint, seed: plan.seed ?? setup.seed, loras: plan.loras ?? setup.loras ?? [] };
 }
 
 async function responseJson(response) {
@@ -107,7 +119,7 @@ async function responseJson(response) {
 
 async function submitOne({ fetchApi = api.fetchApi.bind(api), workflow, experimentId, run, settings }) {
   await responseJson(await fetchApi(`${LAB_ROOT}/runs/${run.id}/queued`, { method: "POST", body: JSON.stringify({ experiment_id: experimentId }) }));
-  const prompt = patchPrompt(workflow, { ...settings, checkpoint: run.plan.checkpoint, seed: run.plan.seed, loras: run.plan.loras ?? [], experimentId, runId: run.id });
+  const prompt = patchPrompt(workflow, { ...effectiveRunSettings(settings, run.plan), experimentId, runId: run.id });
   try {
     return await responseJson(await fetchApi("/prompt", { method: "POST", body: JSON.stringify({ prompt }) }));
   } catch (error) {
@@ -147,7 +159,8 @@ class SerialQueue {
       const run = detail.runs.find((item) => item.id === runId);
       this.onUpdate(detail);
       if (!run || ["completed", "failed", "archived"].includes(run.state)) return run;
-      const historyStatus = String(history?.status?.status_str ?? history?.status ?? "").toLowerCase();
+      const historyEntry = history?.[promptId] ?? history;
+      const historyStatus = String(historyEntry?.status?.status_str ?? historyEntry?.status ?? "").toLowerCase();
       if (["success", "error", "failed", "interrupted"].some((state) => historyStatus.includes(state))) {
         const error = historyStatus.includes("success") ? "prompt completed without DualIdentityScore result" : `prompt execution ${historyStatus}`;
         await this.recordFailure(experimentId, runId, error);
@@ -187,15 +200,16 @@ function buildPromotionPayload(candidates, stage, settings) {
   const seeds = [...new Set(candidates.map((run) => run.plan?.seed).filter((seed) => Number.isInteger(seed)))];
   const loraMap = new Map();
   for (const run of candidates) for (const lora of run.plan?.loras ?? []) { const [name, strength] = Array.isArray(lora) ? lora : [lora.name, lora.strength]; if (name) loraMap.set(`${name}:${strength}`, [name, strength]); }
+  if (stage === "lora_single" && !loraMap.size) for (const lora of settings.loras ?? []) { const [name, strength] = Array.isArray(lora) ? lora : [lora.name, lora.strength]; if (name) loraMap.set(`${name}:${strength}`, [name, strength]); }
   const payload = { checkpoints, seeds, loras: [...loraMap.values()], stages: [stage] };
   if (!checkpoints.length || !seeds.length) throw new Error("selected candidates need checkpoint and seed values");
-  if (stage === "focused_refine") payload.refine_settings = { steps: settings.steps, cfg: settings.cfg, denoise: settings.denoise, pixel_budget: settings.pixelBudget, sampler: settings.sampler, scheduler: settings.scheduler };
+  if (stage === "focused_refine") payload.refine_settings = { steps: settings.steps, cfg: settings.cfg, denoise: settings.denoise, pixel_budget: megapixels(settings.pixelBudget), sampler: settings.sampler, scheduler: settings.scheduler };
   return payload;
 }
-function galleryMetadata(run) {
-  const report = normalizeReport(run); const plan = run.plan ?? {}; const detection = report.detection;
+function galleryMetadata(run, setup = {}) {
+  const report = normalizeReport(run); const plan = run.plan ?? {}; const effective = effectiveRunSettings(setup, plan); const detection = report.detection;
   const loras = (plan.loras ?? []).map((item) => Array.isArray(item) ? `${item[0]} @ ${item[1]}` : `${item.name} @ ${item.strength}`).join(", ") || "no LoRA";
-  const refine = plan.refine ?? {}; return `active ${report.activeScore ?? "—"} • reference ${report.referenceScore ?? "—"} • base ${report.baseScore ?? "—"} • ${report.rankable ? "rankable" : "not rankable"} • detections base:${!!detection.base} reference:${!!detection.reference} generated:${!!detection.generated} • ${plan.checkpoint ?? "—"} • ${loras} • seed ${plan.seed ?? "—"} • steps ${refine.steps ?? plan.steps ?? "—"} cfg ${refine.cfg ?? plan.cfg ?? "—"} ${refine.sampler ?? plan.sampler ?? "—"}/${refine.scheduler ?? plan.scheduler ?? "—"} denoise ${refine.denoise ?? plan.denoise ?? "—"} pixels ${refine.pixel_budget ?? plan.pixel_budget ?? "—"} • runtime ${report.runtimeSeconds ?? "—"}`;
+  return `active ${report.activeScore ?? "—"} • reference ${report.referenceScore ?? "—"} • base ${report.baseScore ?? "—"} • ${report.rankable ? "rankable" : "not rankable"} • detections base:${!!detection.base} reference:${!!detection.reference} generated:${!!detection.generated} • ${plan.checkpoint ?? "—"} • ${loras} • seed ${plan.seed ?? "—"} • steps ${effective.steps ?? "—"} cfg ${effective.cfg ?? "—"} ${effective.sampler ?? "—"}/${effective.scheduler ?? "—"} denoise ${effective.denoise ?? "—"} MP ${effective.pixelBudget ?? "—"} • runtime ${report.runtimeSeconds ?? "—"}`;
 }
 function filterAndSortResults(results, filters) {
   const filtered = results.filter((run) => {
@@ -229,7 +243,7 @@ function renderGallery(container, detail, refresh, selected = new Set(), filters
     const card = el("article", undefined, "identity-lab-card");
     if (run.state === "completed") { const image = el("img"); image.src = `${LAB_ROOT}/runs/${encodeURIComponent(run.id)}/output`; image.alt = `Result ${run.id}`; card.append(image); }
     const choose = el("input"); choose.type = "checkbox"; choose.checked = selected.has(run.id); choose.addEventListener("change", (event) => { event.target.checked ? selected.add(run.id) : selected.delete(run.id); }); card.append(choose);
-    card.append(el("p", galleryMetadata(run)));
+    card.append(el("p", galleryMetadata(run, detail.experiment?.settings?.setup ?? {})));
     const controls = el("div", undefined, "identity-lab-card-controls");
     if (run.state === "completed") for (let rating = 1; rating <= 5; rating++) { const button = el("button", String(rating)); button.addEventListener("click", async () => { await responseJson(await api.fetchApi(`${LAB_ROOT}/runs/${run.id}/review`, { method: "PATCH", body: JSON.stringify({ rating }) })); refresh(); }); controls.append(button); }
     const favorite = el("button", run.favorite ? "★" : "☆"); favorite.addEventListener("click", async () => { await responseJson(await api.fetchApi(`${LAB_ROOT}/runs/${run.id}/review`, { method: "PATCH", body: JSON.stringify({ favorite: !run.favorite }) })); refresh(); }); controls.append(favorite); card.append(controls); container.append(card);
@@ -242,7 +256,7 @@ function renderPanel(container) {
   css(); container.replaceChildren(); const title = el("h2", "Identity Lab"); const status = el("p", "Load a workflow with stable Identity Lab roles."); const form = el("form", undefined, "identity-lab-setup");
   const mode = el("select"); mode.name = "mode"; mode.append(new Option("Face swap", "face_swap"), new Option("Identity i2i", "identity_i2i")); form.append(mode);
   const sampler = el("select"); sampler.name = "sampler"; sampler.append(new Option("Euler", "euler"), new Option("Euler ancestral", "euler_ancestral"), new Option("DPM++ 2M", "dpmpp_2m")); const scheduler = el("select"); scheduler.name = "scheduler"; scheduler.append(new Option("Simple", "simple"), new Option("Karras", "karras"), new Option("Normal", "normal")); form.append(sampler, scheduler);
-  const fields = [["name", "Experiment name", "Identity sweep"], ["seeds", "Seeds", "1, 2, 3"], ["steps", "Steps", "28"], ["cfg", "Guidance / CFG", "3.5"], ["denoise", "Denoise", "0.8"], ["pixelBudget", "Pixel budget", "1048576"]];
+  const fields = [["name", "Experiment name", "Identity sweep"], ["seeds", "Seeds", "1, 2, 3"], ["steps", "Steps", "28"], ["cfg", "Guidance / CFG", "3.5"], ["denoise", "Denoise", "0.8"], ["pixelBudget", "Pixel budget (MP; raw pixels accepted)", "1.048576"]];
   for (const [name, label, value] of fields) { const input = el("input"); input.name = name; input.value = value; input.placeholder = label; form.append(input); }
   const catalogArea = el("fieldset"); catalogArea.append(el("legend", "Local Flux 9B catalog")); form.append(catalogArea); const launch = el("button", "Create & run one at a time"); launch.type = "submit"; launch.disabled = true; form.append(launch); const actions = el("section", undefined, "identity-lab-actions"); const gallery = el("section", undefined, "identity-lab-gallery"); container.append(title, status, form, actions, gallery);
   const selectedSetup = () => ({ mode: formValue(form, "mode"), checkpoints: [...form.querySelectorAll('input[name="checkpoint"]:checked')].map((input) => input.value), loras: [1, 2, 3].map((index) => ({ name: formValue(form, `lora-${index}`), strength: formValue(form, `lora-strength-${index}`) })).filter((lora) => lora.name), seeds: formValue(form, "seeds"), steps: formValue(form, "steps"), cfg: formValue(form, "cfg"), denoise: formValue(form, "denoise"), pixelBudget: formValue(form, "pixelBudget"), sampler: formValue(form, "sampler"), scheduler: formValue(form, "scheduler") });
@@ -257,7 +271,7 @@ function renderPanel(container) {
   form.addEventListener("submit", async (event) => { event.preventDefault(); try {
     await catalogPromise; const graph = await app.graphToPrompt(); const workflow = graph.output ?? graph.prompt ?? graph; roleMap(workflow); const settings = parseSetup(selectedSetup());
     status.textContent = estimatePreview(settings, settings.checkpoints.length * settings.seeds.length); const created = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments`, { method: "POST", body: JSON.stringify({ name: formValue(form, "name"), mode: settings.mode, checkpoints: settings.checkpoints, seeds: settings.seeds, loras: settings.loras.map((l) => [l.name, l.strength]), stages: ["baseline"], settings: { setup: settings }, workflow }) }));
-    const id = created.experiment.id; const pause = el("button", "Pause after current"); pause.addEventListener("click", () => queue?.pause()); const resume = el("button", "Resume planned or confirmed-stale work"); resume.addEventListener("click", () => queue?.resume(id)); const stage = el("select"); stage.append(new Option("LoRA singles", "lora_single"), new Option("LoRA pairs", "lora_pair"), new Option("LoRA triples", "lora_triple"), new Option("Focused refine", "focused_refine")); const promote = el("button", "Promote selected candidates"); promote.addEventListener("click", async () => { const detail = await refresh(id); const candidates = detail.runs.filter((run) => selected.has(run.id)); const payload = buildPromotionPayload(candidates, stage.value, settings); await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/promote`, { method: "POST", body: JSON.stringify(payload) })); await refresh(id); }); const archive = el("button", "Archive"); archive.addEventListener("click", async () => { await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/archive`, { method: "POST", body: "{}" })); status.textContent = "Archived. Outputs retained."; }); const preview = el("button", "Preview deletion"); const confirmation = el("input"); confirmation.placeholder = "Type exact DELETE confirmation"; const remove = el("button", "Delete archived experiment"); let deleteToken = ""; preview.addEventListener("click", async () => { const value = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/delete-preview`)); deleteToken = value.token; status.textContent = `Delete preview — DB rows: ${value.runs.join(", ") || "none"}; files: ${value.files.join(", ") || "none"}`; confirmation.placeholder = value.confirmation; }); remove.addEventListener("click", async () => { const value = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}`, { method: "DELETE", body: JSON.stringify({ token: deleteToken, confirmation: confirmation.value }) })); status.textContent = `Deleted ${value.runs.length} rows; recoverable trash: ${(value.recoverable_trash ?? []).join(", ") || "none"}`; gallery.replaceChildren(); }); actions.replaceChildren(pause, resume, stage, promote, archive, preview, confirmation, remove);
+    const id = created.experiment.id; const pause = el("button", "Pause after current"); pause.addEventListener("click", () => queue?.pause()); const resume = el("button", "Resume planned or confirmed-stale work"); resume.addEventListener("click", () => queue?.resume(id)); const stage = el("select"); stage.append(new Option("LoRA singles", "lora_single"), new Option("LoRA pairs", "lora_pair"), new Option("LoRA triples", "lora_triple"), new Option("Focused refine", "focused_refine")); const promote = el("button", "Promote selected candidates"); promote.addEventListener("click", async () => { const detail = await refresh(id); const candidates = detail.runs.filter((run) => selected.has(run.id)); const currentRefinement = parseSetup(selectedSetup()); const payload = buildPromotionPayload(candidates, stage.value, currentRefinement); await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/promote`, { method: "POST", body: JSON.stringify(payload) })); await refresh(id); }); const archive = el("button", "Archive"); archive.addEventListener("click", async () => { await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/archive`, { method: "POST", body: "{}" })); status.textContent = "Archived. Outputs retained."; }); const preview = el("button", "Preview deletion"); const confirmation = el("input"); confirmation.placeholder = "Type exact DELETE confirmation"; const remove = el("button", "Delete archived experiment"); let deleteToken = ""; preview.addEventListener("click", async () => { const value = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/delete-preview`)); deleteToken = value.token; status.textContent = `Delete preview — DB rows: ${value.runs.join(", ") || "none"}; files: ${value.files.join(", ") || "none"}`; confirmation.placeholder = value.confirmation; }); remove.addEventListener("click", async () => { const value = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}`, { method: "DELETE", body: JSON.stringify({ token: deleteToken, confirmation: confirmation.value }) })); status.textContent = `Deleted ${value.runs.length} rows; recoverable trash: ${(value.recoverable_trash ?? []).join(", ") || "none"}`; gallery.replaceChildren(); }); actions.replaceChildren(pause, resume, stage, promote, archive, preview, confirmation, remove);
     queue = new SerialQueue({ onUpdate: (detail) => { if (detail.runs) { status.textContent = statusSummary(detail); renderGallery(gallery, detail, () => refresh(id), selected); } } }); refresh(id); queue.run(id);
   } catch (error) { status.textContent = `Error: ${String(error.message || error)}`; } });
 }
@@ -266,6 +280,6 @@ css();
 app.registerExtension({ name: "arch.identity-lab", setup() { css(); } });
 app.extensionManager.registerSidebarTab({ id: "arch.identity-lab", icon: "pi pi-flask", title: "Identity Lab", type: "custom", render: renderPanel });
 
-const seam = { parseSetup, estimatePreview, patchPrompt, submitOne, normalizeReport, buildPromotionPayload, filterAndSortResults, galleryMetadata, SerialQueue, renderPanel };
+const seam = { parseSetup, estimatePreview, patchPrompt, effectiveRunSettings, submitOne, normalizeReport, buildPromotionPayload, filterAndSortResults, galleryMetadata, SerialQueue, renderPanel };
 globalThis.__identityLab = seam;
-export { parseSetup, estimatePreview, patchPrompt, normalizeReport, buildPromotionPayload, submitOne, filterAndSortResults, galleryMetadata, SerialQueue };
+export { parseSetup, estimatePreview, patchPrompt, effectiveRunSettings, normalizeReport, buildPromotionPayload, submitOne, filterAndSortResults, galleryMetadata, SerialQueue };
