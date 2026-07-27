@@ -19,6 +19,7 @@ from comfyui_identity_score.experiment_service import (
     IDENTITY_LAB_SAMPLER,
     IDENTITY_LAB_SCORE,
     ExperimentService,
+    _safe_relative_name,
     validate_api_workflow,
 )
 
@@ -89,6 +90,12 @@ def test_windows_catalog_entries_remain_exact_loader_compatible_names(tmp_path):
 
     assert catalog["diffusion_models"] == [folder_paths.get_filename_list("diffusion_models")[0]]
     assert catalog["loras"] == [folder_paths.get_filename_list("loras")[0]]
+
+
+def test_safe_relative_name_normalizes_storage_paths_and_rejects_unsafe_windows_paths():
+    assert _safe_relative_name(r"identity_lab\results\x.png") == "identity_lab/results/x.png"
+    assert _safe_relative_name(r"..\outside\x.png") is None
+    assert _safe_relative_name(r"C:\outside\x.png") is None
 
 
 def test_workflow_template_requires_one_typed_node_for_every_stable_role():

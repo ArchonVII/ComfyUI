@@ -49,17 +49,17 @@ def _safe_relative_name(value: str) -> str | None:
     windows = PureWindowsPath(normalized)
     if normalized.startswith("/") or Path(normalized).is_absolute() or windows.is_absolute() or windows.drive or ".." in Path(normalized).parts:
         return None
-    return value
+    return normalized
 
 
 def _catalog_entries(folder_paths_module: Any, groups: tuple[str, ...]) -> list[str]:
     values: list[str] = []
     for group in groups:
         for raw_name in folder_paths_module.get_filename_list(group):
-            name = _safe_relative_name(raw_name)
-            lowered = (name or "").casefold()
-            if name and "flux" in lowered and "9b" in lowered and name not in values:
-                values.append(name)
+            normalized = _safe_relative_name(raw_name)
+            lowered = (normalized or "").casefold()
+            if normalized and "flux" in lowered and "9b" in lowered and raw_name not in values:
+                values.append(raw_name)
     return values
 
 
