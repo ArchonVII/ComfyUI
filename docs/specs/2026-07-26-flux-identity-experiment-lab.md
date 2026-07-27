@@ -117,7 +117,7 @@ The face-swap template uses the proven crop, mask-refinement, Flux reference-lat
 
 The identity-i2i template uses the installed Flux.2 PuLID path. The base image supplies scene/composition and the identity image supplies facial identity. The decoded result feeds the same scorer.
 
-Both templates use `input/example.png` as a safe loader default, share stable role titles, expose the focused sweep inputs, and contain notes explaining mode semantics. A deterministic builder and semantic workflow tests prevent node IDs, titles, links, or patch roles from drifting.
+Both templates use `input/wan_q4_placeholder.ppm` as a safe loader default, share stable role titles, expose the focused sweep inputs, and contain notes explaining mode semantics. A deterministic builder and semantic workflow tests prevent node IDs, titles, links, or patch roles from drifting.
 
 ## Testing and Validation
 
@@ -125,7 +125,7 @@ Python unit tests cover dual scoring, missing-face behavior, mode ranking, canon
 
 Workflow contract tests parse both editor JSON files, validate link integrity and required node roles, assert loader defaults resolve against the main runtime base, and ensure both final outputs feed `DualIdentityScore`.
 
-Runtime validation starts an isolated worktree server using the main checkout as `--base-directory`, checks live `/object_info`, loads both workflows, submits one deliberately low-cost Flux run, verifies the score appears in node execution data, confirms the database/result image, and opens the gallery result. Repository GitHub CI remains the only required full-suite run for the final PR head.
+Runtime validation starts an isolated server from the worktree so the branch custom node remains authoritative. A temporary extra-model-path configuration points at the main checkout's installed models, the main input directory supplies authorized ephemeral smoke inputs, and isolated temporary user/output directories keep validation data separate. The smoke checks live `/object_info`, both workflow contracts, `/identity-lab` routes, one deliberately low-cost Flux run, score data in prompt history, SQLite completion, the recorded PNG, and gallery retrieval. Repository GitHub CI remains the only required full-suite run for the final PR head.
 
 ## Risks
 

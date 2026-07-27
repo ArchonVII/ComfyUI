@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, pytest, SQLite, OpenCV YuNet/SFace, Pillow, aiohttp/ComfyUI routes, vanilla JavaScript, Node test harness, ComfyUI editor-format JSON.
 
-**Plan Status:** Active until implementation closeout; update the Plan Closeout section before PR ready/merge.
+**Plan Status:** Complete on 2026-07-26. This document is now historical implementation guidance; the final PR head still uses required GitHub CI as its sole full-suite delivery gate.
 
 ---
 
@@ -281,6 +281,13 @@ Push the final head, update the PR body with exact evidence, promote it when che
 
 ## Plan Closeout
 
-- Status: Active.
-- Completion evidence: Pending.
-- Deferred scope: Qwen and Z-Image-family execution adapters, automatic aesthetic scoring, multi-user/multi-GPU scheduling, and exhaustive sweeps.
+- Status: Complete on 2026-07-26.
+- Focused verification: with `COMFY_RUNTIME_BASE=C:\tools\image\ComfyUI`, `C:\tools\image\ComfyUI\venv\Scripts\python.exe -m pytest custom_nodes\comfyui_identity_score\tests tests\workflows\test_flux_identity_lab_workflows.py -q` completed with `130 passed in 26.57s`.
+- Live server isolation: the server started from the worktree at reviewed head `aeb1d2d0` on `127.0.0.1:8194`. Temporary extra model paths referenced the main runtime models and four required workflow dependencies, while temporary user/output directories isolated the database and generated files. The server loaded `DualIdentityScore` from the worktree. Exact PID `26904` was stopped, the temporary junctions/config/runtime trees were removed, and port `8194` was confirmed clean.
+- Live contracts and catalog: `/object_info` exposed `DualIdentityScore`, `ApplyPuLIDFlux2`, the detector/SAM nodes, and the crop/uncrop nodes. The local catalog exposed 9 Flux 9B diffusion models and 108 LoRAs, and its checkpoint token exactly matched the live `UNETLoader` token. The face-swap graph had 33 nodes/50 integral links and the i2i graph had 23 nodes/26 integral links; both had every stable role, two placeholder loaders, and one `DualIdentityScore`. `MarkdownNote` was the only editor-only type absent from backend `/object_info`.
+- Live generation: experiment `986dd199-bead-477c-8156-cbfcae672698`, run `fdf98a2a-2bce-44a0-9248-eb14691dfa1c`, and prompt `8753a001-c5d4-4a61-8e12-ee5b51be190b` executed one face-swap baseline at 0.0625 MP and one sampling step. ComfyUI history reported success in 12.23 seconds. The visible scorer data reported reference `0.337639`, base `0.738586`, all three faces detected, and a rankable result.
+- Live persistence and gallery: SQLite recorded the exact run as completed with relative result path `identity_lab/results/fdf98a2a-2bce-44a0-9248-eb14691dfa1c.png`. The output route returned HTTP 200, `image/png`, a valid PNG signature, and 1,687,061 bytes. The results route returned one completed gallery record, and a rating/favorite update round-tripped through the review and gallery routes.
+- Validation feedback: the first live submission found that Windows catalog names had been normalized away from the loader's exact token. The implementation added a regression test and the reviewed narrow fix at `aeb1d2d0`; the corrected end-to-end smoke above then passed.
+- Frontend validation: no interactive in-app browser was available in the isolated validation environment. The focused suite nevertheless ran the sidebar registration, DOM interaction, accessibility, queue-control, review, and action-error tests; direct live HTTP validation exercised the gallery data and output route.
+- Delivery gate: repository GitHub CI remains the only required full-suite run for the final PR head and is handled by the PR delivery workflow rather than repeated locally.
+- Deferred scope: Qwen and Z-Image-family execution adapters, automatic aesthetic scoring, arbitrary workflow-input sweeping, multi-user/multi-GPU scheduling, per-face manual selection, and exhaustive sweeps.
