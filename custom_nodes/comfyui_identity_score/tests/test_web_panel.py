@@ -93,6 +93,8 @@ const fetchApi = async (path, options = {{}}) => {{
   ], {{}});
   if (cards[0].id !== "b") throw new Error("gallery did not default-sort by active score");
   if (api.filterAndSortResults(cards, {{ checkpoint: "a" }}).length !== 1) throw new Error("gallery checkpoint filter failed");
+  const rankableFirst = api.filterAndSortResults([{{ id:"partial", state:"completed", plan:{{loras:[]}}, identity_report:{{active_score:.99,rankable:false}} }}, {{ id:"rankable", state:"completed", plan:{{loras:[]}}, identity_report:{{active_score:.1,rankable:true}} }}], {{}});
+  if (rankableFirst[0].id !== "rankable") throw new Error("non-rankable partial score outranked a rankable result");
   const details = api.galleryMetadata({{ id: "b", state: "completed", plan: {{ checkpoint: "flux", loras: [["face", 0.7]], steps: 28, cfg: 3.5, sampler: "euler", scheduler: "simple", denoise: 0.8 }}, identity_report: {{ active_score: 0.9, reference_score: 0.8, base_score: 0.2, rankable: true, face_detection: {{base:true, reference:true, generated:true}}, runtime_seconds: 12 }} }});
   if (!details.includes("reference 0.8") || !details.includes("runtime 12")) throw new Error("gallery metadata is incomplete");
   let detailCalls = 0; const queueCalls = [];
@@ -111,6 +113,8 @@ const fetchApi = async (path, options = {{}}) => {{
   const failingQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ failureCalls.push(path); if (path === "/identity-lab/experiments/bad") return {{ok:true, json:async()=> failedRecorded ? {{...persisted, runs:[{{...persisted.runs[0], state:"failed"}}]}} : persisted}}; if (path === "/prompt") return {{ok:true, json:async()=>({{prompt_id:"bad-prompt"}})}}; if (path === "/history/bad-prompt") return {{ok:true, json:async()=>({{ "bad-prompt": {{status:{{status_str:"error"}}}} }})}}; if (path.endsWith("/failed")) {{ failedRecorded = true; return {{ok:true, json:async()=>({{state:"failed"}})}}; }} return {{ok:true, json:async()=>({{}})}}; }}, maxPolls: 1 }});
   await failingQueue.run("bad");
   if (!failureCalls.some((path) => path.endsWith("/runs/serial/failed"))) throw new Error("terminal execution failure was not recorded");
+  const timeoutCalls = []; const timeoutQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ timeoutCalls.push(path); if (path === "/identity-lab/experiments/timeout") return {{ok:true,json:async()=>persisted}}; if (path === "/prompt") return {{ok:true,json:async()=>({{prompt_id:"still-running"}})}}; if (path === "/history/still-running") return {{ok:true,json:async()=>({{}})}}; return {{ok:true,json:async()=>({{state:"queued"}})}}; }}, maxPolls: 1 }});
+  await timeoutQueue.run("timeout"); if (timeoutCalls.some((path) => path.endsWith("/failed"))) throw new Error("poll timeout incorrectly failed a potentially running prompt");
 }})().catch((error) => {{ console.error(error.stack || error.message); process.exit(1); }});
 """
     result = subprocess.run(["node", "-e", node_script], check=False, capture_output=True, text=True)

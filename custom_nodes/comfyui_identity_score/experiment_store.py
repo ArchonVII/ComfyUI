@@ -59,8 +59,17 @@ class ExperimentStore:
 
     def archive_experiment(self, experiment_id: str) -> dict[str, Any]:
         with self._connection() as connection:
-            self._fetch_experiment(connection, experiment_id)
-            connection.execute("UPDATE experiments SET state = 'archived', updated_at = ? WHERE id = ?", (_utc_now(), experiment_id))
+            experiment = self._fetch_experiment(connection, experiment_id)
+            if experiment["state"] != "active":
+                raise ValueError("experiment is already archived")
+            busy = connection.execute("SELECT 1 FROM runs WHERE experiment_id = ? AND state IN ('queued', 'running') LIMIT 1", (experiment_id,)).fetchone()
+            if busy is not None:
+                raise ValueError("cannot archive while runs are queued or running")
+            now = _utc_now()
+            updated = connection.execute("UPDATE experiments SET state = 'archived', updated_at = ? WHERE id = ? AND state = 'active'", (now, experiment_id))
+            if updated.rowcount != 1:
+                raise ValueError("experiment state changed concurrently")
+            connection.execute("UPDATE runs SET state = 'archived', updated_at = ? WHERE experiment_id = ? AND state = 'planned'", (now, experiment_id))
             return self._fetch_experiment(connection, experiment_id)
 
     def delete_archived_experiment(self, experiment_id: str) -> list[dict[str, Any]]:
@@ -69,6 +78,8 @@ class ExperimentStore:
             experiment = self._fetch_experiment(connection, experiment_id)
             if experiment["state"] != "archived":
                 raise ValueError("only archived experiments can be deleted")
+            if connection.execute("SELECT 1 FROM runs WHERE experiment_id = ? AND state IN ('queued', 'running') LIMIT 1", (experiment_id,)).fetchone() is not None:
+                raise ValueError("cannot delete while runs are queued or running")
             runs = [_decode_run(row) for row in connection.execute("SELECT * FROM runs WHERE experiment_id = ? ORDER BY created_at, id", (experiment_id,))]
             connection.execute("DELETE FROM runs WHERE experiment_id = ?", (experiment_id,))
             deleted = connection.execute("DELETE FROM experiments WHERE id = ? AND state = 'archived'", (experiment_id,))
@@ -160,6 +171,7 @@ class ExperimentStore:
             raise ValueError(f"unknown state: {target_state!r}")
         with self._connection() as connection:
             run = self._fetch_run(connection, run_id)
+            self._require_active_experiment(connection, run["experiment_id"])
             if target_state not in _TRANSITIONS[run["state"]]:
                 raise ValueError(f"invalid state transition: {run['state']} -> {target_state}")
             now = _utc_now()
@@ -174,6 +186,7 @@ class ExperimentStore:
 
     def mark_run_queued(self, *, experiment_id: str, run_id: str) -> dict[str, Any]:
         with self._connection() as connection:
+            self._require_active_experiment(connection, experiment_id)
             run = self._fetch_run(connection, run_id)
             if run["experiment_id"] != experiment_id or run["state"] not in {"planned", "failed"}:
                 raise ValueError("run is not queueable")
@@ -207,7 +220,7 @@ class ExperimentStore:
         now = _utc_now()
         with self._connection() as connection:
             if experiment_id is not None:
-                self._fetch_experiment(connection, experiment_id)
+                self._require_active_experiment(connection, experiment_id)
             clauses = ["state IN ('queued', 'running')", "updated_at <= ?"]
             values: list[Any] = [cutoff_text]
             if experiment_id is not None:
@@ -246,7 +259,7 @@ class ExperimentStore:
         normalized_path = _relative_output_path(output_path)
         report_json = _encode_json(dict(identity_report), label="identity report", reject_embeddings=True)
         with self._connection() as connection:
-            self._fetch_experiment(connection, experiment_id)
+            self._require_active_experiment(connection, experiment_id)
             run = self._fetch_run(connection, run_id)
             if run["experiment_id"] != experiment_id:
                 raise ValueError("run does not belong to experiment")
@@ -278,7 +291,7 @@ class ExperimentStore:
         """Reserve one output path before a recorder creates its local file."""
         normalized_path = _relative_output_path(output_path)
         with self._connection() as connection:
-            self._fetch_experiment(connection, experiment_id)
+            self._require_active_experiment(connection, experiment_id)
             run = self._fetch_run(connection, run_id)
             if run["experiment_id"] != experiment_id:
                 raise ValueError("run does not belong to experiment")
@@ -302,7 +315,7 @@ class ExperimentStore:
             raise ValueError("error must be a non-empty string")
         report_json = _encode_json({"error": error.strip()[:500], "rankable": False}, label="failure report", reject_embeddings=True)
         with self._connection() as connection:
-            self._fetch_experiment(connection, experiment_id)
+            self._require_active_experiment(connection, experiment_id)
             run = self._fetch_run(connection, run_id)
             if run["experiment_id"] != experiment_id:
                 raise ValueError("run does not belong to experiment")
@@ -325,6 +338,7 @@ class ExperimentStore:
         report_json = _encode_json(dict(identity_report), label="identity report", reject_embeddings=True)
         with self._connection() as connection:
             run = self._fetch_run(connection, run_id)
+            self._require_active_experiment(connection, run["experiment_id"])
             if run["state"] == "completed":
                 raise ValueError("completed run data is immutable")
             if run["state"] != "running":
@@ -442,6 +456,13 @@ class ExperimentStore:
         if row is None:
             raise KeyError(f"experiment not found: {experiment_id}")
         return _decode_experiment(row)
+
+    @classmethod
+    def _require_active_experiment(cls, connection: sqlite3.Connection, experiment_id: str) -> dict[str, Any]:
+        experiment = cls._fetch_experiment(connection, experiment_id)
+        if experiment["state"] != "active":
+            raise ValueError("experiment must be active for execution mutations")
+        return experiment
 
     @staticmethod
     def _fetch_run(connection: sqlite3.Connection, run_id: str) -> dict[str, Any]:

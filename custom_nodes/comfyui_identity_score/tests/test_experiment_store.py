@@ -439,6 +439,29 @@ def test_store_archives_experiments_non_destructively(store, planned_run):
     assert store.get_run(run["id"])["id"] == run["id"]
 
 
+def test_archive_quiesces_planned_work_and_blocks_all_execution_mutations(store, planned_run):
+    experiment = store.create_experiment(name="Quiescent archive", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+
+    archived = store.archive_experiment(experiment["id"])
+
+    assert archived["state"] == "archived"
+    assert store.get_run(run["id"])["state"] == "archived"
+    with pytest.raises(ValueError, match="active"):
+        store.mark_run_queued(experiment_id=experiment["id"], run_id=run["id"])
+    with pytest.raises(ValueError, match="active"):
+        store.claim_recorded_run(experiment_id=experiment["id"], run_id=run["id"], output_path="identity_lab/results/archive.png")
+
+
+def test_archive_rejects_queued_or_running_work(store, planned_run):
+    experiment = store.create_experiment(name="Busy archive", mode="face_swap")
+    run = store.create_run(experiment["id"], planned_run)
+    store.mark_run_queued(experiment_id=experiment["id"], run_id=run["id"])
+
+    with pytest.raises(ValueError, match="queued or running"):
+        store.archive_experiment(experiment["id"])
+
+
 @pytest.mark.parametrize("timeout", [float("nan"), float("inf"), float("-inf")])
 def test_store_rejects_non_finite_stale_timeouts(store, timeout):
     with pytest.raises(ValueError, match="finite"):
