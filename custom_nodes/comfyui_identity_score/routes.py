@@ -382,6 +382,7 @@ def register_routes() -> None:
     routes.post("/identity-lab/experiments/{experiment_id}/plan")(_validated(post_plan))
     routes.post("/identity-lab/experiments/{experiment_id}/promote")(_validated(post_promote))
     routes.post("/identity-lab/experiments/{experiment_id}/estimate")(_validated(post_estimate))
+    routes.post("/identity-lab/experiments/{experiment_id}/estimates")(_validated(post_estimate))
     routes.post("/identity-lab/estimates")(_validated(post_global_estimate))
     routes.post("/identity-lab/runs/{run_id}/queued")(_validated(post_mark_queued))
     routes.post("/identity-lab/runs/{run_id}/failed")(_validated(post_failed))

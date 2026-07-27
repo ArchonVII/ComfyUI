@@ -212,6 +212,7 @@ def test_register_routes_includes_explicit_human_controlled_promotion_endpoint(m
 
     assert ("post", "/identity-lab/experiments/{experiment_id}/promote") in registered
     assert ("post", "/identity-lab/experiments/{experiment_id}/estimate") in registered
+    assert ("post", "/identity-lab/experiments/{experiment_id}/estimates") in registered
     assert ("post", "/identity-lab/estimates") in registered
     assert ("get", "/identity-lab/experiments/{experiment_id}/delete-preview") in registered
     assert ("delete", "/identity-lab/experiments/{experiment_id}") in registered

@@ -45,7 +45,7 @@ function parseSeeds(value) {
 function megapixels(value) {
   const numeric = strictNumber(value, "pixel budget", { min: 0.01 });
   // Older saved configurations use raw pixels; normalize explicitly to MP.
-  return numeric > 1000 ? numeric / 1_000_000 : numeric;
+  return numeric > 1000 ? numeric / 1_048_576 : numeric;
 }
 
 function parseSetup(raw) {
@@ -72,8 +72,8 @@ function formatEstimate(estimate) {
   return `${estimate.run_count} runs • ${estimate.estimated_seconds}s (${estimate.time_source}) • ${estimate.estimated_bytes} bytes (${estimate.disk_source}) • ${estimate.free_bytes} bytes free • ${estimate.can_launch ? "ready" : "insufficient space"}`;
 }
 
-async function previewEstimate(fetchApi, settings, runCount) {
-  const estimate = await responseJson(await fetchApi(`${LAB_ROOT}/estimates`, { method: "POST", body: JSON.stringify({ run_count: runCount }) }));
+async function previewEstimate(fetchApi, settings, runCount, endpoint = `${LAB_ROOT}/estimates`) {
+  const estimate = await responseJson(await fetchApi(endpoint, { method: "POST", body: JSON.stringify({ run_count: runCount }) }));
   return { settings: JSON.stringify(settings), estimate, text: formatEstimate(estimate) };
 }
 
@@ -273,6 +273,7 @@ function renderPanel(container) {
   const catalogArea = el("fieldset"); catalogArea.append(el("legend", "Local Flux 9B catalog")); form.append(catalogArea); const launch = el("button", "Create & run one at a time"); launch.type = "submit"; launch.disabled = true; form.append(launch); const actions = el("section", undefined, "identity-lab-actions"); const gallery = el("section", undefined, "identity-lab-gallery"); container.append(title, status, form, actions, gallery);
   let liveCatalog = {};
   const selectedSetup = () => ({ mode: formValue(form, "mode"), checkpoints: [...form.querySelectorAll('input[name="checkpoint"]:checked')].map((input) => input.value), loras: [1, 2, 3].map((index) => ({ name: formValue(form, `lora-${index}`), strength: formValue(form, `lora-strength-${index}`) })).filter((lora) => lora.name), seeds: formValue(form, "seeds"), steps: formValue(form, "steps"), cfg: formValue(form, "cfg"), denoise: formValue(form, "denoise"), pixelBudget: formValue(form, "pixelBudget"), sampler: formValue(form, "sampler"), scheduler: formValue(form, "scheduler"), samplers: liveCatalog.samplers, schedulers: liveCatalog.schedulers });
+  const hydrateSetup = (setup = {}) => { mode.value = setup.mode ?? mode.value; for (const name of ["seeds", "steps", "cfg", "denoise", "pixelBudget", "sampler", "scheduler"]) { const control = form.querySelector(`[name="${name}"]`); if (control && setup[name] !== undefined) control.value = Array.isArray(setup[name]) ? setup[name].join(", ") : String(setup[name]); } const checkpoints = new Set(setup.checkpoints ?? []); for (const control of form.querySelectorAll('input[name="checkpoint"]')) control.checked = checkpoints.has(control.value); for (let index = 1; index <= 3; index++) { const lora = setup.loras?.[index - 1]; const name = form.querySelector(`[name="lora-${index}"]`); const strength = form.querySelector(`[name="lora-strength-${index}"]`); if (name) name.value = lora?.name ?? ""; if (strength && lora?.strength !== undefined) strength.value = String(lora.strength); } };
   let freshEstimate = null, freshPromotion = null;
   const previewSetup = async () => { try { const setup = parseSetup(selectedSetup()); const count = setup.checkpoints.length * setup.seeds.length; freshEstimate = null; freshPromotion = null; status.textContent = "Refreshing local estimate…"; freshEstimate = await previewEstimate(api.fetchApi.bind(api), setup, count); status.textContent = freshEstimate.text; } catch (error) { freshEstimate = null; freshPromotion = null; status.textContent = `Setup: ${String(error.message || error)}`; } };
   form.addEventListener("input", previewSetup);
@@ -288,7 +289,7 @@ function renderPanel(container) {
     const resume = el("button", "Resume planned or confirmed-stale work"); resume.addEventListener("click", () => queue?.resume(id));
     const stage = el("select"); stage.append(new Option("LoRA singles", "lora_single"), new Option("LoRA pairs", "lora_pair"), new Option("LoRA triples", "lora_triple"), new Option("Focused refine", "focused_refine"));
     const previewPromotion = el("button", "Preview promotion"); const confirmPromotion = el("button", "Confirm promotion");
-    previewPromotion.addEventListener("click", async () => { const detail = await refresh(id); const refinement = parseSetup(selectedSetup()); const payload = buildPromotionPayload(detail.runs.filter((run) => selected.has(run.id)), stage.value, refinement); const estimate = await previewEstimate(api.fetchApi.bind(api), payload, promotionRunCount(payload)); freshPromotion = { payload, settings: JSON.stringify(refinement), estimate }; status.textContent = `Promotion preview: ${estimate.text}`; });
+    previewPromotion.addEventListener("click", async () => { const detail = await refresh(id); const refinement = parseSetup(selectedSetup()); const payload = buildPromotionPayload(detail.runs.filter((run) => selected.has(run.id)), stage.value, refinement); const estimate = await previewEstimate(api.fetchApi.bind(api), payload, promotionRunCount(payload), `${LAB_ROOT}/experiments/${id}/estimates`); freshPromotion = { payload, settings: JSON.stringify(refinement), estimate }; status.textContent = `Promotion preview: ${estimate.text}`; });
     confirmPromotion.addEventListener("click", async () => { if (!freshPromotion?.estimate.estimate.can_launch || freshPromotion.settings !== JSON.stringify(parseSetup(selectedSetup()))) throw new Error("preview a fresh, launchable promotion before confirming"); await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/promote`, { method: "POST", body: JSON.stringify(freshPromotion.payload) })); freshPromotion = null; await refresh(id); });
     const archive = el("button", "Archive"); archive.addEventListener("click", async () => { await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}/archive`, { method: "POST", body: "{}" })); status.textContent = "Archived. Outputs retained."; });
     const preview = el("button", "Preview deletion"); const confirmation = el("input"); confirmation.placeholder = "Type exact DELETE confirmation"; const remove = el("button", "Delete archived experiment"); let deleteToken = "", expectedConfirmation = "";
@@ -296,7 +297,7 @@ function renderPanel(container) {
     remove.addEventListener("click", async () => { if (!deleteToken || confirmation.value !== expectedConfirmation) { status.textContent = "Deletion confirmation must exactly match the preview."; return; } const value = await responseJson(await api.fetchApi(`${LAB_ROOT}/experiments/${id}`, { method: "DELETE", body: JSON.stringify({ token: deleteToken, confirmation: confirmation.value }) })); status.textContent = `Deleted ${value.runs.length} rows; recoverable trash: ${(value.recoverable_trash ?? []).join(", ") || "none"}`; gallery.replaceChildren(); });
     actions.replaceChildren(pause, resume, stage, previewPromotion, confirmPromotion, archive, preview, confirmation, remove);
   };
-  const activateExisting = async (id) => { if (!id) return; const detail = await refresh(id); if (!detail.experiment.settings.workflow_template) throw new Error("selected experiment has no persisted workflow template"); queue = new SerialQueue({ onUpdate: (update) => { if (update.runs) { status.textContent = statusSummary(update); renderGallery(gallery, update, () => refresh(id), selected); } } }); renderExperimentActions(id, detail.experiment.settings.setup ?? {}); status.textContent = `${statusSummary(detail)} • loaded persisted experiment`; };
+  const activateExisting = async (id) => { if (!id) return; await catalogPromise; const detail = await refresh(id); if (!detail.experiment.settings.workflow_template) throw new Error("selected experiment has no persisted workflow template"); hydrateSetup(detail.experiment.settings.setup); queue = new SerialQueue({ onUpdate: (update) => { if (update.runs) { status.textContent = statusSummary(update); renderGallery(gallery, update, () => refresh(id), selected); } } }); renderExperimentActions(id, detail.experiment.settings.setup ?? {}); status.textContent = `${statusSummary(detail)} • loaded persisted experiment`; };
   existing.addEventListener("change", async () => { try { await activateExisting(existing.value); } catch (error) { status.textContent = `Error: ${String(error.message || error)}`; } });
   api.fetchApi(`${LAB_ROOT}/experiments`).then(responseJson).then(({ experiments }) => { for (const experiment of experiments) existing.append(new Option(experiment.name, experiment.id)); }).catch((error) => { status.textContent = `Experiment list error: ${String(error.message || error)}`; });
   form.addEventListener("submit", async (event) => { event.preventDefault(); try {
