@@ -50,3 +50,69 @@ const bodies=calls.map(([p,o])=>[p,o.method, o.body&&JSON.parse(o.body)]); if(!b
 """
     result = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_identity_lab_panel_surfaces_action_failures_in_live_status_without_unhandled_rejections():
+    script = r"""
+const fs = require("fs"), vm = require("vm");
+let source = fs.readFileSync(__SCRIPT_PATH__, "utf8").replace(/^import[^\n]*\n/gm, "").replaceAll("import.meta.url", JSON.stringify("https://local/identity_lab.js")).replace(/export \{[^}]+\};?\s*$/m, "");
+;(async () => {
+const node = (tag) => ({ tagName:tag, children:[], listeners:{}, dataset:{}, style:{}, attributes:{}, textContent:"", value:"", checked:false,
+  append(...nodes) { for (const child of nodes) child.parent = this; this.children.push(...nodes); if (this.tagName === "select" && !this.value && nodes[0]) this.value = nodes[0].value; },
+  prepend(...nodes) { for (const child of nodes) child.parent = this; this.children.unshift(...nodes); },
+  replaceChildren(...nodes) { for (const child of nodes) child.parent = this; this.children = nodes; },
+  addEventListener(name, handler) { this.listeners[name] = handler; },
+  setAttribute(name, value) { this.attributes[name] = value; },
+  querySelector(selector) { return this.querySelectorAll(selector)[0]; },
+  querySelectorAll(selector) { const result = []; const match = selector.match(/^([a-z]+)?\[name="([^"]+)"\](?::checked)?$/); const visit = (parent) => { for (const child of parent.children || []) { if (match && (!match[1] || child.tagName === match[1]) && child.name === match[2] && (!selector.endsWith(":checked") || child.checked)) result.push(child); visit(child); } }; visit(this); return result; },
+});
+const workflow = {
+  "1":{class_type:"LoadImage",inputs:{},_meta:{title:"IDENTITY_LAB_BASE_IMAGE"}}, "2":{class_type:"LoadImage",inputs:{},_meta:{title:"IDENTITY_LAB_REFERENCE_IMAGE"}},
+  "3":{class_type:"UNETLoader",inputs:{},_meta:{title:"IDENTITY_LAB_MODEL"}}, "4":{class_type:"LoraLoader",inputs:{},_meta:{title:"IDENTITY_LAB_LORA_1"}},
+  "5":{class_type:"LoraLoader",inputs:{},_meta:{title:"IDENTITY_LAB_LORA_2"}}, "6":{class_type:"LoraLoader",inputs:{},_meta:{title:"IDENTITY_LAB_LORA_3"}},
+  "7":{class_type:"KSampler",inputs:{},_meta:{title:"IDENTITY_LAB_SAMPLER"}}, "8":{class_type:"DualIdentityScore",inputs:{},_meta:{title:"IDENTITY_LAB_SCORE"}},
+  "9":{class_type:"ImageScaleToTotalPixels",inputs:{},_meta:{title:"IDENTITY_LAB_PIXEL_BUDGET"}},
+};
+const run = {id:"run-1",state:"completed",favorite:false,rating:null,notes:"",plan:{checkpoint:"flux.safetensors",seed:7,loras:[["face.safetensors", .7]],stage:"baseline",refine:{}},identity_report:{active_score:{cosine_similarity:.9},reference_to_output:{cosine_similarity:.9},base_to_output:{cosine_similarity:.2},rankable:true,face_detection:{base:true,reference:true,generated:true}}};
+const detail = () => ({experiment:{id:"exp-1",state:"active",settings:{workflow_template:workflow,setup:{mode:"face_swap",checkpoints:["flux.safetensors"],loras:[{name:"face.safetensors",strength:.7}],seeds:[7],steps:28,cfg:3.5,denoise:.8,pixelBudget:1,sampler:"euler",scheduler:"simple"}}},runs:[run]});
+const ok = (value) => ({ok:true,json:async()=>value});
+const jsonFailure = (message) => ({ok:false,status:422,json:async()=>({error:message})});
+const textFailure = (message) => ({ok:false,status:400,json:async()=>{throw new Error("not JSON")},text:async()=>message});
+const backend = {fetchApi: async (path, options = {}) => {
+  if (path.endsWith("/catalog")) return ok({diffusion_models:["flux.safetensors"],loras:["face.safetensors"]});
+  if (path === "/identity-lab/experiments") return ok({experiments:[detail().experiment]});
+  if (path === "/identity-lab/experiments/exp-1" && options.method === "DELETE") return textFailure("delete plain-text detail");
+  if (path === "/identity-lab/experiments/exp-1") return ok(detail());
+  if (path.endsWith("/review")) return jsonFailure("review JSON detail");
+  if (path === "/identity-lab/experiments/exp-1/estimates") return textFailure("promotion plain-text detail");
+  if (path.endsWith("/estimates")) return ok({run_count:1,estimated_seconds:1,estimated_bytes:1,free_bytes:1,time_source:"test",disk_source:"test",can_launch:true});
+  if (path.endsWith("/archive")) return jsonFailure("archive JSON detail");
+  if (path.endsWith("/delete-preview")) return ok({runs:["run-1"],files:["identity_lab/results/run-1.png"],token:"a".repeat(64),confirmation:"DELETE exp-1"});
+  return ok({});
+}};
+let sidebar, unhandled = [];
+process.on("unhandledRejection", (error) => unhandled.push(String(error && (error.stack || error.message) || error)));
+const app = {registerExtension() {}, extensionManager:{registerSidebarTab(value) { sidebar = value; }}, graphToPrompt:async()=>({output:workflow})};
+const document = {head:{append() {}},createElement:node};
+const context = {app,api:backend,document,Option:function(text,value) { const option = node("option"); option.textContent = text; option.value = value; return option; },URL,structuredClone,console,setTimeout,clearTimeout};
+vm.runInNewContext(source, context);
+const root = node("section"); sidebar.render(root); await new Promise((resolve) => setTimeout(resolve, 0));
+const walk = (parent) => { const result = []; const visit = (value) => { for (const child of value.children || []) { result.push(child); visit(child); } }; visit(parent); return result; };
+const liveStatus = () => walk(root).find((item) => item.attributes["aria-live"] === "polite");
+const button = (text) => walk(root).find((item) => item.textContent === text && item.listeners.click);
+const assertStatus = (message) => { const status = liveStatus(); if (!status || status.textContent !== `Error: ${message}`) throw new Error(`expected live status ${message}, got ${status && status.textContent}`); };
+const existing = walk(root).find((item) => item.name === "active-experiment"); existing.value = "exp-1"; await existing.listeners.change();
+if (!liveStatus()) throw new Error("missing aria-live status region");
+await button("5").listeners.click(); assertStatus("review JSON detail");
+const candidate = walk(root).find((item) => item.tagName === "input" && item.parent && item.parent.tagName === "article"); candidate.checked = true; candidate.listeners.change({target:candidate});
+await button("Preview promotion").listeners.click(); assertStatus("promotion plain-text detail");
+await button("Archive").listeners.click(); assertStatus("archive JSON detail");
+await button("Preview deletion").listeners.click();
+const confirmation = walk(root).find((item) => item.placeholder === "DELETE exp-1"); confirmation.value = "DELETE exp-1";
+await button("Delete archived experiment").listeners.click(); assertStatus("delete plain-text detail");
+await new Promise((resolve) => setTimeout(resolve, 0));
+if (unhandled.length) throw new Error(`unhandled rejection: ${unhandled.join("\n")}`);
+})().catch((error) => { console.error(error.stack || error.message); process.exit(1); });
+""".replace("__SCRIPT_PATH__", json.dumps(str(SCRIPT_PATH)))
+    result = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
