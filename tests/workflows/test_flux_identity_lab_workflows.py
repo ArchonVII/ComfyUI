@@ -69,7 +69,7 @@ NODE_SCHEMAS = {
     "PuLIDEVACLIPLoader": ((), ("EVA_CLIP",)),
     "PuLIDModelLoader": (("pulid_file",), ("PULID_MODEL",)),
     "ApplyPuLIDFlux2": (("model", "pulid_model", "eva_clip", "face_analysis", "image", "strength", "face_index", "debug_mode"), ("MODEL",)),
-    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "extra_metadata", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key", "experiment_id", "run_id"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
+    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "experiment_id", "run_id", "extra_metadata", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
     "SaveImage": (("images", "filename_prefix"), ("IMAGE",)),
     "PreviewImage": (("images",), ("IMAGE",)),
     "MarkdownNote": ((), ()),
@@ -82,8 +82,7 @@ OPTIONAL_EDITOR_SOCKETS = {
 }
 
 # Frontend/editor ordering is socket-first, which differs from several backend
-# INPUT_TYPES declaration orders. The trailing entries are widgets, except the
-# DualIdentityScore runner IDs which are force-input seams after its widgets.
+# INPUT_TYPES declaration orders. The trailing entries are editor widgets.
 EDITOR_SOCKET_PREFIXES = {
     "LoadImage": (), "UNETLoader": (), "LoraLoaderModelOnly": ("model",),
     "CLIPLoader": (), "VAELoader": (), "CLIPTextEncode": ("clip",),
@@ -98,11 +97,11 @@ EDITOR_SOCKET_PREFIXES = {
     "BatchUncropAdvanced": ("original_images", "cropped_images", "cropped_masks", "combined_crop_mask", "bboxes", "combined_bounding_box"),
     "PuLIDInsightFaceLoader": (), "PuLIDEVACLIPLoader": (), "PuLIDModelLoader": (),
     "ApplyPuLIDFlux2": ("model", "pulid_model", "eva_clip", "face_analysis", "image"),
-    "DualIdentityScore": ("base_image", "reference_image", "generated_image", "extra_metadata"),
+    "DualIdentityScore": ("base_image", "reference_image", "generated_image", "experiment_id", "run_id", "extra_metadata"),
     "SaveImage": ("images",), "PreviewImage": ("images",), "MarkdownNote": (),
 }
 
-EDITOR_TRAILING_FORCE_INPUTS = {"DualIdentityScore": ("experiment_id", "run_id")}
+EDITOR_TRAILING_FORCE_INPUTS = {}
 EDITOR_WIDGET_VALUE_COUNTS = {
     "LoadImage": 1, "UNETLoader": 2, "LoraLoaderModelOnly": 2, "CLIPLoader": 3,
     "VAELoader": 1, "CLIPTextEncode": 1, "KSampler": 7,
@@ -250,10 +249,11 @@ def test_every_generated_node_uses_socket_first_editor_order_and_widget_serializ
 
 
 @pytest.mark.parametrize("name", WORKFLOWS)
-def test_dual_identity_score_metadata_socket_has_editor_target_slot_three(name):
+def test_dual_identity_score_force_input_sockets_have_exact_editor_slots(name):
     score = node(load_workflow(name), "IDENTITY_LAB_SCORE")
-    assert input_slot(score, "extra_metadata") == 3
-    assert score["inputs"][3]["link"] is None
+    for input_name, expected_slot in (("experiment_id", 3), ("run_id", 4), ("extra_metadata", 5)):
+        assert input_slot(score, input_name) == expected_slot
+        assert score["inputs"][expected_slot]["link"] is None
 
 
 @pytest.mark.parametrize(("name", "mode"), WORKFLOWS.items())

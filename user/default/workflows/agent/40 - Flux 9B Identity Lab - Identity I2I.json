@@ -962,6 +962,16 @@
           "link": 26
         },
         {
+          "name": "experiment_id",
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "run_id",
+          "type": "STRING",
+          "link": null
+        },
+        {
           "name": "extra_metadata",
           "type": "EXTRA_METADATA",
           "link": null
@@ -1003,16 +1013,6 @@
         },
         {
           "name": "metadata_key",
-          "type": "STRING",
-          "link": null
-        },
-        {
-          "name": "experiment_id",
-          "type": "STRING",
-          "link": null
-        },
-        {
-          "name": "run_id",
           "type": "STRING",
           "link": null
         }
