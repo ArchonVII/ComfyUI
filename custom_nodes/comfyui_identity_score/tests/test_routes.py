@@ -154,6 +154,39 @@ def test_active_run_helper_uses_prompt_queue_history_api_and_treats_history_as_a
     assert routes.active_identity_lab_run_ids(prompt_server) == set()
 
 
+def test_resume_route_reconciles_production_history_queue_item_tuple(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=RouteFolderPaths(tmp_path))
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+    created = service.create_experiment({
+        "name": "production history", "mode": "face_swap", "checkpoints": ["flux-9b.safetensors"], "seeds": [7, 8], "stages": ["baseline"],
+    })
+    experiment_id = created["experiment"]["id"]
+    terminal, retryable = created["runs"]
+    service.store.transition_run(terminal["id"], "queued")
+    service.store.transition_run(retryable["id"], "queued")
+    api_prompt = {"8": {"class_type": "DualIdentityScore", "inputs": {"experiment_id": experiment_id, "run_id": terminal["id"]}}}
+
+    class PromptQueue:
+        def get_history(self):
+            return {"prompt-id": {"status": {"status_str": "error"}, "prompt": (17, "prompt-id", api_prompt, {"client_id": "browser"}, ["outputs"])}}
+
+    prompt_server = type("PromptServer", (), {"prompt_queue": PromptQueue()})()
+    monkeypatch.setattr(routes, "active_run_ids_provider", lambda: set())
+    monkeypatch.setattr(routes, "terminal_history_provider", lambda: routes.terminal_identity_lab_history(prompt_server))
+
+    class Request:
+        match_info = {"experiment_id": experiment_id}
+
+        async def json(self):
+            return {"stale_after_seconds": 0}
+
+    response = asyncio.run(routes.post_resume(Request()))
+    resumed = json.loads(response.text)["runs"]
+    assert {run["id"] for run in resumed} == {retryable["id"]}
+    assert service.store.get_run(terminal["id"])["state"] == "failed"
+    assert service.store.get_run(terminal["id"])["identity_report"]["error"] == "history error"
+
+
 def test_active_run_helper_fails_closed_when_prompt_queue_inspection_errors():
     class PromptQueue:
         def get_current_queue(self):

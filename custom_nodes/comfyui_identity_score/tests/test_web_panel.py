@@ -115,6 +115,10 @@ const fetchApi = async (path, options = {{}}) => {{
   if (!failureCalls.some((path) => path.endsWith("/runs/serial/failed"))) throw new Error("terminal execution failure was not recorded");
   const timeoutCalls = []; const timeoutQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ timeoutCalls.push(path); if (path === "/identity-lab/experiments/timeout") return {{ok:true,json:async()=>persisted}}; if (path === "/prompt") return {{ok:true,json:async()=>({{prompt_id:"still-running"}})}}; if (path === "/history/still-running") return {{ok:true,json:async()=>({{}})}}; return {{ok:true,json:async()=>({{state:"queued"}})}}; }}, maxPolls: 1 }});
   await timeoutQueue.run("timeout"); if (timeoutCalls.some((path) => path.endsWith("/failed"))) throw new Error("poll timeout incorrectly failed a potentially running prompt");
+  const activeCalls = []; const updates = []; const activeQueue = new api.SerialQueue({{ fetchApi: async (path) => {{ activeCalls.push(path); if (path === "/identity-lab/experiments/active") return {{ok:true,json:async()=>({{...persisted, runs:[{{...persisted.runs[0], id:"already-queued", state:"queued"}}, {{...persisted.runs[0], id:"must-not-submit", state:"planned"}}]}})}}; throw new Error(`unexpected request ${{path}}`); }}, onUpdate: (update) => updates.push(update) }});
+  await activeQueue.run("active");
+  if (activeCalls.includes("/prompt")) throw new Error("serial queue submitted while an earlier run was active");
+  if (!updates.some((update) => update.status && update.status.includes("queued or running"))) throw new Error("serial queue did not surface active-run monitoring status");
 }})().catch((error) => {{ console.error(error.stack || error.message); process.exit(1); }});
 """
     result = subprocess.run(["node", "-e", node_script], check=False, capture_output=True, text=True)

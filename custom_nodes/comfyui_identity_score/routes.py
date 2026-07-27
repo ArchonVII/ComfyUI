@@ -44,6 +44,15 @@ def _run_ids_in_prompt(prompt: Any) -> set[str]:
     return run_ids
 
 
+def _queue_item_prompt(value: Any) -> Mapping[str, Any] | None:
+    """Extract ComfyUI's API prompt from its queue/history item tuple."""
+    if isinstance(value, Mapping):
+        return value
+    if isinstance(value, (tuple, list)) and len(value) >= 3 and isinstance(value[2], Mapping):
+        return value[2]
+    return None
+
+
 def _queued_run_ids(value: Any) -> set[str]:
     if isinstance(value, Mapping):
         found = _run_ids_in_prompt(value)
@@ -103,7 +112,7 @@ def terminal_identity_lab_history(prompt_server: Any | None = None) -> dict[str,
         if not any(value in status for value in ("success", "error", "failed", "interrupted")):
             continue
         diagnostic = "history success without DualIdentityScore result" if "success" in status else f"history {status}"[:500]
-        prompt = entry.get("prompt")
+        prompt = _queue_item_prompt(entry.get("prompt"))
         for run_id in _run_ids_in_prompt(prompt):
             terminal[run_id] = diagnostic
     return terminal
