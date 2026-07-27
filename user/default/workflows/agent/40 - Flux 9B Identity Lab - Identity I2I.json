@@ -22,7 +22,18 @@
         {
           "name": "image",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
         }
       ],
       "outputs": [
@@ -47,7 +58,8 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "wan_q4_placeholder.ppm"
+        "wan_q4_placeholder.ppm",
+        "image"
       ]
     },
     {
@@ -68,7 +80,18 @@
         {
           "name": "image",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
         }
       ],
       "outputs": [
@@ -93,7 +116,8 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "wan_q4_placeholder.ppm"
+        "wan_q4_placeholder.ppm",
+        "image"
       ]
     },
     {
@@ -114,12 +138,18 @@
         {
           "name": "unet_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "unet_name"
+          }
         },
         {
           "name": "weight_dtype",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "weight_dtype"
+          }
         }
       ],
       "outputs": [
@@ -164,12 +194,18 @@
         {
           "name": "lora_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "lora_name"
+          }
         },
         {
           "name": "strength_model",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "strength_model"
+          }
         }
       ],
       "outputs": [
@@ -214,12 +250,18 @@
         {
           "name": "lora_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "lora_name"
+          }
         },
         {
           "name": "strength_model",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "strength_model"
+          }
         }
       ],
       "outputs": [
@@ -264,12 +306,18 @@
         {
           "name": "lora_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "lora_name"
+          }
         },
         {
           "name": "strength_model",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "strength_model"
+          }
         }
       ],
       "outputs": [
@@ -309,17 +357,26 @@
         {
           "name": "clip_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "clip_name"
+          }
         },
         {
           "name": "type",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "type"
+          }
         },
         {
           "name": "device",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "device"
+          }
         }
       ],
       "outputs": [
@@ -361,7 +418,10 @@
         {
           "name": "vae_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "vae_name"
+          }
         }
       ],
       "outputs": [
@@ -406,17 +466,26 @@
         {
           "name": "upscale_method",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "upscale_method"
+          }
         },
         {
           "name": "megapixels",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "megapixels"
+          }
         },
         {
           "name": "resolution_steps",
           "type": "INT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "resolution_steps"
+          }
         }
       ],
       "outputs": [
@@ -505,7 +574,10 @@
         {
           "name": "text",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
         }
       ],
       "outputs": [
@@ -549,7 +621,10 @@
         {
           "name": "text",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
         }
       ],
       "outputs": [
@@ -630,7 +705,10 @@
         {
           "name": "provider",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "provider"
+          }
         }
       ],
       "outputs": [
@@ -700,7 +778,10 @@
         {
           "name": "pulid_file",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "pulid_file"
+          }
         }
       ],
       "outputs": [
@@ -764,17 +845,26 @@
         {
           "name": "strength",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "strength"
+          }
         },
         {
           "name": "face_index",
           "type": "INT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "face_index"
+          }
         },
         {
           "name": "debug_mode",
           "type": "BOOLEAN",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "debug_mode"
+          }
         }
       ],
       "outputs": [
@@ -835,32 +925,50 @@
         {
           "name": "seed",
           "type": "INT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "seed"
+          }
         },
         {
           "name": "steps",
           "type": "INT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "steps"
+          }
         },
         {
           "name": "cfg",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "cfg"
+          }
         },
         {
           "name": "sampler_name",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "sampler_name"
+          }
         },
         {
           "name": "scheduler",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "scheduler"
+          }
         },
         {
           "name": "denoise",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "denoise"
+          }
         }
       ],
       "outputs": [
@@ -979,42 +1087,66 @@
         {
           "name": "experiment_mode",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "experiment_mode"
+          }
         },
         {
           "name": "face_score_threshold",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "face_score_threshold"
+          }
         },
         {
           "name": "same_identity_threshold",
           "type": "FLOAT",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "same_identity_threshold"
+          }
         },
         {
           "name": "face_selection",
           "type": "COMBO",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "face_selection"
+          }
         },
         {
           "name": "write_manifest",
           "type": "BOOLEAN",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "write_manifest"
+          }
         },
         {
           "name": "manifest_dir",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "manifest_dir"
+          }
         },
         {
           "name": "run_label",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "run_label"
+          }
         },
         {
           "name": "metadata_key",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "metadata_key"
+          }
         }
       ],
       "outputs": [
@@ -1129,7 +1261,10 @@
         {
           "name": "filename_prefix",
           "type": "STRING",
-          "link": null
+          "link": null,
+          "widget": {
+            "name": "filename_prefix"
+          }
         }
       ],
       "outputs": [

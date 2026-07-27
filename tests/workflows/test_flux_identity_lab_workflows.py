@@ -46,7 +46,7 @@ ROLES = {
 # Captured from the running ComfyUI /object_info endpoint on the target runtime.
 # DualIdentityScore is intentionally local until the isolated server restart.
 NODE_SCHEMAS = {
-    "LoadImage": (("image",), ("IMAGE", "MASK")),
+    "LoadImage": (("image", "upload"), ("IMAGE", "MASK")),
     "UNETLoader": (("unet_name", "weight_dtype"), ("MODEL",)),
     "LoraLoaderModelOnly": (("model", "lora_name", "strength_model"), ("MODEL",)),
     "CLIPLoader": (("clip_name", "type", "device"), ("CLIP",)),
@@ -103,7 +103,7 @@ EDITOR_SOCKET_PREFIXES = {
 
 EDITOR_TRAILING_FORCE_INPUTS = {}
 EDITOR_WIDGET_VALUE_COUNTS = {
-    "LoadImage": 1, "UNETLoader": 2, "LoraLoaderModelOnly": 2, "CLIPLoader": 3,
+    "LoadImage": 2, "UNETLoader": 2, "LoraLoaderModelOnly": 2, "CLIPLoader": 3,
     "VAELoader": 1, "CLIPTextEncode": 1, "KSampler": 7,
     "ImageScaleToTotalPixels": 3, "VAEEncode": 0, "VAEDecode": 0,
     "ReferenceLatent": 0, "EmptyFlux2LatentImage": 3, "GetImageSize": 0,
@@ -112,6 +112,28 @@ EDITOR_WIDGET_VALUE_COUNTS = {
     "BatchUncropAdvanced": 4, "PuLIDInsightFaceLoader": 1,
     "PuLIDEVACLIPLoader": 0, "PuLIDModelLoader": 1, "ApplyPuLIDFlux2": 3,
     "DualIdentityScore": 8, "SaveImage": 1, "PreviewImage": 0, "MarkdownNote": 1,
+}
+
+WIDGET_INPUTS = {
+    "LoadImage": ("image", "upload"), "UNETLoader": ("unet_name", "weight_dtype"),
+    "LoraLoaderModelOnly": ("lora_name", "strength_model"),
+    "CLIPLoader": ("clip_name", "type", "device"), "VAELoader": ("vae_name",),
+    "CLIPTextEncode": ("text",),
+    "KSampler": ("seed", "steps", "cfg", "sampler_name", "scheduler", "denoise"),
+    "ImageScaleToTotalPixels": ("upscale_method", "megapixels", "resolution_steps"),
+    "VAEEncode": (), "VAEDecode": (), "ReferenceLatent": (),
+    "EmptyFlux2LatentImage": ("width", "height", "batch_size"), "GetImageSize": (),
+    "UltralyticsDetectorProvider": ("model_name",),
+    "BboxDetectorSEGS": ("threshold", "dilation", "crop_factor", "drop_size", "labels"),
+    "SAMLoader": ("model_name", "device_mode"),
+    "SAMDetectorCombined": ("detection_hint", "dilation", "threshold", "bbox_expansion", "mask_hint_threshold", "mask_hint_use_negative"),
+    "BatchCropFromMaskAdvanced": ("crop_size_mult", "bbox_smooth_alpha"),
+    "BatchUncropAdvanced": ("border_blending", "crop_rescale", "use_combined_mask", "use_square_mask"),
+    "PuLIDInsightFaceLoader": ("provider",), "PuLIDEVACLIPLoader": (),
+    "PuLIDModelLoader": ("pulid_file",),
+    "ApplyPuLIDFlux2": ("strength", "face_index", "debug_mode"),
+    "DualIdentityScore": ("experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key"),
+    "SaveImage": ("filename_prefix",), "PreviewImage": (), "MarkdownNote": (),
 }
 
 
@@ -192,6 +214,7 @@ def test_builder_is_byte_identical_and_preserves_stable_editor_ids(tmp_path):
     first = {name: (tmp_path / name).read_bytes() for name in WORKFLOWS}
     subprocess.run([sys.executable, str(BUILDER), "--output-root", str(tmp_path)], check=True)
     assert {name: (tmp_path / name).read_bytes() for name in WORKFLOWS} == first
+    assert {name: (WORKFLOW_DIR / name).read_bytes() for name in WORKFLOWS} == first
     for name in WORKFLOWS:
         workflow = json.loads(first[name])
         assert workflow["last_node_id"] == max(item["id"] for item in workflow["nodes"])
@@ -246,6 +269,31 @@ def test_every_generated_node_uses_socket_first_editor_order_and_widget_serializ
             f"{node_type} widgets must serialize in editor order after {prefix}; "
             f"found widget inputs {widget_names}"
         )
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_every_widget_backed_input_has_its_real_editor_association(name):
+    for item in load_workflow(name)["nodes"]:
+        expected = WIDGET_INPUTS[item["type"]]
+        actual = tuple(input_["name"] for input_ in item["inputs"] if "widget" in input_)
+        assert actual == expected
+        for input_ in item["inputs"]:
+            if input_["name"] in expected:
+                assert input_["widget"] == {"name": input_["name"]}
+            else:
+                assert "widget" not in input_
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_load_image_uses_frontend_upload_widget_serialization(name):
+    workflow = load_workflow(name)
+    loaders = [item for item in workflow["nodes"] if item["type"] == "LoadImage"]
+    assert len(loaders) == 2
+    for loader in loaders:
+        assert tuple((item["name"], item["type"], item["widget"]["name"]) for item in loader["inputs"]) == (
+            ("image", "COMBO", "image"), ("upload", "IMAGEUPLOAD", "upload")
+        )
+        assert loader["widgets_values"] == [PLACEHOLDER, "image"]
 
 
 @pytest.mark.parametrize("name", WORKFLOWS)

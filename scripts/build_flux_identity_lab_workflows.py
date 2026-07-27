@@ -25,6 +25,31 @@ LORAS = (
 PULID = "pulid_flux2_klein_v2.safetensors"
 
 
+# Editor serialization distinguishes widgets from graph sockets. Keep this map
+# explicit rather than inferring it from input types: COMBO/STRING fields can be
+# widgets, while model/image/force-input fields must remain sockets.
+WIDGET_INPUTS = {
+    "LoadImage": frozenset({"image", "upload"}),
+    "UNETLoader": frozenset({"unet_name", "weight_dtype"}),
+    "LoraLoaderModelOnly": frozenset({"lora_name", "strength_model"}),
+    "CLIPLoader": frozenset({"clip_name", "type", "device"}),
+    "VAELoader": frozenset({"vae_name"}), "CLIPTextEncode": frozenset({"text"}),
+    "KSampler": frozenset({"seed", "steps", "cfg", "sampler_name", "scheduler", "denoise"}),
+    "ImageScaleToTotalPixels": frozenset({"upscale_method", "megapixels", "resolution_steps"}),
+    "EmptyFlux2LatentImage": frozenset({"width", "height", "batch_size"}),
+    "UltralyticsDetectorProvider": frozenset({"model_name"}),
+    "BboxDetectorSEGS": frozenset({"threshold", "dilation", "crop_factor", "drop_size", "labels"}),
+    "SAMLoader": frozenset({"model_name", "device_mode"}),
+    "SAMDetectorCombined": frozenset({"detection_hint", "dilation", "threshold", "bbox_expansion", "mask_hint_threshold", "mask_hint_use_negative"}),
+    "BatchCropFromMaskAdvanced": frozenset({"crop_size_mult", "bbox_smooth_alpha"}),
+    "BatchUncropAdvanced": frozenset({"border_blending", "crop_rescale", "use_combined_mask", "use_square_mask"}),
+    "PuLIDInsightFaceLoader": frozenset({"provider"}), "PuLIDModelLoader": frozenset({"pulid_file"}),
+    "ApplyPuLIDFlux2": frozenset({"strength", "face_index", "debug_mode"}),
+    "DualIdentityScore": frozenset({"experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key"}),
+    "SaveImage": frozenset({"filename_prefix"}),
+}
+
+
 @dataclass
 class Graph:
     slug: str
@@ -43,7 +68,12 @@ class Graph:
             "order": len(self.nodes),
             "mode": 0,
             "inputs": [
-                {"name": name, "type": value_type, "link": None}
+                {
+                    "name": name,
+                    "type": value_type,
+                    "link": None,
+                    **({"widget": {"name": name}} if name in WIDGET_INPUTS.get(node_type, frozenset()) else {}),
+                }
                 for name, value_type in inputs
             ],
             "outputs": [
@@ -96,7 +126,7 @@ def add(graph, node_type, title, pos, inputs=(), outputs=(), widgets=(), size=(3
 
 
 def load_image(graph, title, pos):
-    return add(graph, "LoadImage", title, pos, (("image", "COMBO"),), (("IMAGE", "IMAGE"), ("MASK", "MASK")), (PLACEHOLDER,), (300, 280))
+    return add(graph, "LoadImage", title, pos, (("image", "COMBO"), ("upload", "IMAGEUPLOAD")), (("IMAGE", "IMAGE"), ("MASK", "MASK")), (PLACEHOLDER, "image"), (300, 280))
 
 
 def model_stack(graph, pos):
