@@ -14,6 +14,7 @@ from comfyui_identity_score.experiment_service import (
     IDENTITY_LAB_LORA_2,
     IDENTITY_LAB_LORA_3,
     IDENTITY_LAB_MODEL,
+    IDENTITY_LAB_PIXEL_BUDGET,
     IDENTITY_LAB_REFERENCE_IMAGE,
     IDENTITY_LAB_SAMPLER,
     IDENTITY_LAB_SCORE,
@@ -52,6 +53,7 @@ def template():
         "6": {"class_type": "LoraLoader", "inputs": {}, "_meta": {"title": IDENTITY_LAB_LORA_3}},
         "7": {"class_type": "KSampler", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SAMPLER}},
         "8": {"class_type": "DualIdentityScore", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SCORE}},
+        "9": {"class_type": "ImageScaleToTotalPixels", "inputs": {}, "_meta": {"title": IDENTITY_LAB_PIXEL_BUDGET}},
     }
 
 
@@ -73,13 +75,22 @@ def test_workflow_template_requires_one_typed_node_for_every_stable_role():
     with pytest.raises(ValueError, match="missing"):
         validate_api_workflow(missing)
     duplicate = template()
-    duplicate["9"] = {"class_type": "DualIdentityScore", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SCORE}}
+    duplicate["10"] = {"class_type": "DualIdentityScore", "inputs": {}, "_meta": {"title": IDENTITY_LAB_SCORE}}
     with pytest.raises(ValueError, match="duplicate"):
         validate_api_workflow(duplicate)
     wrong = template()
     wrong["3"]["class_type"] = "KSampler"
     with pytest.raises(ValueError, match="expected"):
         validate_api_workflow(wrong)
+    advanced_sampler = template()
+    advanced_sampler["7"]["class_type"] = "KSamplerAdvanced"
+    with pytest.raises(ValueError, match="IDENTITY_LAB_SAMPLER"):
+        validate_api_workflow(advanced_sampler)
+
+    missing_pixel_budget = template()
+    del missing_pixel_budget["9"]
+    with pytest.raises(ValueError, match="IDENTITY_LAB_PIXEL_BUDGET"):
+        validate_api_workflow(missing_pixel_budget)
 
 
 def test_created_experiment_keeps_validated_workflow_in_durable_settings_not_run_refine(tmp_path):
@@ -340,14 +351,38 @@ def test_archived_experiment_delete_preview_requires_exact_confirmation_and_only
     preview = service.delete_preview(experiment_id)
     assert preview["runs"] == [run_id]
     assert preview["files"] == [completed["output_path"]]
+    assert preview["token"]
     with pytest.raises(ValueError, match="confirmation"):
-        service.delete_archived(experiment_id, confirmation="DELETE anything else")
+        service.delete_archived(experiment_id, token=preview["token"], confirmation="DELETE anything else")
     assert output.is_file()
 
-    deleted = service.delete_archived(experiment_id, confirmation=preview["confirmation"])
+    with service.store._connection() as connection:
+        connection.execute("UPDATE runs SET notes = 'changed' WHERE id = ?", (run_id,))
+    with pytest.raises(ValueError, match="snapshot"):
+        service.delete_archived(experiment_id, token=preview["token"], confirmation=preview["confirmation"])
+
+    preview = service.delete_preview(experiment_id)
+    deleted = service.delete_archived(experiment_id, token=preview["token"], confirmation=preview["confirmation"])
 
     assert deleted["runs"] == [run_id]
     assert not output.exists()
     assert unrelated.read_bytes() == b"keep"
     with pytest.raises(KeyError, match="not found"):
         service.detail(experiment_id)
+
+
+def test_delete_quarantine_restores_outputs_when_database_delete_fails(tmp_path, monkeypatch):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({"name": "restore", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [9], "stages": ["baseline"]})
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    completed = service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+    output = Path(service.output_directory) / completed["output_path"]
+    service.archive(experiment_id)
+    preview = service.delete_preview(experiment_id)
+    monkeypatch.setattr(service.store, "delete_archived_experiment", lambda _id: (_ for _ in ()).throw(RuntimeError("database unavailable")))
+
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        service.delete_archived(experiment_id, token=preview["token"], confirmation=preview["confirmation"])
+
+    assert output.is_file()
+    assert service.detail(experiment_id)["experiment"]["state"] == "archived"

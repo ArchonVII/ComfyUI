@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from comfyui_identity_score import routes
 from comfyui_identity_score.experiment_service import (
     IDENTITY_LAB_BASE_IMAGE, IDENTITY_LAB_LORA_1, IDENTITY_LAB_LORA_2, IDENTITY_LAB_LORA_3,
-    IDENTITY_LAB_MODEL, IDENTITY_LAB_REFERENCE_IMAGE, IDENTITY_LAB_SAMPLER, IDENTITY_LAB_SCORE, ExperimentService,
+    IDENTITY_LAB_MODEL, IDENTITY_LAB_PIXEL_BUDGET, IDENTITY_LAB_REFERENCE_IMAGE, IDENTITY_LAB_SAMPLER, IDENTITY_LAB_SCORE, ExperimentService,
 )
 
 
@@ -34,7 +34,7 @@ class RouteFolderPaths:
 
 
 def api_workflow():
-    pairs = [(IDENTITY_LAB_BASE_IMAGE, "LoadImage"), (IDENTITY_LAB_REFERENCE_IMAGE, "LoadImage"), (IDENTITY_LAB_MODEL, "UNETLoader"), (IDENTITY_LAB_LORA_1, "LoraLoader"), (IDENTITY_LAB_LORA_2, "LoraLoader"), (IDENTITY_LAB_LORA_3, "LoraLoader"), (IDENTITY_LAB_SAMPLER, "KSampler"), (IDENTITY_LAB_SCORE, "DualIdentityScore")]
+    pairs = [(IDENTITY_LAB_BASE_IMAGE, "LoadImage"), (IDENTITY_LAB_REFERENCE_IMAGE, "LoadImage"), (IDENTITY_LAB_MODEL, "UNETLoader"), (IDENTITY_LAB_LORA_1, "LoraLoader"), (IDENTITY_LAB_LORA_2, "LoraLoader"), (IDENTITY_LAB_LORA_3, "LoraLoader"), (IDENTITY_LAB_SAMPLER, "KSampler"), (IDENTITY_LAB_SCORE, "DualIdentityScore"), (IDENTITY_LAB_PIXEL_BUDGET, "ImageScaleToTotalPixels")]
     return {str(index): {"class_type": kind, "inputs": {}, "_meta": {"title": title}} for index, (title, kind) in enumerate(pairs, 1)}
 
 
@@ -219,9 +219,9 @@ def test_register_routes_includes_explicit_human_controlled_promotion_endpoint(m
 
 
 def test_delete_and_prompt_failure_payloads_are_strict_and_local():
-    assert routes.validate_delete_payload({"confirmation": "DELETE 123"})["confirmation"] == "DELETE 123"
+    assert routes.validate_delete_payload({"token": "a" * 64, "confirmation": "DELETE 123"})["confirmation"] == "DELETE 123"
     assert routes.validate_failure_payload({"experiment_id": str(uuid4()), "error": "prompt refused"})["error"] == "prompt refused"
     with pytest.raises(ValueError, match="confirmation"):
-        routes.validate_delete_payload({"confirmation": ""})
+        routes.validate_delete_payload({"token": "a" * 64, "confirmation": ""})
     with pytest.raises(ValueError, match="error"):
         routes.validate_failure_payload({"experiment_id": str(uuid4()), "error": ""})

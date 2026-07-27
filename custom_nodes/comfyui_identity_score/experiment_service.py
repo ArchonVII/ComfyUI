@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PureWindowsPath
@@ -24,6 +25,7 @@ IDENTITY_LAB_LORA_1 = "IDENTITY_LAB_LORA_1"
 IDENTITY_LAB_LORA_2 = "IDENTITY_LAB_LORA_2"
 IDENTITY_LAB_LORA_3 = "IDENTITY_LAB_LORA_3"
 IDENTITY_LAB_SAMPLER = "IDENTITY_LAB_SAMPLER"
+IDENTITY_LAB_PIXEL_BUDGET = "IDENTITY_LAB_PIXEL_BUDGET"
 IDENTITY_LAB_SCORE = "IDENTITY_LAB_SCORE"
 
 _ROLE_TYPES = {
@@ -33,7 +35,8 @@ _ROLE_TYPES = {
     IDENTITY_LAB_LORA_1: frozenset({"LoraLoader"}),
     IDENTITY_LAB_LORA_2: frozenset({"LoraLoader"}),
     IDENTITY_LAB_LORA_3: frozenset({"LoraLoader"}),
-    IDENTITY_LAB_SAMPLER: frozenset({"KSampler", "KSamplerAdvanced"}),
+    IDENTITY_LAB_SAMPLER: frozenset({"KSampler"}),
+    IDENTITY_LAB_PIXEL_BUDGET: frozenset({"ImageScaleToTotalPixels"}),
     IDENTITY_LAB_SCORE: frozenset({"DualIdentityScore"}),
 }
 
@@ -276,21 +279,51 @@ class ExperimentService:
 
     def delete_preview(self, experiment_id: str) -> dict[str, Any]:
         runs, files = self._deletable_files(experiment_id)
-        return {"experiment_id": experiment_id, "runs": [run["id"] for run in runs], "files": [relative for relative, _target in files], "confirmation": f"DELETE {experiment_id}"}
+        run_ids = [run["id"] for run in runs]
+        paths = [relative for relative, _target in files]
+        token_payload = {"experiment_id": experiment_id, "runs": runs, "files": paths}
+        token = hashlib.sha256(json.dumps(token_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")).hexdigest()
+        return {"experiment_id": experiment_id, "runs": run_ids, "files": paths, "token": token, "confirmation": f"DELETE {experiment_id}"}
 
-    def delete_archived(self, experiment_id: str, *, confirmation: str) -> dict[str, Any]:
+    def delete_archived(self, experiment_id: str, *, token: str, confirmation: str) -> dict[str, Any]:
         preview = self.delete_preview(experiment_id)
         if confirmation != preview["confirmation"]:
             raise ValueError("delete confirmation does not match this experiment")
-        deleted_runs = self.store.delete_archived_experiment(experiment_id)
-        deleted_files: list[str] = []
+        if not isinstance(token, str) or token != preview["token"]:
+            raise ValueError("delete snapshot changed; request a new preview")
+        trash_root = self.output_directory.resolve() / "identity_lab" / ".trash" / token
+        moved: list[tuple[str, Path, Path]] = []
         for relative, target in self._deletable_files_from_preview(preview):
+            if not target.exists():
+                continue
+            trash = trash_root / target.name
+            trash.parent.mkdir(parents=True, exist_ok=True)
             try:
-                target.unlink(missing_ok=True)
-                deleted_files.append(relative)
+                shutil.move(str(target), str(trash))
             except OSError as exc:
-                raise ValueError(f"unable to delete exact previewed output: {relative}") from exc
-        return {"experiment_id": experiment_id, "runs": [run["id"] for run in deleted_runs], "files": deleted_files}
+                for _path, original, quarantined in reversed(moved):
+                    if quarantined.exists():
+                        original.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(quarantined), str(original))
+                raise ValueError(f"unable to quarantine exact previewed output: {relative}") from exc
+            moved.append((relative, target, trash))
+        try:
+            deleted_runs = self.store.delete_archived_experiment(experiment_id)
+        except BaseException:
+            for _path, original, quarantined in reversed(moved):
+                if quarantined.exists():
+                    original.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(quarantined), str(original))
+            raise
+        recoverable_trash: list[str] = []
+        deleted_files: list[str] = []
+        for relative, _original, quarantined in moved:
+            try:
+                quarantined.unlink(missing_ok=True)
+                deleted_files.append(relative)
+            except OSError:
+                recoverable_trash.append(str(quarantined.relative_to(self.output_directory.resolve())).replace("\\", "/"))
+        return {"experiment_id": experiment_id, "runs": [run["id"] for run in deleted_runs], "files": deleted_files, "recoverable_trash": recoverable_trash}
 
     def _deletable_files_from_preview(self, preview: Mapping[str, Any]) -> list[tuple[str, Path]]:
         root = self.output_directory.resolve()

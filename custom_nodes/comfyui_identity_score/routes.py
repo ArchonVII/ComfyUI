@@ -185,8 +185,10 @@ def validate_archive_payload(value: Any) -> dict[str, Any]:
 
 def validate_delete_payload(value: Any) -> dict[str, Any]:
     payload = require_object(value)
-    if set(payload) != {"confirmation"} or not isinstance(payload.get("confirmation"), str) or not payload["confirmation"].strip():
+    if set(payload) != {"token", "confirmation"} or not isinstance(payload.get("confirmation"), str) or not payload["confirmation"].strip():
         raise ValueError("delete confirmation must be a non-empty string")
+    if not isinstance(payload.get("token"), str) or len(payload["token"]) != 64 or any(character not in "0123456789abcdef" for character in payload["token"]):
+        raise ValueError("delete token must be a preview snapshot token")
     return payload
 
 
@@ -347,7 +349,7 @@ async def get_delete_preview(request):
 async def delete_experiment(request):
     experiment_id = require_id(request.match_info["experiment_id"])
     payload = validate_delete_payload(await _body(request))
-    return _response(lambda: get_service().delete_archived(experiment_id, confirmation=payload["confirmation"]))
+    return _response(lambda: get_service().delete_archived(experiment_id, token=payload["token"], confirmation=payload["confirmation"]))
 
 
 async def get_output(request):
