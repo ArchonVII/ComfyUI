@@ -81,8 +81,37 @@ def active_identity_lab_run_ids(prompt_server: Any | None = None) -> set[str]:
     return _queued_run_ids(current)
 
 
+def terminal_identity_lab_history(prompt_server: Any | None = None) -> dict[str, str]:
+    if prompt_server is None:
+        server_module = sys.modules.get("server")
+        prompt_server = getattr(getattr(server_module, "PromptServer", None), "instance", None)
+    queue = getattr(prompt_server, "prompt_queue", None)
+    get_history = getattr(queue, "get_history", None)
+    if not callable(get_history):
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history")
+    try:
+        history = get_history()
+    except Exception as exc:
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history") from exc
+    if not isinstance(history, Mapping):
+        raise QueueInspectionError("unable to inspect ComfyUI queue/history")
+    terminal: dict[str, str] = {}
+    for entry in history.values():
+        if not isinstance(entry, Mapping):
+            continue
+        status = str((entry.get("status") or {}).get("status_str", entry.get("status", ""))).lower()
+        if not any(value in status for value in ("success", "error", "failed", "interrupted")):
+            continue
+        diagnostic = "history success without DualIdentityScore result" if "success" in status else f"history {status}"[:500]
+        prompt = entry.get("prompt")
+        for run_id in _run_ids_in_prompt(prompt):
+            terminal[run_id] = diagnostic
+    return terminal
+
+
 # Test seam for route-level resume handling; production keeps it local to PromptServer.
 active_run_ids_provider = active_identity_lab_run_ids
+terminal_history_provider = terminal_identity_lab_history
 
 
 def require_object(value: Any) -> dict[str, Any]:
@@ -312,7 +341,7 @@ async def post_resume(request):
     experiment_id = require_id(request.match_info["experiment_id"])
     payload = validate_resume_payload(await _body(request))
     timeout = payload.get("stale_after_seconds", 300)
-    return _response(lambda: {"runs": get_service().resume_stale(experiment_id, stale_after_seconds=timeout, active_run_ids=active_run_ids_provider())})
+    return _response(lambda: {"runs": get_service().resume_stale(experiment_id, stale_after_seconds=timeout, active_run_ids=active_run_ids_provider(), terminal_history=terminal_history_provider())})
 
 
 async def post_archive(request):

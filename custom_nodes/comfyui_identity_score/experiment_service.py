@@ -235,13 +235,19 @@ class ExperimentService:
     def fail_run(self, experiment_id: str, run_id: str, error: str) -> dict[str, Any]:
         return self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=error)
 
-    def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+    def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset(), terminal_history: Mapping[str, str] | None = None) -> list[dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
+        terminal_history = dict(terminal_history or {})
         for run in self.store.list_runs(experiment_id):
-            if run["id"] in active_run_ids or run["state"] != "running" or not run["output_path"]:
+            if run["id"] in active_run_ids or run["state"] not in {"queued", "running"}:
                 continue
             updated_at = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
             if updated_at > cutoff:
+                continue
+            if run["id"] in terminal_history:
+                self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run["id"], error=terminal_history[run["id"]])
+                continue
+            if run["state"] != "running" or not run["output_path"]:
                 continue
             try:
                 self._remove_stale_claimed_output(run["output_path"])
@@ -251,7 +257,7 @@ class ExperimentService:
                 except (KeyError, ValueError):
                     pass
                 raise ValueError("unable to clean stale claimed output") from exc
-        return self.store.resume_stale_runs(experiment_id=experiment_id, stale_after_seconds=stale_after_seconds, active_run_ids=active_run_ids)
+        return self.store.resume_stale_runs(experiment_id=experiment_id, stale_after_seconds=stale_after_seconds, active_run_ids=frozenset(active_run_ids) | frozenset(terminal_history))
 
     def _remove_stale_claimed_output(self, output_path: str) -> None:
         relative = _safe_relative_name(output_path)

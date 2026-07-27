@@ -156,6 +156,21 @@ def test_service_lifecycle_reviews_resume_archive_results_and_safe_output_file(t
     assert service.archive(experiment_id)["state"] == "archived"
 
 
+def test_resume_reconciliation_fails_terminal_history_and_only_replans_absent_rows(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({"name": "reconcile", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7, 8], "stages": ["baseline"]})
+    experiment_id = created["experiment"]["id"]
+    terminal, absent = created["runs"]
+    service.store.transition_run(terminal["id"], "queued")
+    service.store.transition_run(absent["id"], "queued")
+
+    resumed = service.resume_stale(experiment_id, stale_after_seconds=0, terminal_history={terminal["id"]: "history error"})
+
+    assert {run["id"] for run in resumed} == {absent["id"]}
+    failed = service.store.get_run(terminal["id"])
+    assert failed["state"] == "failed" and failed["identity_report"]["error"] == "history error"
+
+
 def test_record_run_writes_local_png_metadata_and_completes_a_non_rankable_run(tmp_path):
     service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
     created = service.create_experiment({
