@@ -1,0 +1,10 @@
+.identity-lab-setup { display: grid; gap: .55rem; padding: .75rem 0; }
+.identity-lab-setup input, .identity-lab-setup button, .identity-lab-card button { min-height: 2rem; }
+.identity-lab-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .75rem; }
+.identity-lab-filters, .identity-lab-actions { grid-column: 1 / -1; display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+.identity-lab-filters select, .identity-lab-actions input { min-height: 2rem; max-width: 16rem; }
+.identity-lab-card { border: 1px solid var(--border-color, #555); border-radius: .4rem; overflow: hidden; padding: .45rem; }
+.identity-lab-card img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #222; }
+.identity-lab-card p { margin: .4rem 0; overflow-wrap: anywhere; }
+.identity-lab-card-controls { display: flex; gap: .25rem; flex-wrap: wrap; }
+.identity-lab-card textarea { width: 100%; min-height: 3rem; box-sizing: border-box; margin-top: .45rem; }
