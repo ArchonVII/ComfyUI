@@ -12,7 +12,7 @@ Face detection uses OpenCV YuNet. Face embeddings and cosine similarity use Open
 
 Use only images of people who authorized this local processing. The extension compares supplied faces; it is not intended to identify unknown people.
 
-All source images, generated images, experiment rows, ratings, and notes remain in the configured ComfyUI directories. The HTTP routes are meant for the same local ComfyUI session and do not add authentication or make a server safe to expose publicly.
+Scoring and experiment processing are local-only and do not upload images or call a network identity service. By default, experiment data and outputs use the configured ComfyUI directories. The legacy `catalog_root` and `manifest_dir` fields are ordinary local filesystem paths, however: they may be absolute, and relative values containing `..` may resolve outside the input or user directory. Configure those fields deliberately. The HTTP routes are meant for the same local ComfyUI session and do not add authentication or make a server safe to expose publicly.
 
 Identity similarity is a comparative debugging and ranking signal, not proof of identity and not a measure of image quality. Lighting, crop, pose, occlusion, multiple faces, and detector choice can move a score. Treat the gallery and your visual review as authoritative.
 
@@ -50,7 +50,7 @@ A result is rankable only when the base, reference, and generated faces were all
 
 Leave `experiment_id` and `run_id` unconnected for ordinary manual use. When both IDs are supplied by Identity Lab, the node saves the exact result and completes that run in SQLite.
 
-`OpenCV Identity Score` remains available for older workflows. Its optional catalog resolves below the ComfyUI input directory: `subject` scores one subject folder, while `all_subjects` treats each immediate subfolder as a subject.
+`OpenCV Identity Score` remains available for older workflows. A relative `catalog_root` starts from the ComfyUI input directory, subject to the external-path behavior described above. `subject` scores one subject folder, while `all_subjects` treats each immediate subfolder as a subject.
 
 ## Load an experiment template
 
@@ -66,7 +66,7 @@ The templates default both image loaders to `wan_q4_placeholder.ppm`. Replace bo
 
 Do not rename or duplicate nodes whose titles begin with `IDENTITY_LAB_`. Those stable roles are the panel's validated patch contract for image loaders, checkpoint, three LoRA slots, sampler, pixel budget, and scorer. The panel rejects an incompatible or ambiguous loaded workflow before queueing.
 
-The templates intentionally expose no more than three LoRA slots. They include ordinary Save and Preview nodes as well as the scorer, so they remain useful outside the panel.
+The templates intentionally expose no more than three LoRA slots. They include ordinary Save and Preview nodes as well as the scorer, so they remain useful outside the panel. Their scorer defaults `write_manifest` to true, and their ordinary `SaveImage` node also persists a separate ComfyUI output on every successful queue.
 
 ## Run a staged experiment
 
@@ -116,16 +116,17 @@ Manual review should consider likeness, artifacts, blending, composition, and ov
 With the standard ComfyUI directories:
 
 - SQLite: `<user-directory>/default/identity_lab/identity_lab.sqlite3`
-- Recorded experiment result: `<output-directory>/identity_lab/results/<run-id>.png`
-- Optional manual-score manifest: `<user-directory>/default/identity_score_runs/`
+- Scorer-recorded experiment result: `<output-directory>/identity_lab/results/<run-id>.png`
+- Template `SaveImage` output: below `<output-directory>/identity_lab/`, with ComfyUI-numbered filenames beginning `face_swap` or `identity_i2i`
+- Score manifest while the template's default `write_manifest` remains enabled: `<user-directory>/default/identity_score_runs/`
 
 SQLite uses relative output paths and stores plans, state, scalar score reports, ratings, favorites, and notes. It does not store image bytes or face embeddings. The result PNG carries normal ComfyUI prompt metadata when that metadata is available.
 
-Changing `--user-directory` or `--output-directory` moves these locations. Back up the database and `identity_lab/results` together if you want a portable experiment history.
+Changing `--user-directory` or `--output-directory` moves these default locations. An absolute or parent-traversing legacy `manifest_dir` can place manifests elsewhere. Back up the database and `identity_lab/results` together if you want a portable experiment history; back up ordinary SaveImage outputs and manifests separately if you need those too.
 
 ## Archive and delete
 
-`Archive` hides an inactive experiment from the default selector and retains its rows and every output. It is allowed only after queued/running work has quiesced; planned rows become archived.
+`Archive` hides an active experiment from the default selector without deleting database rows or files. It is allowed only after queued/running work has quiesced; planned rows become archived.
 
 Deletion is separate and irreversible:
 
@@ -135,7 +136,7 @@ Deletion is separate and irreversible:
 4. Type the displayed `DELETE <experiment-id>` confirmation exactly.
 5. Select `Delete archived experiment`.
 
-The preview is snapshot-token protected. If the rows or files change, request a new preview. The service quarantines only the previewed result files while removing the corresponding SQLite rows and restores them if the database operation fails. A reported `recoverable trash` path means final file cleanup failed and needs manual local inspection.
+The preview token covers the experiment's database run snapshot and its recorded output-path list. It does not hash file contents or metadata, so replacing a file at the same path does not invalidate the token. Deletion removes the experiment and run rows plus only the scorer-recorded `identity_lab/results/<run-id>.png` files listed by the preview. Score manifests, ordinary template `SaveImage` outputs, and unrelated files are not removed. The service quarantines the previewed result files while deleting the rows and restores them if the database operation fails. A reported `recoverable trash` path means final file cleanup failed and needs manual local inspection.
 
 There is no automatic retention cleanup.
 
