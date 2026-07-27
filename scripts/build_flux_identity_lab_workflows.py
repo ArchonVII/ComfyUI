@@ -108,7 +108,7 @@ def model_stack(graph, pos):
         graph.connect(previous, 0, lora, "model")
         loras.append(lora)
         previous = lora
-    clip = add(graph, "CLIPLoader", "Flux.2 Qwen 8B text encoder", (pos[0], pos[1] + 300), (("clip_name", "COMBO"), ("type", "COMBO")), (("CLIP", "CLIP"),), (CLIP, "flux2"))
+    clip = add(graph, "CLIPLoader", "Flux.2 Qwen 8B text encoder", (pos[0], pos[1] + 300), (("clip_name", "COMBO"), ("type", "COMBO"), ("device", "COMBO")), (("CLIP", "CLIP"),), (CLIP, "flux2", "default"))
     vae = add(graph, "VAELoader", "Flux.2 VAE", (pos[0] + 360, pos[1] + 300), (("vae_name", "COMBO"),), (("VAE", "VAE"),), (VAE,))
     return previous, clip, vae
 
@@ -118,7 +118,7 @@ def sampler(graph, pos):
 
 
 def score(graph, mode, pos):
-    return add(graph, "DualIdentityScore", "IDENTITY_LAB_SCORE", pos, (("base_image", "IMAGE"), ("reference_image", "IMAGE"), ("generated_image", "IMAGE"), ("experiment_mode", "COMBO"), ("face_score_threshold", "FLOAT"), ("same_identity_threshold", "FLOAT"), ("face_selection", "COMBO"), ("write_manifest", "BOOLEAN"), ("manifest_dir", "STRING"), ("run_label", "STRING"), ("metadata_key", "STRING"), ("experiment_id", "STRING"), ("run_id", "STRING")), (("reference_cosine_similarity", "FLOAT"), ("reference_detected", "BOOLEAN"), ("reference_same_identity", "BOOLEAN"), ("base_cosine_similarity", "FLOAT"), ("base_detected", "BOOLEAN"), ("base_same_identity", "BOOLEAN"), ("generated_detected", "BOOLEAN"), ("active_cosine_similarity", "FLOAT"), ("active_same_identity", "BOOLEAN"), ("rankable", "BOOLEAN"), ("report_json", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (mode, 0.7, 0.363, "largest", True, "default/identity_score_runs", f"identity-lab-{mode}", "identity_score_report"), (420, 390))
+    return add(graph, "DualIdentityScore", "IDENTITY_LAB_SCORE", pos, (("base_image", "IMAGE"), ("reference_image", "IMAGE"), ("generated_image", "IMAGE"), ("experiment_mode", "COMBO"), ("face_score_threshold", "FLOAT"), ("same_identity_threshold", "FLOAT"), ("face_selection", "COMBO"), ("write_manifest", "BOOLEAN"), ("manifest_dir", "STRING"), ("run_label", "STRING"), ("metadata_key", "STRING"), ("experiment_id", "STRING"), ("run_id", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (("reference_cosine_similarity", "FLOAT"), ("reference_detected", "BOOLEAN"), ("reference_same_identity", "BOOLEAN"), ("base_cosine_similarity", "FLOAT"), ("base_detected", "BOOLEAN"), ("base_same_identity", "BOOLEAN"), ("generated_detected", "BOOLEAN"), ("active_cosine_similarity", "FLOAT"), ("active_same_identity", "BOOLEAN"), ("rankable", "BOOLEAN"), ("report_json", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (mode, 0.7, 0.363, "largest", True, "default/identity_score_runs", f"identity-lab-{mode}", "identity_score_report"), (420, 390))
 
 
 def output_nodes(graph, image, prefix, pos):
@@ -139,7 +139,7 @@ def build_face_swap():
     masks = []
     crops = []
     for label, image, y in (("target", base, -100), ("source", reference, 350)):
-        detected = add(graph, "BboxDetectorSEGS", f"Detect {label} face/head", (-1140, y), (("bbox_detector", "BBOX_DETECTOR"), ("image", "IMAGE"), ("threshold", "FLOAT"), ("dilation", "INT"), ("crop_factor", "FLOAT"), ("drop_size", "INT"), ("labels", "STRING")), (("SEGS", "SEGS"),), (0.55, 4, 3.0, 10, "all"), (350, 300))
+        detected = add(graph, "BboxDetectorSEGS", f"Detect {label} face/head", (-1140, y), (("bbox_detector", "BBOX_DETECTOR"), ("image", "IMAGE"), ("detailer_hook", "DETAILER_HOOK"), ("threshold", "FLOAT"), ("dilation", "INT"), ("crop_factor", "FLOAT"), ("drop_size", "INT"), ("labels", "STRING")), (("SEGS", "SEGS"),), (0.55, 4, 3.0, 10, "all"), (350, 300))
         refined = add(graph, "SAMDetectorCombined", f"SAM refine {label} face/head", (-720, y), (("sam_model", "SAM_MODEL"), ("segs", "SEGS"), ("image", "IMAGE"), ("detection_hint", "COMBO"), ("dilation", "INT"), ("threshold", "FLOAT"), ("bbox_expansion", "INT"), ("mask_hint_threshold", "FLOAT"), ("mask_hint_use_negative", "COMBO")), (("MASK", "MASK"),), ("center-1", 0, 0.93, 24, 0.7, "False"), (370, 360))
         crop = add(graph, "BatchCropFromMaskAdvanced", f"Crop {label} head region", (-280, y), (("original_images", "IMAGE"), ("masks", "MASK"), ("crop_size_mult", "FLOAT"), ("bbox_smooth_alpha", "FLOAT")), (("original_images", "IMAGE"), ("cropped_images", "IMAGE"), ("cropped_masks", "MASK"), ("combined_crop_image", "IMAGE"), ("combined_crop_masks", "MASK"), ("bboxes", "BBOX"), ("combined_bounding_box", "BBOX"), ("bbox_width", "INT"), ("bbox_height", "INT")), (2.35 if label == "target" else 2.1, 0.5), (400, 300))
         graph.connect(detector, 0, detected, "bbox_detector")

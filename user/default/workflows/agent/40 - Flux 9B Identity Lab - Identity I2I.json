@@ -315,6 +315,11 @@
           "name": "type",
           "type": "COMBO",
           "link": null
+        },
+        {
+          "name": "device",
+          "type": "COMBO",
+          "link": null
         }
       ],
       "outputs": [
@@ -334,7 +339,8 @@
       },
       "widgets_values": [
         "Qwen\\qwen_3_8b_fp8mixed.safetensors",
-        "flux2"
+        "flux2",
+        "default"
       ]
     },
     {
@@ -1003,6 +1009,11 @@
         {
           "name": "run_id",
           "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
           "link": null
         }
       ],

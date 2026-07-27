@@ -49,7 +49,7 @@ NODE_SCHEMAS = {
     "LoadImage": (("image",), ("IMAGE", "MASK")),
     "UNETLoader": (("unet_name", "weight_dtype"), ("MODEL",)),
     "LoraLoaderModelOnly": (("model", "lora_name", "strength_model"), ("MODEL",)),
-    "CLIPLoader": (("clip_name", "type"), ("CLIP",)),
+    "CLIPLoader": (("clip_name", "type", "device"), ("CLIP",)),
     "VAELoader": (("vae_name",), ("VAE",)),
     "CLIPTextEncode": (("clip", "text"), ("CONDITIONING",)),
     "KSampler": (("model", "seed", "steps", "cfg", "sampler_name", "scheduler", "positive", "negative", "latent_image", "denoise"), ("LATENT",)),
@@ -60,7 +60,7 @@ NODE_SCHEMAS = {
     "EmptyFlux2LatentImage": (("width", "height", "batch_size"), ("LATENT",)),
     "GetImageSize": (("image",), ("INT", "INT", "INT")),
     "UltralyticsDetectorProvider": (("model_name",), ("BBOX_DETECTOR", "SEGM_DETECTOR")),
-    "BboxDetectorSEGS": (("bbox_detector", "image", "threshold", "dilation", "crop_factor", "drop_size", "labels"), ("SEGS",)),
+    "BboxDetectorSEGS": (("bbox_detector", "image", "detailer_hook", "threshold", "dilation", "crop_factor", "drop_size", "labels"), ("SEGS",)),
     "SAMLoader": (("model_name", "device_mode"), ("SAM_MODEL",)),
     "SAMDetectorCombined": (("sam_model", "segs", "image", "detection_hint", "dilation", "threshold", "bbox_expansion", "mask_hint_threshold", "mask_hint_use_negative"), ("MASK",)),
     "BatchCropFromMaskAdvanced": (("original_images", "masks", "crop_size_mult", "bbox_smooth_alpha"), ("IMAGE", "IMAGE", "MASK", "IMAGE", "MASK", "BBOX", "BBOX", "INT", "INT")),
@@ -69,10 +69,16 @@ NODE_SCHEMAS = {
     "PuLIDEVACLIPLoader": ((), ("EVA_CLIP",)),
     "PuLIDModelLoader": (("pulid_file",), ("PULID_MODEL",)),
     "ApplyPuLIDFlux2": (("model", "pulid_model", "strength", "eva_clip", "face_analysis", "image", "face_index", "debug_mode"), ("MODEL",)),
-    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key", "experiment_id", "run_id"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
+    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key", "experiment_id", "run_id", "extra_metadata"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
     "SaveImage": (("images", "filename_prefix"), ("IMAGE",)),
     "PreviewImage": (("images",), ("IMAGE",)),
     "MarkdownNote": ((), ()),
+}
+
+OPTIONAL_EDITOR_SOCKETS = {
+    "CLIPLoader": (("device", "COMBO"),),
+    "BboxDetectorSEGS": (("detailer_hook", "DETAILER_HOOK"),),
+    "DualIdentityScore": (("extra_metadata", "EXTRA_METADATA"),),
 }
 
 
@@ -149,6 +155,22 @@ def test_builder_is_byte_identical_and_preserves_stable_editor_ids(tmp_path):
         assert workflow["last_node_id"] == max(item["id"] for item in workflow["nodes"])
         assert workflow["last_link_id"] == max(item[0] for item in workflow["links"])
         assert_link_integrity_and_schemas(workflow)
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_templates_preserve_captured_optional_editor_sockets(name):
+    workflow = load_workflow(name)
+    for node_type, expected in OPTIONAL_EDITOR_SOCKETS.items():
+        nodes = [item for item in workflow["nodes"] if item["type"] == node_type]
+        if node_type in {"CLIPLoader", "DualIdentityScore"}:
+            assert nodes, f"{name} is missing {node_type}"
+        for item in nodes:
+            actual = tuple(
+                (input_["name"], input_["type"])
+                for input_ in item["inputs"]
+                if input_["name"] in {socket_name for socket_name, _type in expected}
+            )
+            assert actual == expected
 
 
 @pytest.mark.parametrize(("name", "mode"), WORKFLOWS.items())
