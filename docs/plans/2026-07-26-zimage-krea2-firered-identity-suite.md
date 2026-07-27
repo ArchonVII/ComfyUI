@@ -100,7 +100,7 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   similarity against the configured `0.363` same-identity threshold. The
   highest raw result scored `0.812342`.
 - **Verification:** All eight model files matched their expected sizes and
-  SHA-256 hashes; 20 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
+  SHA-256 hashes; 22 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
   live/direct node schema checks, and proof-integrity checks passed.
 - **Review closeout:** A P1 portability review found OS-native separators in
   nested model selector values. The final workflows use separator-free model
@@ -113,6 +113,11 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   `clip, prompt, vae, image1, image2, image3`, with a regression test covering
   the exact order and normal link-integrity checks covering the resulting
   target slots.
+- **Reproduction review closeout:** Final P2 review found stale nested FireRed
+  encoder placement text and an undocumented GFPGAN v1.4 dependency. The guide
+  now matches the flat selector path and explains the zero-storage alias; the
+  manifest records the required restorer's ReActor dataset URL, path, byte
+  size, SHA-256 hash, and license. Two focused tests enforce both contracts.
 - **Runtime scope clarification:** The native Z-Image, Krea 2, and FireRed
   graphs were model-selector and node-schema validated, but no native result is
   presented as benchmark evidence. The running shared ComfyUI process predated

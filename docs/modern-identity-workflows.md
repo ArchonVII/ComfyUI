@@ -135,9 +135,14 @@ Existing assets reused by these workflows:
 
 - `models/vae/ae.safetensors`
 - `models/vae/qwen_image_vae.safetensors`
-- `models/text_encoders/Qwen/qwen_2.5_vl_7b_fp8_scaled.safetensors`
+- `models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors`
 - `models/insightface/inswapper_128.onnx`
 - installed ReActor, ComfyUI-GGUF, and OpenCV Identity Score nodes
+
+If the reused Qwen2.5-VL encoder currently lives at
+`models/text_encoders/Qwen/qwen_2.5_vl_7b_fp8_scaled.safetensors`, move, copy,
+or link it to the selector-facing root path above. The verified Windows install
+uses an NTFS hardlink, so this alias consumes no additional model storage.
 
 The Krea workflow additionally requires:
 
@@ -145,7 +150,16 @@ The Krea workflow additionally requires:
 
 The installed revision is pinned in the model manifest.
 
-The first controlled ReActor run also provisioned its missing `buffalo_l` face-analysis pack and safety-classifier files automatically. Their installed paths and aggregate sizes are recorded in the manifest.
+The ReActor/GFPGAN proof additionally requires
+`models/facerestore_models/GFPGANv1.4.pth`. ReActor's `get_restorers()` downloads
+its restorer set only when the restorer directory is empty, so an installation
+with some other restorer may need this file downloaded explicitly. The exact
+ReActor dataset URL, installed size, SHA-256 hash, and Apache-2.0 license are in
+the manifest.
+
+The first controlled ReActor run also provisioned its missing `buffalo_l`
+face-analysis pack and safety-classifier files automatically. Their installed
+paths and aggregate sizes are recorded in the manifest.
 
 ## Research basis
 

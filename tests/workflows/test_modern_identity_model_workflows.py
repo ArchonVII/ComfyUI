@@ -363,3 +363,36 @@ def test_controlled_face_swap_evidence_is_complete_and_not_cherry_picked():
         assert identity["cosine_similarity"] == pytest.approx(
             expected_similarity
         )
+
+
+def test_firered_encoder_documentation_matches_flat_selector_contract():
+    guide = (REPO_ROOT / "docs" / "modern-identity-workflows.md").read_text(
+        encoding="utf-8"
+    )
+    selector_path = (
+        "`models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors`"
+    )
+    assert selector_path in guide
+
+
+def test_reactor_gfpgan_restorer_is_manifested_for_reproduction():
+    manifest_path = (
+        REPO_ROOT / "docs" / "modern-identity-model-manifest.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    destination = "models/facerestore_models/GFPGANv1.4.pth"
+    matches = [
+        entry
+        for entry in manifest["runtime_downloads"]
+        if entry["destination"] == destination
+    ]
+    assert len(matches) == 1
+    restorer = matches[0]
+    assert restorer["source"].endswith(
+        "/models/facerestore_models/GFPGANv1.4.pth"
+    )
+    assert restorer["size"] == 348632874
+    assert restorer["sha256"] == (
+        "e2cd4703ab14f4d01fd1383a8a8b266f"
+        "9a5833dacee8e6a79d3bf21a1b6be5ad"
+    )
