@@ -482,12 +482,6 @@
           "link": 4
         },
         {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 5,
-          "shape": 7
-        },
-        {
           "name": "direction",
           "type": "COMBO",
           "link": null,
@@ -518,6 +512,12 @@
           "widget": {
             "name": "spacing_color"
           }
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE",
+          "link": 5,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -562,12 +562,6 @@
           "link": 6
         },
         {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 7,
-          "shape": 7
-        },
-        {
           "name": "direction",
           "type": "COMBO",
           "link": null,
@@ -598,6 +592,12 @@
           "widget": {
             "name": "spacing_color"
           }
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE",
+          "link": 7,
+          "shape": 7
         }
       ],
       "outputs": [
@@ -1552,7 +1552,7 @@
       8,
       0,
       9,
-      1,
+      5,
       "IMAGE"
     ],
     [
@@ -1568,7 +1568,7 @@
       7,
       0,
       10,
-      1,
+      5,
       "IMAGE"
     ],
     [

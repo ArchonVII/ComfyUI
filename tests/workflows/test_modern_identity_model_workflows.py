@@ -165,6 +165,24 @@ def test_z_turbo_uses_q8_full_encoder_and_external_identity_anchor():
     assert nodes(workflow, "SetLatentNoiseMask")
 
 
+def test_z_turbo_image_stitch_inputs_follow_registered_schema_order():
+    workflow = load_workflow("40 - Z-Image Turbo Identity Anchor I2I.json")
+    expected_order = [
+        "image1",
+        "direction",
+        "match_image_size",
+        "spacing_width",
+        "spacing_color",
+        "image2",
+    ]
+    stitch_nodes = nodes(workflow, "ImageStitch")
+    assert len(stitch_nodes) == 2
+    for stitch_node in stitch_nodes:
+        assert [
+            input_spec["name"] for input_spec in stitch_node["inputs"]
+        ] == expected_order
+
+
 def test_z_base_has_distinct_generation_and_low_denoise_refinement_passes():
     workflow = load_workflow("41 - Z-Image Base Two Stage Precision I2I.json")
     unet = nodes(workflow, "UnetLoaderGGUF")
