@@ -317,6 +317,9 @@ def test_krea_identity_has_a_two_reference_executable_api_graph():
     decoder_id = by_type["VAEDecode"][0][0]
     assert score["inputs"]["generated_image"] == [decoder_id, 0]
     assert by_type["SaveImage"][0][1]["inputs"]["images"] == [decoder_id, 0]
+    assert by_type["SaveImage"][0][1]["inputs"]["filename_prefix"] == (
+        "agent/modern-identity/krea2-identity-v1-2"
+    )
     assert patch_id == by_type["KSampler"][0][1]["inputs"]["model"][0]
 
 
@@ -396,3 +399,25 @@ def test_reactor_gfpgan_restorer_is_manifested_for_reproduction():
         "e2cd4703ab14f4d01fd1383a8a8b266f"
         "9a5833dacee8e6a79d3bf21a1b6be5ad"
     )
+
+
+def test_reactor_swap_model_is_pinned_for_benchmark_reproduction():
+    manifest_path = (
+        REPO_ROOT / "docs" / "modern-identity-model-manifest.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    destination = "models/insightface/inswapper_128.onnx"
+    matches = [
+        entry
+        for entry in manifest["runtime_downloads"]
+        if entry["destination"] == destination
+    ]
+    assert len(matches) == 1
+    swap_model = matches[0]
+    assert swap_model["source"].endswith("/models/inswapper_128.onnx")
+    assert swap_model["size"] == 554253681
+    assert swap_model["sha256"] == (
+        "e4a3f08c753cb72d04e10aa0f7dbe3de"
+        "ebbf39567d4ead6dce08e98aa49e16af"
+    )
+    assert "non-commercial" in swap_model["license"].casefold()

@@ -100,7 +100,7 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   similarity against the configured `0.363` same-identity threshold. The
   highest raw result scored `0.812342`.
 - **Verification:** All eight model files matched their expected sizes and
-  SHA-256 hashes; 22 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
+  SHA-256 hashes; 23 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
   live/direct node schema checks, and proof-integrity checks passed.
 - **Review closeout:** A P1 portability review found OS-native separators in
   nested model selector values. The final workflows use separator-free model
@@ -118,6 +118,12 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   now matches the flat selector path and explains the zero-storage alias; the
   manifest records the required restorer's ReActor dataset URL, path, byte
   size, SHA-256 hash, and license. Two focused tests enforce both contracts.
+- **Final labeling/provenance closeout:** A later P2 review found the Krea API
+  save prefix under the control-evidence directory and an unpinned
+  `inswapper_128.onnx`. Krea API results now save under
+  `agent/modern-identity/krea2-identity-v1-2`; the manifest pins the swap
+  model's ReActor URL, destination, size, SHA-256 hash, and InsightFace
+  non-commercial terms. Tests enforce both behaviors.
 - **Runtime scope clarification:** The native Z-Image, Krea 2, and FireRed
   graphs were model-selector and node-schema validated, but no native result is
   presented as benchmark evidence. The running shared ComfyUI process predated

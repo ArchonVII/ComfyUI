@@ -77,6 +77,15 @@
   ],
   "runtime_downloads": [
     {
+      "family": "InsightFace inswapper 128",
+      "source": "https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/inswapper_128.onnx",
+      "destination": "models/insightface/inswapper_128.onnx",
+      "size": 554253681,
+      "sha256": "e4a3f08c753cb72d04e10aa0f7dbe3deebbf39567d4ead6dce08e98aa49e16af",
+      "license": "InsightFace non-commercial research terms",
+      "provisioned_by": "ComfyUI-ReActor installer; required by the committed benchmark graph"
+    },
+    {
       "family": "GFPGAN v1.4 face restorer",
       "source": "https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/facerestore_models/GFPGANv1.4.pth",
       "destination": "models/facerestore_models/GFPGANv1.4.pth",
@@ -101,7 +110,6 @@
   "reused_local_assets": [
     "models/vae/ae.safetensors",
     "models/vae/qwen_image_vae.safetensors",
-    "models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
-    "models/insightface/inswapper_128.onnx"
+    "models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors"
   ]
 }

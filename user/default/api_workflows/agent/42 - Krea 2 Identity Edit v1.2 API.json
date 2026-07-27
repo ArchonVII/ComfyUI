@@ -233,7 +233,7 @@
   },
   "15": {
     "inputs": {
-      "filename_prefix": "agent/identity-model-benchmark/krea2-native",
+      "filename_prefix": "agent/modern-identity/krea2-identity-v1-2",
       "images": [
         "14",
         0
