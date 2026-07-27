@@ -45,11 +45,11 @@ _ROLE_TYPES = {
 def _safe_relative_name(value: str) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
-    name = value.replace("\\", "/")
-    windows = PureWindowsPath(name)
-    if name.startswith("/") or Path(name).is_absolute() or windows.is_absolute() or windows.drive or ".." in Path(name).parts:
+    normalized = value.replace("\\", "/")
+    windows = PureWindowsPath(normalized)
+    if normalized.startswith("/") or Path(normalized).is_absolute() or windows.is_absolute() or windows.drive or ".." in Path(normalized).parts:
         return None
-    return name
+    return value
 
 
 def _catalog_entries(folder_paths_module: Any, groups: tuple[str, ...]) -> list[str]:

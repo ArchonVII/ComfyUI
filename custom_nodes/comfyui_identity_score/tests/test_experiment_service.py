@@ -43,6 +43,20 @@ class FakeFolderPaths:
         return str(self.root / "output")
 
 
+class FakeWindowsFolderPaths(FakeFolderPaths):
+    names = {
+        "diffusion_models": [
+            r"Flux\9B\flux-9b.safetensors",
+            r"..\escape-flux-9b.safetensors",
+        ],
+        "checkpoints": [],
+        "loras": [
+            r"Flux\9B\face-9b.safetensors",
+            r"C:\outside\bad-flux-9b.safetensors",
+        ],
+    }
+
+
 def template():
     return {
         "1": {"class_type": "LoadImage", "inputs": {}, "_meta": {"title": IDENTITY_LAB_BASE_IMAGE}},
@@ -65,6 +79,16 @@ def test_catalogs_are_deterministic_flux_9b_only_and_path_safe(tmp_path):
     assert catalog["loras"] == ["Flux/9B/face-9b.safetensors"]
     assert isinstance(catalog["samplers"], list)
     assert isinstance(catalog["schedulers"], list)
+
+
+def test_windows_catalog_entries_remain_exact_loader_compatible_names(tmp_path):
+    folder_paths = FakeWindowsFolderPaths(tmp_path)
+    service = ExperimentService(folder_paths_module=folder_paths)
+
+    catalog = service.catalogs()
+
+    assert catalog["diffusion_models"] == [folder_paths.get_filename_list("diffusion_models")[0]]
+    assert catalog["loras"] == [folder_paths.get_filename_list("loras")[0]]
 
 
 def test_workflow_template_requires_one_typed_node_for_every_stable_role():
