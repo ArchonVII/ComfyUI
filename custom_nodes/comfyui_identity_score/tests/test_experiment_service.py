@@ -60,10 +60,11 @@ def template():
 def test_catalogs_are_deterministic_flux_9b_only_and_path_safe(tmp_path):
     service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
 
-    assert service.catalogs() == {
-        "diffusion_models": ["Flux/9B/flux-9b.safetensors", "flux-dev-9b.safetensors"],
-        "loras": ["Flux/9B/face-9b.safetensors"],
-    }
+    catalog = service.catalogs()
+    assert catalog["diffusion_models"] == ["Flux/9B/flux-9b.safetensors", "flux-dev-9b.safetensors"]
+    assert catalog["loras"] == ["Flux/9B/face-9b.safetensors"]
+    assert isinstance(catalog["samplers"], list)
+    assert isinstance(catalog["schedulers"], list)
 
 
 def test_workflow_template_requires_one_typed_node_for_every_stable_role():

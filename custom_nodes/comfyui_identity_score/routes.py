@@ -327,6 +327,11 @@ async def post_estimate(request):
     return _response(lambda: get_service().estimate(experiment_id, **payload))
 
 
+async def post_global_estimate(request):
+    payload = validate_estimate_payload(await _body(request))
+    return _response(lambda: get_service().estimate(None, **payload))
+
+
 async def post_mark_queued(request):
     run_id = require_id(request.match_info["run_id"])
     payload = require_object(await _body(request))
@@ -377,6 +382,7 @@ def register_routes() -> None:
     routes.post("/identity-lab/experiments/{experiment_id}/plan")(_validated(post_plan))
     routes.post("/identity-lab/experiments/{experiment_id}/promote")(_validated(post_promote))
     routes.post("/identity-lab/experiments/{experiment_id}/estimate")(_validated(post_estimate))
+    routes.post("/identity-lab/estimates")(_validated(post_global_estimate))
     routes.post("/identity-lab/runs/{run_id}/queued")(_validated(post_mark_queued))
     routes.post("/identity-lab/runs/{run_id}/failed")(_validated(post_failed))
     routes.get("/identity-lab/experiments/{experiment_id}/results")(_validated(get_results))

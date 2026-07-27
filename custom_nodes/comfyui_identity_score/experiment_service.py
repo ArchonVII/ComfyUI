@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import importlib
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PureWindowsPath
@@ -62,6 +63,16 @@ def _catalog_entries(folder_paths_module: Any, groups: tuple[str, ...]) -> list[
     return values
 
 
+def _sampler_catalog() -> tuple[list[str], list[str]]:
+    """Read Comfy's live sampler registry without making the service depend on it."""
+    try:
+        sampler_module = importlib.import_module("comfy.samplers")
+        sampler = sampler_module.KSampler
+        return list(sampler.SAMPLERS), list(sampler.SCHEDULERS)
+    except (AttributeError, ImportError):
+        return [], []
+
+
 def validate_api_workflow(workflow: Mapping[str, Any]) -> dict[str, str]:
     """Map stable title roles to API prompt node ids, rejecting ambiguous graphs."""
     if not isinstance(workflow, Mapping):
@@ -102,9 +113,12 @@ class ExperimentService:
         return self._store
 
     def catalogs(self) -> dict[str, list[str]]:
+        samplers, schedulers = _sampler_catalog()
         return {
             "diffusion_models": _catalog_entries(self.folder_paths, ("diffusion_models", "checkpoints")),
             "loras": _catalog_entries(self.folder_paths, ("loras",)),
+            "samplers": samplers,
+            "schedulers": schedulers,
         }
 
     def _validate_catalog_selection(self, checkpoints: list[str], loras: list[tuple[str, float]]) -> None:

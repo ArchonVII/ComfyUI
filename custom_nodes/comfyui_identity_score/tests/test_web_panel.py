@@ -60,6 +60,8 @@ let badDenoise = false; try {{ api.parseSetup({{ ...settings, denoise: "1.1" }})
 if (!badDenoise) throw new Error("out-of-range denoise was accepted");
 let badMode = false; try {{ api.parseSetup({{ ...settings, mode: "txt2img" }}); }} catch {{ badMode = true; }}
 if (!badMode) throw new Error("invalid experiment mode was accepted");
+let badCatalogValue = false; try {{ api.parseSetup({{ ...settings, samplers: ["heun"], schedulers: ["simple"] }}); }} catch {{ badCatalogValue = true; }}
+if (!badCatalogValue) throw new Error("unavailable sampler was accepted");
 if (!api.estimatePreview(settings, 2).includes("runs")) throw new Error("estimate preview missing");
 const patched = api.patchPrompt(workflow, {{ ...settings, experimentId: "exp", runId: "run", mode: "face_swap" }});
 if (patched["1"].inputs.image !== "locked-base.png" || patched["2"].inputs.image !== "locked-ref.png") throw new Error("locked image roles changed");
