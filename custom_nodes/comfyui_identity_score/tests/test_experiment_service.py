@@ -323,3 +323,31 @@ def test_stale_cleanup_rejects_out_of_root_claims_and_fails_closed(tmp_path):
 
     assert outside.read_bytes() == b"keep"
     assert service.store.get_run(run_id)["state"] == "failed"
+
+
+def test_archived_experiment_delete_preview_requires_exact_confirmation_and_only_removes_its_png(tmp_path):
+    service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
+    created = service.create_experiment({
+        "name": "discard", "mode": "face_swap", "checkpoints": ["flux-dev-9b.safetensors"], "seeds": [7], "stages": ["baseline"],
+    })
+    experiment_id, run_id = created["experiment"]["id"], created["runs"][0]["id"]
+    completed = service.record_run(experiment_id=experiment_id, run_id=run_id, generated_image=np.zeros((2, 2, 3)), report={})
+    output = Path(service.output_directory) / completed["output_path"]
+    unrelated = Path(service.output_directory) / "identity_lab/results/keep.png"
+    unrelated.write_bytes(b"keep")
+    service.archive(experiment_id)
+
+    preview = service.delete_preview(experiment_id)
+    assert preview["runs"] == [run_id]
+    assert preview["files"] == [completed["output_path"]]
+    with pytest.raises(ValueError, match="confirmation"):
+        service.delete_archived(experiment_id, confirmation="DELETE anything else")
+    assert output.is_file()
+
+    deleted = service.delete_archived(experiment_id, confirmation=preview["confirmation"])
+
+    assert deleted["runs"] == [run_id]
+    assert not output.exists()
+    assert unrelated.read_bytes() == b"keep"
+    with pytest.raises(KeyError, match="not found"):
+        service.detail(experiment_id)

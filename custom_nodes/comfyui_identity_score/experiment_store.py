@@ -63,6 +63,19 @@ class ExperimentStore:
             connection.execute("UPDATE experiments SET state = 'archived', updated_at = ? WHERE id = ?", (_utc_now(), experiment_id))
             return self._fetch_experiment(connection, experiment_id)
 
+    def delete_archived_experiment(self, experiment_id: str) -> list[dict[str, Any]]:
+        """Delete one already-archived experiment and its exact run rows atomically."""
+        with self._connection() as connection:
+            experiment = self._fetch_experiment(connection, experiment_id)
+            if experiment["state"] != "archived":
+                raise ValueError("only archived experiments can be deleted")
+            runs = [_decode_run(row) for row in connection.execute("SELECT * FROM runs WHERE experiment_id = ? ORDER BY created_at, id", (experiment_id,))]
+            connection.execute("DELETE FROM runs WHERE experiment_id = ?", (experiment_id,))
+            deleted = connection.execute("DELETE FROM experiments WHERE id = ? AND state = 'archived'", (experiment_id,))
+            if deleted.rowcount != 1:
+                raise ValueError("experiment state changed concurrently")
+            return runs
+
     def create_run(self, experiment_id: str, planned_run: PlannedRun) -> dict[str, Any]:
         if not isinstance(planned_run, PlannedRun):
             raise ValueError("planned_run must be a PlannedRun")

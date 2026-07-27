@@ -212,4 +212,16 @@ def test_register_routes_includes_explicit_human_controlled_promotion_endpoint(m
 
     assert ("post", "/identity-lab/experiments/{experiment_id}/promote") in registered
     assert ("post", "/identity-lab/experiments/{experiment_id}/estimate") in registered
+    assert ("get", "/identity-lab/experiments/{experiment_id}/delete-preview") in registered
+    assert ("delete", "/identity-lab/experiments/{experiment_id}") in registered
+    assert ("post", "/identity-lab/runs/{run_id}/failed") in registered
     routes._ROUTES_REGISTERED = False
+
+
+def test_delete_and_prompt_failure_payloads_are_strict_and_local():
+    assert routes.validate_delete_payload({"confirmation": "DELETE 123"})["confirmation"] == "DELETE 123"
+    assert routes.validate_failure_payload({"experiment_id": str(uuid4()), "error": "prompt refused"})["error"] == "prompt refused"
+    with pytest.raises(ValueError, match="confirmation"):
+        routes.validate_delete_payload({"confirmation": ""})
+    with pytest.raises(ValueError, match="error"):
+        routes.validate_failure_payload({"experiment_id": str(uuid4()), "error": ""})

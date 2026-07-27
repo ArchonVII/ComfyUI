@@ -215,6 +215,9 @@ class ExperimentService:
     def mark_queued(self, experiment_id: str, run_id: str) -> dict[str, Any]:
         return self.store.mark_run_queued(experiment_id=experiment_id, run_id=run_id)
 
+    def fail_run(self, experiment_id: str, run_id: str, error: str) -> dict[str, Any]:
+        return self.store.fail_recorded_run(experiment_id=experiment_id, run_id=run_id, error=error)
+
     def resume_stale(self, experiment_id: str, *, stale_after_seconds: float, active_run_ids: set[str] | frozenset[str] = frozenset()) -> list[dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
         for run in self.store.list_runs(experiment_id):
@@ -248,6 +251,57 @@ class ExperimentService:
 
     def archive(self, experiment_id: str) -> dict[str, Any]:
         return self.store.archive_experiment(experiment_id)
+
+    def _deletable_files(self, experiment_id: str) -> tuple[list[dict[str, Any]], list[tuple[str, Path]]]:
+        experiment = self.store.get_experiment(experiment_id)
+        if experiment["state"] != "archived":
+            raise ValueError("only archived experiments can be deleted")
+        root = self.output_directory.resolve()
+        results_root = (root / "identity_lab" / "results").resolve()
+        runs = self.store.list_runs(experiment_id)
+        files: list[tuple[str, Path]] = []
+        for run in runs:
+            relative = run.get("output_path")
+            if relative is None:
+                continue
+            if not isinstance(relative, str) or not relative.startswith("identity_lab/results/") or not relative.endswith(".png"):
+                raise ValueError("experiment contains an output outside identity-lab results")
+            target = (root / relative).resolve()
+            if results_root not in target.parents or target.suffix.lower() != ".png":
+                raise ValueError("experiment contains an output outside identity-lab results")
+            if target.exists() and not target.is_file():
+                raise ValueError("experiment output is not a file")
+            files.append((relative, target))
+        return runs, files
+
+    def delete_preview(self, experiment_id: str) -> dict[str, Any]:
+        runs, files = self._deletable_files(experiment_id)
+        return {"experiment_id": experiment_id, "runs": [run["id"] for run in runs], "files": [relative for relative, _target in files], "confirmation": f"DELETE {experiment_id}"}
+
+    def delete_archived(self, experiment_id: str, *, confirmation: str) -> dict[str, Any]:
+        preview = self.delete_preview(experiment_id)
+        if confirmation != preview["confirmation"]:
+            raise ValueError("delete confirmation does not match this experiment")
+        deleted_runs = self.store.delete_archived_experiment(experiment_id)
+        deleted_files: list[str] = []
+        for relative, target in self._deletable_files_from_preview(preview):
+            try:
+                target.unlink(missing_ok=True)
+                deleted_files.append(relative)
+            except OSError as exc:
+                raise ValueError(f"unable to delete exact previewed output: {relative}") from exc
+        return {"experiment_id": experiment_id, "runs": [run["id"] for run in deleted_runs], "files": deleted_files}
+
+    def _deletable_files_from_preview(self, preview: Mapping[str, Any]) -> list[tuple[str, Path]]:
+        root = self.output_directory.resolve()
+        results_root = (root / "identity_lab" / "results").resolve()
+        result: list[tuple[str, Path]] = []
+        for relative in preview["files"]:
+            target = (root / relative).resolve()
+            if results_root not in target.parents or target.suffix.lower() != ".png":
+                raise ValueError("preview includes an output outside identity-lab results")
+            result.append((relative, target))
+        return result
 
     def output_file(self, output_path: str) -> Path:
         relative = _safe_relative_name(output_path)

@@ -183,6 +183,23 @@ def validate_archive_payload(value: Any) -> dict[str, Any]:
     return payload
 
 
+def validate_delete_payload(value: Any) -> dict[str, Any]:
+    payload = require_object(value)
+    if set(payload) != {"confirmation"} or not isinstance(payload.get("confirmation"), str) or not payload["confirmation"].strip():
+        raise ValueError("delete confirmation must be a non-empty string")
+    return payload
+
+
+def validate_failure_payload(value: Any) -> dict[str, Any]:
+    payload = require_object(value)
+    if set(payload) != {"experiment_id", "error"}:
+        raise ValueError("failure payload requires experiment_id and error")
+    payload["experiment_id"] = require_id(payload["experiment_id"])
+    if not isinstance(payload["error"], str) or not payload["error"].strip() or len(payload["error"]) > 500:
+        raise ValueError("error must be a non-empty string up to 500 characters")
+    return payload
+
+
 def validate_estimate_payload(value: Any) -> dict[str, Any]:
     payload = require_object(value)
     allowed = {"run_count", "fallback_seconds", "fallback_bytes"}
@@ -316,6 +333,23 @@ async def post_mark_queued(request):
     return _response(lambda: get_service().mark_queued(require_id(payload["experiment_id"]), run_id))
 
 
+async def post_failed(request):
+    run_id = require_id(request.match_info["run_id"])
+    payload = validate_failure_payload(await _body(request))
+    return _response(lambda: get_service().fail_run(payload["experiment_id"], run_id, payload["error"]))
+
+
+async def get_delete_preview(request):
+    experiment_id = require_id(request.match_info["experiment_id"])
+    return _response(lambda: get_service().delete_preview(experiment_id))
+
+
+async def delete_experiment(request):
+    experiment_id = require_id(request.match_info["experiment_id"])
+    payload = validate_delete_payload(await _body(request))
+    return _response(lambda: get_service().delete_archived(experiment_id, confirmation=payload["confirmation"]))
+
+
 async def get_output(request):
     run_id = require_id(request.match_info["run_id"])
     try:
@@ -342,9 +376,12 @@ def register_routes() -> None:
     routes.post("/identity-lab/experiments/{experiment_id}/promote")(_validated(post_promote))
     routes.post("/identity-lab/experiments/{experiment_id}/estimate")(_validated(post_estimate))
     routes.post("/identity-lab/runs/{run_id}/queued")(_validated(post_mark_queued))
+    routes.post("/identity-lab/runs/{run_id}/failed")(_validated(post_failed))
     routes.get("/identity-lab/experiments/{experiment_id}/results")(_validated(get_results))
     routes.patch("/identity-lab/runs/{run_id}/review")(_validated(patch_review))
     routes.post("/identity-lab/experiments/{experiment_id}/resume")(_validated(post_resume))
     routes.post("/identity-lab/experiments/{experiment_id}/archive")(_validated(post_archive))
+    routes.get("/identity-lab/experiments/{experiment_id}/delete-preview")(_validated(get_delete_preview))
+    routes.delete("/identity-lab/experiments/{experiment_id}")(_validated(delete_experiment))
     routes.get("/identity-lab/runs/{run_id}/output")(_validated(get_output))
     _ROUTES_REGISTERED = True
