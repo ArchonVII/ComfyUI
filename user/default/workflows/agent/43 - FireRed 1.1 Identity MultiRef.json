@@ -1,0 +1,1315 @@
+{
+  "id": "b8f91c4b-ee7d-5b1e-8247-d7651e783d25",
+  "revision": 0,
+  "last_node_id": 18,
+  "last_link_id": 24,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UnetLoaderGGUF",
+      "pos": [
+        -1560,
+        -760
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "unet_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "unet_name"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "title": "FireRed Image Edit 1.1 Q4_K_M",
+      "properties": {
+        "Node name for S&R": "UnetLoaderGGUF"
+      },
+      "widgets_values": [
+        "FireRed-Image-Edit-1.1-Q4_K_M.gguf"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -1180,
+        -760
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "lora_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "lora_name"
+          }
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "strength_model"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "title": "FireRed 1.1 Lightning 8-step v1.2",
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "FireRed-Image-Edit-1.1-Lightning-8steps-v1.2.safetensors",
+        1.0
+      ]
+    },
+    {
+      "id": 3,
+      "type": "ModelSamplingAuraFlow",
+      "pos": [
+        -800,
+        -760
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "name": "shift",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "shift"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            3
+          ]
+        }
+      ],
+      "title": "FireRed/Qwen shift 3.1",
+      "properties": {
+        "Node name for S&R": "ModelSamplingAuraFlow"
+      },
+      "widgets_values": [
+        3.1
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CFGNorm",
+      "pos": [
+        -440,
+        -760
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "strength"
+          }
+        },
+        {
+          "name": "pre_cfg",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "pre_cfg"
+          },
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            15
+          ]
+        }
+      ],
+      "title": "FireRed CFG normalization",
+      "properties": {
+        "Node name for S&R": "CFGNorm"
+      },
+      "widgets_values": [
+        1.0,
+        false
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPLoader",
+      "pos": [
+        -1560,
+        -520
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "clip_name"
+          }
+        },
+        {
+          "name": "type",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "type"
+          }
+        },
+        {
+          "name": "device",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "device"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 0,
+          "links": [
+            5,
+            9
+          ]
+        }
+      ],
+      "title": "Existing Qwen2.5-VL 7B FP8 encoder",
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "qwen_image",
+        "default"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "VAELoader",
+      "pos": [
+        -1180,
+        -520
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "vae_name"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            6,
+            10,
+            14,
+            20
+          ]
+        }
+      ],
+      "title": "Existing Qwen image VAE",
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "LoadImage",
+      "pos": [
+        -1560,
+        -120
+      ],
+      "size": [
+        310,
+        320
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "Target scene - pose/body/background from image 1",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm",
+        "image"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "LoadImage",
+      "pos": [
+        -1560,
+        280
+      ],
+      "size": [
+        310,
+        320
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "image"
+          }
+        },
+        {
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "link": null,
+          "widget": {
+            "name": "upload"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            8,
+            12,
+            23
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "Identity reference - face/head from image 2",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm",
+        "image"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "FluxKontextImageScale",
+      "pos": [
+        -1180,
+        -80
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            7,
+            11,
+            13
+          ]
+        }
+      ],
+      "title": "FireRed target resolution normalization",
+      "properties": {
+        "Node name for S&R": "FluxKontextImageScale"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 10,
+      "type": "TextEncodeQwenImageEditPlus",
+      "pos": [
+        -760,
+        -420
+      ],
+      "size": [
+        450,
+        280
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 6,
+          "shape": 7
+        },
+        {
+          "name": "image1",
+          "type": "IMAGE",
+          "link": 7,
+          "shape": 7
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE",
+          "link": 8,
+          "shape": 7
+        },
+        {
+          "name": "image3",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            16
+          ]
+        }
+      ],
+      "title": "FireRed two-reference identity instruction",
+      "properties": {
+        "Node name for S&R": "TextEncodeQwenImageEditPlus"
+      },
+      "widgets_values": [
+        "Replace the person in image 1 with the face and head identity from image 2. Preserve image 1's pose, expression, body, clothing, camera, lighting, and background."
+      ]
+    },
+    {
+      "id": 11,
+      "type": "TextEncodeQwenImageEditPlus",
+      "pos": [
+        -760,
+        -100
+      ],
+      "size": [
+        430,
+        240
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 9
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 10,
+          "shape": 7
+        },
+        {
+          "name": "image1",
+          "type": "IMAGE",
+          "link": 11,
+          "shape": 7
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE",
+          "link": 12,
+          "shape": 7
+        },
+        {
+          "name": "image3",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            17
+          ]
+        }
+      ],
+      "title": "FireRed grounded unconditional",
+      "properties": {
+        "Node name for S&R": "TextEncodeQwenImageEditPlus"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 12,
+      "type": "VAEEncode",
+      "pos": [
+        -760,
+        240
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 13
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            18
+          ]
+        }
+      ],
+      "title": "Encode target scene latent",
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 13,
+      "type": "KSampler",
+      "pos": [
+        -220,
+        -240
+      ],
+      "size": [
+        330,
+        430
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 15
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "seed"
+          }
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "steps"
+          }
+        },
+        {
+          "name": "cfg",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "cfg"
+          }
+        },
+        {
+          "name": "sampler_name",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "sampler_name"
+          }
+        },
+        {
+          "name": "scheduler",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "scheduler"
+          }
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 16
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 17
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 18
+        },
+        {
+          "name": "denoise",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "denoise"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            19
+          ]
+        }
+      ],
+      "title": "FireRed 1.1 Lightning identity edit",
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        432026,
+        "fixed",
+        8,
+        1.0,
+        "euler",
+        "simple",
+        1.0
+      ]
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        180,
+        -160
+      ],
+      "size": [
+        310,
+        190
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 19
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            21,
+            22,
+            24
+          ]
+        }
+      ],
+      "title": "Decode native FireRed identity edit",
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "SaveImage",
+      "pos": [
+        540,
+        -220
+      ],
+      "size": [
+        320,
+        270
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 21
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "filename_prefix"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Save native FireRed identity result",
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "agent/modern-identity/firered-1-1"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "PreviewImage",
+      "pos": [
+        900,
+        -220
+      ],
+      "size": [
+        320,
+        270
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Preview native FireRed result",
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 17,
+      "type": "OpenCVIdentityScore",
+      "pos": [
+        540,
+        120
+      ],
+      "size": [
+        410,
+        450
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "reference_image",
+          "type": "IMAGE",
+          "link": 23
+        },
+        {
+          "name": "generated_image",
+          "type": "IMAGE",
+          "link": 24
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "catalog_root",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "catalog_root"
+          }
+        },
+        {
+          "name": "subject_name",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "subject_name"
+          }
+        },
+        {
+          "name": "catalog_mode",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "catalog_mode"
+          }
+        },
+        {
+          "name": "catalog_aggregation",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "catalog_aggregation"
+          }
+        },
+        {
+          "name": "max_catalog_images",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_catalog_images"
+          }
+        },
+        {
+          "name": "include_subfolders",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "include_subfolders"
+          }
+        },
+        {
+          "name": "face_score_threshold",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "face_score_threshold"
+          }
+        },
+        {
+          "name": "same_identity_threshold",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "same_identity_threshold"
+          }
+        },
+        {
+          "name": "face_selection",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "face_selection"
+          }
+        },
+        {
+          "name": "write_manifest",
+          "type": "BOOLEAN",
+          "link": null,
+          "widget": {
+            "name": "write_manifest"
+          }
+        },
+        {
+          "name": "manifest_dir",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "manifest_dir"
+          }
+        },
+        {
+          "name": "run_label",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "run_label"
+          }
+        },
+        {
+          "name": "metadata_key",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "metadata_key"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "source_cosine_similarity",
+          "type": "FLOAT",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "source_same_identity",
+          "type": "BOOLEAN",
+          "slot_index": 1,
+          "links": []
+        },
+        {
+          "name": "best_catalog_subject",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": []
+        },
+        {
+          "name": "best_catalog_reference",
+          "type": "STRING",
+          "slot_index": 3,
+          "links": []
+        },
+        {
+          "name": "report_json",
+          "type": "STRING",
+          "slot_index": 4,
+          "links": []
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "slot_index": 5,
+          "links": []
+        }
+      ],
+      "title": "Score identity reference vs FireRed result",
+      "properties": {
+        "Node name for S&R": "OpenCVIdentityScore"
+      },
+      "widgets_values": [
+        "people",
+        "",
+        "off",
+        "mean_top3",
+        64,
+        true,
+        0.7,
+        0.363,
+        "largest",
+        true,
+        "default/identity_score_runs",
+        "firered-1-1-identity",
+        "identity_score_report"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "MarkdownNote",
+      "pos": [
+        -1560,
+        680
+      ],
+      "size": [
+        520,
+        390
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "FireRed 1.1 identity workflow",
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## FireRed Image Edit 1.1 identity multi-reference\n\nFireRed is a native image editor and is the strongest additional identity candidate in this suite. Image 1 is the scene/pose source; image 2 is the identity source. The official current 1.1 Lightning v1.2 LoRA uses 8 steps, CFG 1, Euler/simple, shift 3.1, and CFGNorm. The installed Qwen2.5-VL FP8 encoder and Qwen VAE are reused."
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      7,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      5,
+      0,
+      10,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      6,
+      0,
+      10,
+      2,
+      "VAE"
+    ],
+    [
+      7,
+      9,
+      0,
+      10,
+      3,
+      "IMAGE"
+    ],
+    [
+      8,
+      8,
+      0,
+      10,
+      4,
+      "IMAGE"
+    ],
+    [
+      9,
+      5,
+      0,
+      11,
+      0,
+      "CLIP"
+    ],
+    [
+      10,
+      6,
+      0,
+      11,
+      2,
+      "VAE"
+    ],
+    [
+      11,
+      9,
+      0,
+      11,
+      3,
+      "IMAGE"
+    ],
+    [
+      12,
+      8,
+      0,
+      11,
+      4,
+      "IMAGE"
+    ],
+    [
+      13,
+      9,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      14,
+      6,
+      0,
+      12,
+      1,
+      "VAE"
+    ],
+    [
+      15,
+      4,
+      0,
+      13,
+      0,
+      "MODEL"
+    ],
+    [
+      16,
+      10,
+      0,
+      13,
+      6,
+      "CONDITIONING"
+    ],
+    [
+      17,
+      11,
+      0,
+      13,
+      7,
+      "CONDITIONING"
+    ],
+    [
+      18,
+      12,
+      0,
+      13,
+      8,
+      "LATENT"
+    ],
+    [
+      19,
+      13,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      20,
+      6,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      21,
+      14,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      22,
+      14,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      23,
+      8,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      24,
+      14,
+      0,
+      17,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "modern_identity_suite": {
+      "workflow_slug": "firered-1-1-identity-multiref",
+      "version": 1,
+      "model": "FireRed-Image-Edit-1.1-Q4_K_M.gguf",
+      "license": "Apache-2.0",
+      "research_sources": [
+        "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1",
+        "https://huggingface.co/FireRedTeam/FireRed-Image-Edit-1.1-ComfyUI",
+        "https://www.reddit.com/r/comfyui/comments/1rqyn65/firered_image_edit_11_a_more_powerful_editing/"
+      ]
+    }
+  },
+  "version": 0.4
+}

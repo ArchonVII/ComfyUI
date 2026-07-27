@@ -1,0 +1,89 @@
+{
+  "1": {
+    "inputs": {
+      "image": "identity-benchmark/source_identity.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Synthetic identity source"
+    }
+  },
+  "2": {
+    "inputs": {
+      "image": "identity-benchmark/target_scene_v2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Synthetic target scene"
+    }
+  },
+  "3": {
+    "inputs": {
+      "enabled": true,
+      "swap_model": "inswapper_128.onnx",
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "GFPGANv1.4.pth",
+      "face_restore_visibility": 0.75,
+      "codeformer_weight": 0.5,
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1,
+      "input_image": [
+        "2",
+        0
+      ],
+      "source_image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ReActorFaceSwap",
+    "_meta": {
+      "title": "ReActor face-swap baseline"
+    }
+  },
+  "4": {
+    "inputs": {
+      "filename_prefix": "agent/identity-model-benchmark/reactor-baseline",
+      "images": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save face-swap proof"
+    }
+  },
+  "5": {
+    "inputs": {
+      "catalog_root": "people",
+      "subject_name": "",
+      "catalog_mode": "off",
+      "catalog_aggregation": "mean_top3",
+      "max_catalog_images": 64,
+      "include_subfolders": true,
+      "face_score_threshold": 0.7,
+      "same_identity_threshold": 0.363,
+      "face_selection": "largest",
+      "write_manifest": true,
+      "manifest_dir": "default/identity_score_runs",
+      "run_label": "reactor-proof-baseline",
+      "metadata_key": "identity_score_report",
+      "reference_image": [
+        "1",
+        0
+      ],
+      "generated_image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "OpenCVIdentityScore",
+    "_meta": {
+      "title": "Identity similarity evidence"
+    }
+  }
+}
