@@ -114,11 +114,11 @@ def model_stack(graph, pos):
 
 
 def sampler(graph, pos):
-    return add(graph, "KSampler", "IDENTITY_LAB_SAMPLER", pos, (("model", "MODEL"), ("seed", "INT"), ("steps", "INT"), ("cfg", "FLOAT"), ("sampler_name", "COMBO"), ("scheduler", "COMBO"), ("positive", "CONDITIONING"), ("negative", "CONDITIONING"), ("latent_image", "LATENT"), ("denoise", "FLOAT")), (("LATENT", "LATENT"),), (347129883, "fixed", 28, 3.0, "euler", "beta", 0.72), (340, 430))
+    return add(graph, "KSampler", "IDENTITY_LAB_SAMPLER", pos, (("model", "MODEL"), ("positive", "CONDITIONING"), ("negative", "CONDITIONING"), ("latent_image", "LATENT"), ("seed", "INT"), ("steps", "INT"), ("cfg", "FLOAT"), ("sampler_name", "COMBO"), ("scheduler", "COMBO"), ("denoise", "FLOAT")), (("LATENT", "LATENT"),), (347129883, "fixed", 28, 3.0, "euler", "beta", 0.72), (340, 430))
 
 
 def score(graph, mode, pos):
-    return add(graph, "DualIdentityScore", "IDENTITY_LAB_SCORE", pos, (("base_image", "IMAGE"), ("reference_image", "IMAGE"), ("generated_image", "IMAGE"), ("experiment_mode", "COMBO"), ("face_score_threshold", "FLOAT"), ("same_identity_threshold", "FLOAT"), ("face_selection", "COMBO"), ("write_manifest", "BOOLEAN"), ("manifest_dir", "STRING"), ("run_label", "STRING"), ("metadata_key", "STRING"), ("experiment_id", "STRING"), ("run_id", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (("reference_cosine_similarity", "FLOAT"), ("reference_detected", "BOOLEAN"), ("reference_same_identity", "BOOLEAN"), ("base_cosine_similarity", "FLOAT"), ("base_detected", "BOOLEAN"), ("base_same_identity", "BOOLEAN"), ("generated_detected", "BOOLEAN"), ("active_cosine_similarity", "FLOAT"), ("active_same_identity", "BOOLEAN"), ("rankable", "BOOLEAN"), ("report_json", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (mode, 0.7, 0.363, "largest", True, "default/identity_score_runs", f"identity-lab-{mode}", "identity_score_report"), (420, 390))
+    return add(graph, "DualIdentityScore", "IDENTITY_LAB_SCORE", pos, (("base_image", "IMAGE"), ("reference_image", "IMAGE"), ("generated_image", "IMAGE"), ("extra_metadata", "EXTRA_METADATA"), ("experiment_mode", "COMBO"), ("face_score_threshold", "FLOAT"), ("same_identity_threshold", "FLOAT"), ("face_selection", "COMBO"), ("write_manifest", "BOOLEAN"), ("manifest_dir", "STRING"), ("run_label", "STRING"), ("metadata_key", "STRING"), ("experiment_id", "STRING"), ("run_id", "STRING")), (("reference_cosine_similarity", "FLOAT"), ("reference_detected", "BOOLEAN"), ("reference_same_identity", "BOOLEAN"), ("base_cosine_similarity", "FLOAT"), ("base_detected", "BOOLEAN"), ("base_same_identity", "BOOLEAN"), ("generated_detected", "BOOLEAN"), ("active_cosine_similarity", "FLOAT"), ("active_same_identity", "BOOLEAN"), ("rankable", "BOOLEAN"), ("report_json", "STRING"), ("extra_metadata", "EXTRA_METADATA")), (mode, 0.7, 0.363, "largest", True, "default/identity_score_runs", f"identity-lab-{mode}", "identity_score_report"), (420, 390))
 
 
 def output_nodes(graph, image, prefix, pos):
@@ -196,7 +196,7 @@ def build_identity_i2i():
     insight = add(graph, "PuLIDInsightFaceLoader", "PuLID face analysis", (-960, 350), (("provider", "COMBO"),), (("INSIGHTFACE", "INSIGHTFACE"),), ("CUDA",))
     eva = add(graph, "PuLIDEVACLIPLoader", "PuLID EVA-CLIP", (-590, 350), (), (("EVA_CLIP", "EVA_CLIP"),))
     pulid_model = add(graph, "PuLIDModelLoader", "Load Flux 2 Klein PuLID", (-220, 350), (("pulid_file", "COMBO"),), (("PULID_MODEL", "PULID_MODEL"),), (PULID,))
-    pulid = add(graph, "ApplyPuLIDFlux2", "Apply reference identity to Flux model", (180, 100), (("model", "MODEL"), ("pulid_model", "PULID_MODEL"), ("strength", "FLOAT"), ("eva_clip", "EVA_CLIP"), ("face_analysis", "INSIGHTFACE"), ("image", "IMAGE"), ("face_index", "INT"), ("debug_mode", "BOOLEAN")), (("MODEL", "MODEL"),), (1.2, 0, False), (380, 310))
+    pulid = add(graph, "ApplyPuLIDFlux2", "Apply reference identity to Flux model", (180, 100), (("model", "MODEL"), ("pulid_model", "PULID_MODEL"), ("eva_clip", "EVA_CLIP"), ("face_analysis", "INSIGHTFACE"), ("image", "IMAGE"), ("strength", "FLOAT"), ("face_index", "INT"), ("debug_mode", "BOOLEAN")), (("MODEL", "MODEL"),), (1.2, 0, False), (380, 310))
     sampled = sampler(graph, (600, -100))
     decoded = add(graph, "VAEDecode", "Decode identity I2I result", (990, -100), (("samples", "LATENT"), ("vae", "VAE")), (("IMAGE", "IMAGE"),))
     audit = score(graph, "identity_i2i", (1360, 280))

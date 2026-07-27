@@ -52,7 +52,7 @@ NODE_SCHEMAS = {
     "CLIPLoader": (("clip_name", "type", "device"), ("CLIP",)),
     "VAELoader": (("vae_name",), ("VAE",)),
     "CLIPTextEncode": (("clip", "text"), ("CONDITIONING",)),
-    "KSampler": (("model", "seed", "steps", "cfg", "sampler_name", "scheduler", "positive", "negative", "latent_image", "denoise"), ("LATENT",)),
+    "KSampler": (("model", "positive", "negative", "latent_image", "seed", "steps", "cfg", "sampler_name", "scheduler", "denoise"), ("LATENT",)),
     "ImageScaleToTotalPixels": (("image", "upscale_method", "megapixels", "resolution_steps"), ("IMAGE",)),
     "VAEEncode": (("pixels", "vae"), ("LATENT",)),
     "VAEDecode": (("samples", "vae"), ("IMAGE",)),
@@ -68,8 +68,8 @@ NODE_SCHEMAS = {
     "PuLIDInsightFaceLoader": (("provider",), ("INSIGHTFACE",)),
     "PuLIDEVACLIPLoader": ((), ("EVA_CLIP",)),
     "PuLIDModelLoader": (("pulid_file",), ("PULID_MODEL",)),
-    "ApplyPuLIDFlux2": (("model", "pulid_model", "strength", "eva_clip", "face_analysis", "image", "face_index", "debug_mode"), ("MODEL",)),
-    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key", "experiment_id", "run_id", "extra_metadata"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
+    "ApplyPuLIDFlux2": (("model", "pulid_model", "eva_clip", "face_analysis", "image", "strength", "face_index", "debug_mode"), ("MODEL",)),
+    "DualIdentityScore": (("base_image", "reference_image", "generated_image", "extra_metadata", "experiment_mode", "face_score_threshold", "same_identity_threshold", "face_selection", "write_manifest", "manifest_dir", "run_label", "metadata_key", "experiment_id", "run_id"), ("FLOAT", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "BOOLEAN", "FLOAT", "BOOLEAN", "BOOLEAN", "STRING", "EXTRA_METADATA")),
     "SaveImage": (("images", "filename_prefix"), ("IMAGE",)),
     "PreviewImage": (("images",), ("IMAGE",)),
     "MarkdownNote": ((), ()),
@@ -79,6 +79,40 @@ OPTIONAL_EDITOR_SOCKETS = {
     "CLIPLoader": (("device", "COMBO"),),
     "BboxDetectorSEGS": (("detailer_hook", "DETAILER_HOOK"),),
     "DualIdentityScore": (("extra_metadata", "EXTRA_METADATA"),),
+}
+
+# Frontend/editor ordering is socket-first, which differs from several backend
+# INPUT_TYPES declaration orders. The trailing entries are widgets, except the
+# DualIdentityScore runner IDs which are force-input seams after its widgets.
+EDITOR_SOCKET_PREFIXES = {
+    "LoadImage": (), "UNETLoader": (), "LoraLoaderModelOnly": ("model",),
+    "CLIPLoader": (), "VAELoader": (), "CLIPTextEncode": ("clip",),
+    "KSampler": ("model", "positive", "negative", "latent_image"),
+    "ImageScaleToTotalPixels": ("image",), "VAEEncode": ("pixels", "vae"),
+    "VAEDecode": ("samples", "vae"), "ReferenceLatent": ("conditioning", "latent"),
+    "EmptyFlux2LatentImage": (), "GetImageSize": ("image",),
+    "UltralyticsDetectorProvider": (),
+    "BboxDetectorSEGS": ("bbox_detector", "image", "detailer_hook"),
+    "SAMLoader": (), "SAMDetectorCombined": ("sam_model", "segs", "image"),
+    "BatchCropFromMaskAdvanced": ("original_images", "masks"),
+    "BatchUncropAdvanced": ("original_images", "cropped_images", "cropped_masks", "combined_crop_mask", "bboxes", "combined_bounding_box"),
+    "PuLIDInsightFaceLoader": (), "PuLIDEVACLIPLoader": (), "PuLIDModelLoader": (),
+    "ApplyPuLIDFlux2": ("model", "pulid_model", "eva_clip", "face_analysis", "image"),
+    "DualIdentityScore": ("base_image", "reference_image", "generated_image", "extra_metadata"),
+    "SaveImage": ("images",), "PreviewImage": ("images",), "MarkdownNote": (),
+}
+
+EDITOR_TRAILING_FORCE_INPUTS = {"DualIdentityScore": ("experiment_id", "run_id")}
+EDITOR_WIDGET_VALUE_COUNTS = {
+    "LoadImage": 1, "UNETLoader": 2, "LoraLoaderModelOnly": 2, "CLIPLoader": 3,
+    "VAELoader": 1, "CLIPTextEncode": 1, "KSampler": 7,
+    "ImageScaleToTotalPixels": 3, "VAEEncode": 0, "VAEDecode": 0,
+    "ReferenceLatent": 0, "EmptyFlux2LatentImage": 3, "GetImageSize": 0,
+    "UltralyticsDetectorProvider": 1, "BboxDetectorSEGS": 5, "SAMLoader": 2,
+    "SAMDetectorCombined": 6, "BatchCropFromMaskAdvanced": 2,
+    "BatchUncropAdvanced": 4, "PuLIDInsightFaceLoader": 1,
+    "PuLIDEVACLIPLoader": 0, "PuLIDModelLoader": 1, "ApplyPuLIDFlux2": 3,
+    "DualIdentityScore": 8, "SaveImage": 1, "PreviewImage": 0, "MarkdownNote": 1,
 }
 
 
@@ -118,6 +152,15 @@ def source(workflow: dict, target: dict, input_name: str) -> tuple[dict, int]:
     assert link_id is not None, f"{target['title']}.{input_name} is not linked"
     link = next(item for item in workflow["links"] if item[0] == link_id)
     return next(item for item in workflow["nodes"] if item["id"] == link[1]), link[2]
+
+
+def assert_link_targets_slot(workflow: dict, target: dict, input_name: str, expected_slot: int) -> None:
+    actual_slot = input_slot(target, input_name)
+    assert actual_slot == expected_slot
+    link_id = target["inputs"][actual_slot]["link"]
+    assert link_id is not None
+    link = next(item for item in workflow["links"] if item[0] == link_id)
+    assert link[3:5] == [target["id"], expected_slot]
 
 
 def assert_link_integrity_and_schemas(workflow: dict) -> None:
@@ -171,6 +214,46 @@ def test_templates_preserve_captured_optional_editor_sockets(name):
                 if input_["name"] in {socket_name for socket_name, _type in expected}
             )
             assert actual == expected
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_sampler_links_target_actual_editor_slots(name):
+    sampler = node(load_workflow(name), "IDENTITY_LAB_SAMPLER")
+    assert tuple(item["name"] for item in sampler["inputs"]) == NODE_SCHEMAS["KSampler"][0]
+    for input_name, expected_slot in (("model", 0), ("positive", 1), ("negative", 2), ("latent_image", 3)):
+        assert_link_targets_slot(load_workflow(name), sampler, input_name, expected_slot)
+
+
+def test_pulid_links_target_actual_editor_slots():
+    workflow = load_workflow(IDENTITY_I2I)
+    pulid = next(item for item in workflow["nodes"] if item["type"] == "ApplyPuLIDFlux2")
+    assert tuple(item["name"] for item in pulid["inputs"]) == NODE_SCHEMAS["ApplyPuLIDFlux2"][0]
+    for input_name, expected_slot in (("model", 0), ("pulid_model", 1), ("eva_clip", 2), ("face_analysis", 3), ("image", 4)):
+        assert_link_targets_slot(workflow, pulid, input_name, expected_slot)
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_every_generated_node_uses_socket_first_editor_order_and_widget_serialization(name):
+    for item in load_workflow(name)["nodes"]:
+        node_type = item["type"]
+        prefix = EDITOR_SOCKET_PREFIXES[node_type]
+        trailing = EDITOR_TRAILING_FORCE_INPUTS.get(node_type, ())
+        input_names = tuple(input_["name"] for input_ in item["inputs"])
+        assert input_names[:len(prefix)] == prefix
+        if trailing:
+            assert input_names[-len(trailing):] == trailing
+        widget_names = input_names[len(prefix):len(input_names) - len(trailing) if trailing else None]
+        assert len(item["widgets_values"]) == EDITOR_WIDGET_VALUE_COUNTS[node_type], (
+            f"{node_type} widgets must serialize in editor order after {prefix}; "
+            f"found widget inputs {widget_names}"
+        )
+
+
+@pytest.mark.parametrize("name", WORKFLOWS)
+def test_dual_identity_score_metadata_socket_has_editor_target_slot_three(name):
+    score = node(load_workflow(name), "IDENTITY_LAB_SCORE")
+    assert input_slot(score, "extra_metadata") == 3
+    assert score["inputs"][3]["link"] is None
 
 
 @pytest.mark.parametrize(("name", "mode"), WORKFLOWS.items())

@@ -1513,6 +1513,21 @@
           "link": 36
         },
         {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 37
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 38
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 39
+        },
+        {
           "name": "seed",
           "type": "INT",
           "link": null
@@ -1536,21 +1551,6 @@
           "name": "scheduler",
           "type": "COMBO",
           "link": null
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 37
-        },
-        {
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 38
-        },
-        {
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 39
         },
         {
           "name": "denoise",
@@ -1744,6 +1744,11 @@
           "link": 50
         },
         {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "link": null
+        },
+        {
           "name": "experiment_mode",
           "type": "COMBO",
           "link": null
@@ -1791,11 +1796,6 @@
         {
           "name": "run_id",
           "type": "STRING",
-          "link": null
-        },
-        {
-          "name": "extra_metadata",
-          "type": "EXTRA_METADATA",
           "link": null
         }
       ],
@@ -2284,7 +2284,7 @@
       24,
       0,
       27,
-      6,
+      1,
       "CONDITIONING"
     ],
     [
@@ -2292,7 +2292,7 @@
       22,
       0,
       27,
-      7,
+      2,
       "CONDITIONING"
     ],
     [
@@ -2300,7 +2300,7 @@
       26,
       0,
       27,
-      8,
+      3,
       "LATENT"
     ],
     [
