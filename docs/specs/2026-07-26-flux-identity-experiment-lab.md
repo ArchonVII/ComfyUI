@@ -1,7 +1,7 @@
 # Flux Identity Experiment Lab Design
 
-**Status:** Approved on 2026-07-26  
-**Scope:** Local Flux/Klein 9B face-swap and identity-preserving image-to-image experiments  
+**Status:** Approved on 2026-07-26
+**Scope:** Local Flux/Klein 9B face-swap and identity-preserving image-to-image experiments
 **Owner:** Local ComfyUI user
 
 ## Understanding Summary
