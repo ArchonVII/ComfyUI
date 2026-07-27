@@ -47,9 +47,9 @@ const workflow = {{
   "1": {{ class_type: "LoadImage", inputs: {{ image: "locked-base.png" }}, _meta: {{ title: "IDENTITY_LAB_BASE_IMAGE" }} }},
   "2": {{ class_type: "LoadImage", inputs: {{ image: "locked-ref.png" }}, _meta: {{ title: "IDENTITY_LAB_REFERENCE_IMAGE" }} }},
   "3": {{ class_type: "UNETLoader", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_MODEL" }} }},
-  "4": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-1.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_1" }} }},
-  "5": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-2.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_2" }} }},
-  "6": {{ class_type: "LoraLoader", inputs: {{lora_name:"default-3.safetensors", strength_model:1, strength_clip:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_3" }} }},
+  "4": {{ class_type: "LoraLoaderModelOnly", inputs: {{lora_name:"default-1.safetensors", strength_model:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_1" }} }},
+  "5": {{ class_type: "LoraLoaderModelOnly", inputs: {{lora_name:"default-2.safetensors", strength_model:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_2" }} }},
+  "6": {{ class_type: "LoraLoaderModelOnly", inputs: {{lora_name:"default-3.safetensors", strength_model:1}}, _meta: {{ title: "IDENTITY_LAB_LORA_3" }} }},
   "7": {{ class_type: "KSampler", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_SAMPLER" }} }},
   "8": {{ class_type: "DualIdentityScore", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_SCORE" }} }},
   "9": {{ class_type: "ImageScaleToTotalPixels", inputs: {{}}, _meta: {{ title: "IDENTITY_LAB_PIXEL_BUDGET" }} }},
@@ -67,6 +67,7 @@ const patched = api.patchPrompt(workflow, {{ ...settings, experimentId: "exp", r
 if (patched["1"].inputs.image !== "locked-base.png" || patched["2"].inputs.image !== "locked-ref.png") throw new Error("locked image roles changed");
 if (patched["3"].inputs.unet_name !== "flux.safetensors" || patched["8"].inputs.run_id !== "run") throw new Error("stable role patch failed");
 if (patched["4"].inputs.lora_name !== "face.safetensors" || patched["5"].inputs.lora_name !== "default-2.safetensors" || patched["5"].inputs.strength_model !== 0 || patched["9"].inputs.megapixels !== 1) throw new Error("inactive LoRA or megapixel patching is invalid");
+if ("strength_clip" in patched["4"].inputs || "strength_clip" in patched["5"].inputs || "strength_clip" in patched["6"].inputs) throw new Error("ModelOnly LoRAs must not receive a CLIP strength");
 const duplicate = structuredClone(workflow); duplicate["9"] = structuredClone(duplicate["8"]);
 let rejected = false; try {{ api.patchPrompt(duplicate, {{...settings, experimentId: "exp", runId: "run", mode: "face_swap" }}); }} catch {{ rejected = true; }}
 if (!rejected) throw new Error("duplicate roles were accepted");

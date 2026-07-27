@@ -5,9 +5,9 @@ const ROLE_TYPES = {
   IDENTITY_LAB_BASE_IMAGE: ["LoadImage"],
   IDENTITY_LAB_REFERENCE_IMAGE: ["LoadImage"],
   IDENTITY_LAB_MODEL: ["UNETLoader", "CheckpointLoaderSimple"],
-  IDENTITY_LAB_LORA_1: ["LoraLoader"],
-  IDENTITY_LAB_LORA_2: ["LoraLoader"],
-  IDENTITY_LAB_LORA_3: ["LoraLoader"],
+  IDENTITY_LAB_LORA_1: ["LoraLoader", "LoraLoaderModelOnly"],
+  IDENTITY_LAB_LORA_2: ["LoraLoader", "LoraLoaderModelOnly"],
+  IDENTITY_LAB_LORA_3: ["LoraLoader", "LoraLoaderModelOnly"],
   IDENTITY_LAB_SAMPLER: ["KSampler"],
   IDENTITY_LAB_PIXEL_BUDGET: ["ImageScaleToTotalPixels"],
   IDENTITY_LAB_SCORE: ["DualIdentityScore"],
@@ -109,7 +109,9 @@ function patchPrompt(workflow, settings) {
   ["IDENTITY_LAB_LORA_1", "IDENTITY_LAB_LORA_2", "IDENTITY_LAB_LORA_3"].forEach((role, index) => {
     const inputs = roles[role][1].inputs ??= {}; const lora = settings.loras?.[index];
     if (lora) inputs.lora_name = lora.name;
-    inputs.strength_model = lora?.strength ?? 0; inputs.strength_clip = lora?.strength ?? 0;
+    inputs.strength_model = lora?.strength ?? 0;
+    if (roles[role][1].class_type === "LoraLoader") inputs.strength_clip = lora?.strength ?? 0;
+    else delete inputs.strength_clip;
   });
   const sampler = roles.IDENTITY_LAB_SAMPLER[1].inputs ??= {};
   Object.assign(sampler, { seed: settings.seed ?? settings.seeds?.[0], steps: settings.steps, cfg: settings.cfg, sampler_name: settings.sampler, scheduler: settings.scheduler, denoise: settings.denoise });

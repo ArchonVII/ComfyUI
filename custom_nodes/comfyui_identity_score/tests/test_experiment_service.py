@@ -94,6 +94,14 @@ def test_workflow_template_requires_one_typed_node_for_every_stable_role():
         validate_api_workflow(missing_pixel_budget)
 
 
+def test_workflow_template_accepts_flux_model_only_lora_roles():
+    workflow = template()
+    for node_id in ("4", "5", "6"):
+        workflow[node_id]["class_type"] = "LoraLoaderModelOnly"
+
+    assert validate_api_workflow(workflow)[IDENTITY_LAB_LORA_1] == "4"
+
+
 def test_created_experiment_keeps_validated_workflow_in_durable_settings_not_run_refine(tmp_path):
     service = ExperimentService(folder_paths_module=FakeFolderPaths(tmp_path))
     workflow = template()

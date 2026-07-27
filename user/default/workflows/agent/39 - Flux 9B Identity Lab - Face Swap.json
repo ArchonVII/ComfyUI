@@ -1,0 +1,2384 @@
+{
+  "id": "5c70cb88-7429-5d77-93fe-abe9e7e603b1",
+  "revision": 0,
+  "last_node_id": 33,
+  "last_link_id": 50,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        -1900,
+        -100
+      ],
+      "size": [
+        300,
+        280
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            5,
+            8,
+            9,
+            42,
+            48
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "IDENTITY_LAB_BASE_IMAGE",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        -1900,
+        300
+      ],
+      "size": [
+        300,
+        280
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            12,
+            15,
+            16,
+            49
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "IDENTITY_LAB_REFERENCE_IMAGE",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "wan_q4_placeholder.ppm"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "UNETLoader",
+      "pos": [
+        -1900,
+        -850
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "unet_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_MODEL",
+      "properties": {
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "Flux\\9b\\DarkBeast-Klein9b-V2-BFS-FP8-ComfyUI.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -1540,
+        -850
+      ],
+      "size": [
+        340,
+        210
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "lora_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_LORA_1",
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Flux\\9b\\1 ------ Helper\\Flux2-Klein-9B-consistency-V2.safetensors",
+        0.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -1180,
+        -850
+      ],
+      "size": [
+        340,
+        210
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "name": "lora_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            3
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_LORA_2",
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Flux\\9b\\1 ------ Helper\\Flux2-Klein-Image-RestoreV1.safetensors",
+        0.0
+      ]
+    },
+    {
+      "id": 6,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -820,
+        -850
+      ],
+      "size": [
+        340,
+        210
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "lora_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            36
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_LORA_3",
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Flux\\9b\\1 ------ Helper\\better_skin_darkbeast2_lora.safetensors",
+        0.0
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPLoader",
+      "pos": [
+        -1900,
+        -550
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "type",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 0,
+          "links": [
+            26,
+            27
+          ]
+        }
+      ],
+      "title": "Flux.2 Qwen 8B text encoder",
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "Qwen\\qwen_3_8b_fp8mixed.safetensors",
+        "flux2"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAELoader",
+      "pos": [
+        -1540,
+        -550
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "vae_name",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            23,
+            25,
+            41
+          ]
+        }
+      ],
+      "title": "Flux.2 VAE",
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "UltralyticsDetectorProvider",
+      "pos": [
+        -1500,
+        700
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model_name",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "BBOX_DETECTOR",
+          "type": "BBOX_DETECTOR",
+          "slot_index": 0,
+          "links": [
+            4,
+            11
+          ]
+        },
+        {
+          "name": "SEGM_DETECTOR",
+          "type": "SEGM_DETECTOR",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "title": "Face/head detector",
+      "properties": {
+        "Node name for S&R": "UltralyticsDetectorProvider"
+      },
+      "widgets_values": [
+        "bbox/face_yolov8m.pt"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "SAMLoader",
+      "pos": [
+        -1500,
+        990
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "device_mode",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SAM_MODEL",
+          "type": "SAM_MODEL",
+          "slot_index": 0,
+          "links": [
+            6,
+            13
+          ]
+        }
+      ],
+      "title": "SAM refinement model",
+      "properties": {
+        "Node name for S&R": "SAMLoader"
+      },
+      "widgets_values": [
+        "sam_vit_b_01ec64.pth",
+        "AUTO"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "BboxDetectorSEGS",
+      "pos": [
+        -1140,
+        -100
+      ],
+      "size": [
+        350,
+        300
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 4
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "dilation",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "crop_factor",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "drop_size",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "labels",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "slot_index": 0,
+          "links": [
+            7
+          ]
+        }
+      ],
+      "title": "Detect target face/head",
+      "properties": {
+        "Node name for S&R": "BboxDetectorSEGS"
+      },
+      "widgets_values": [
+        0.55,
+        4,
+        3.0,
+        10,
+        "all"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "SAMDetectorCombined",
+      "pos": [
+        -720,
+        -100
+      ],
+      "size": [
+        370,
+        360
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "sam_model",
+          "type": "SAM_MODEL",
+          "link": 6
+        },
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 7
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 8
+        },
+        {
+          "name": "detection_hint",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "dilation",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "bbox_expansion",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "mask_hint_threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "mask_hint_use_negative",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 0,
+          "links": [
+            10
+          ]
+        }
+      ],
+      "title": "SAM refine target face/head",
+      "properties": {
+        "Node name for S&R": "SAMDetectorCombined"
+      },
+      "widgets_values": [
+        "center-1",
+        0,
+        0.93,
+        24,
+        0.7,
+        "False"
+      ]
+    },
+    {
+      "id": 13,
+      "type": "BatchCropFromMaskAdvanced",
+      "pos": [
+        -280,
+        -100
+      ],
+      "size": [
+        400,
+        300
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "original_images",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "name": "masks",
+          "type": "MASK",
+          "link": 10
+        },
+        {
+          "name": "crop_size_mult",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "bbox_smooth_alpha",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "original_images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "cropped_images",
+          "type": "IMAGE",
+          "slot_index": 1,
+          "links": [
+            20
+          ]
+        },
+        {
+          "name": "cropped_masks",
+          "type": "MASK",
+          "slot_index": 2,
+          "links": [
+            44
+          ]
+        },
+        {
+          "name": "combined_crop_image",
+          "type": "IMAGE",
+          "slot_index": 3,
+          "links": []
+        },
+        {
+          "name": "combined_crop_masks",
+          "type": "MASK",
+          "slot_index": 4,
+          "links": [
+            45
+          ]
+        },
+        {
+          "name": "bboxes",
+          "type": "BBOX",
+          "slot_index": 5,
+          "links": [
+            46
+          ]
+        },
+        {
+          "name": "combined_bounding_box",
+          "type": "BBOX",
+          "slot_index": 6,
+          "links": [
+            47
+          ]
+        },
+        {
+          "name": "bbox_width",
+          "type": "INT",
+          "slot_index": 7,
+          "links": []
+        },
+        {
+          "name": "bbox_height",
+          "type": "INT",
+          "slot_index": 8,
+          "links": []
+        }
+      ],
+      "title": "Crop target head region",
+      "properties": {
+        "Node name for S&R": "BatchCropFromMaskAdvanced"
+      },
+      "widgets_values": [
+        2.35,
+        0.5
+      ]
+    },
+    {
+      "id": 14,
+      "type": "BboxDetectorSEGS",
+      "pos": [
+        -1140,
+        350
+      ],
+      "size": [
+        350,
+        300
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 11
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "name": "threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "dilation",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "crop_factor",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "drop_size",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "labels",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "slot_index": 0,
+          "links": [
+            14
+          ]
+        }
+      ],
+      "title": "Detect source face/head",
+      "properties": {
+        "Node name for S&R": "BboxDetectorSEGS"
+      },
+      "widgets_values": [
+        0.55,
+        4,
+        3.0,
+        10,
+        "all"
+      ]
+    },
+    {
+      "id": 15,
+      "type": "SAMDetectorCombined",
+      "pos": [
+        -720,
+        350
+      ],
+      "size": [
+        370,
+        360
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "sam_model",
+          "type": "SAM_MODEL",
+          "link": 13
+        },
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 14
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 15
+        },
+        {
+          "name": "detection_hint",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "dilation",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "bbox_expansion",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "mask_hint_threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "mask_hint_use_negative",
+          "type": "COMBO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 0,
+          "links": [
+            17
+          ]
+        }
+      ],
+      "title": "SAM refine source face/head",
+      "properties": {
+        "Node name for S&R": "SAMDetectorCombined"
+      },
+      "widgets_values": [
+        "center-1",
+        0,
+        0.93,
+        24,
+        0.7,
+        "False"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "BatchCropFromMaskAdvanced",
+      "pos": [
+        -280,
+        350
+      ],
+      "size": [
+        400,
+        300
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "original_images",
+          "type": "IMAGE",
+          "link": 16
+        },
+        {
+          "name": "masks",
+          "type": "MASK",
+          "link": 17
+        },
+        {
+          "name": "crop_size_mult",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "bbox_smooth_alpha",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "original_images",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "cropped_images",
+          "type": "IMAGE",
+          "slot_index": 1,
+          "links": [
+            21
+          ]
+        },
+        {
+          "name": "cropped_masks",
+          "type": "MASK",
+          "slot_index": 2,
+          "links": []
+        },
+        {
+          "name": "combined_crop_image",
+          "type": "IMAGE",
+          "slot_index": 3,
+          "links": []
+        },
+        {
+          "name": "combined_crop_masks",
+          "type": "MASK",
+          "slot_index": 4,
+          "links": []
+        },
+        {
+          "name": "bboxes",
+          "type": "BBOX",
+          "slot_index": 5,
+          "links": []
+        },
+        {
+          "name": "combined_bounding_box",
+          "type": "BBOX",
+          "slot_index": 6,
+          "links": []
+        },
+        {
+          "name": "bbox_width",
+          "type": "INT",
+          "slot_index": 7,
+          "links": []
+        },
+        {
+          "name": "bbox_height",
+          "type": "INT",
+          "slot_index": 8,
+          "links": []
+        }
+      ],
+      "title": "Crop source head region",
+      "properties": {
+        "Node name for S&R": "BatchCropFromMaskAdvanced"
+      },
+      "widgets_values": [
+        2.1,
+        0.5
+      ]
+    },
+    {
+      "id": 17,
+      "type": "ImageScaleToTotalPixels",
+      "pos": [
+        200,
+        -100
+      ],
+      "size": [
+        330,
+        260
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 20
+        },
+        {
+          "name": "upscale_method",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "megapixels",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "resolution_steps",
+          "type": "INT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            22,
+            32
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_PIXEL_BUDGET",
+      "properties": {
+        "Node name for S&R": "ImageScaleToTotalPixels"
+      },
+      "widgets_values": [
+        "lanczos",
+        1.5,
+        1
+      ]
+    },
+    {
+      "id": 18,
+      "type": "ImageScaleToTotalPixels",
+      "pos": [
+        200,
+        350
+      ],
+      "size": [
+        330,
+        260
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 21
+        },
+        {
+          "name": "upscale_method",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "megapixels",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "resolution_steps",
+          "type": "INT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            24
+          ]
+        }
+      ],
+      "title": "Scale source identity crop",
+      "properties": {
+        "Node name for S&R": "ImageScaleToTotalPixels"
+      },
+      "widgets_values": [
+        "lanczos",
+        1.0,
+        1
+      ]
+    },
+    {
+      "id": 19,
+      "type": "VAEEncode",
+      "pos": [
+        580,
+        -100
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 22
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            31
+          ]
+        }
+      ],
+      "title": "Encode target crop",
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 20,
+      "type": "VAEEncode",
+      "pos": [
+        580,
+        350
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 24
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 25
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            29
+          ]
+        }
+      ],
+      "title": "Encode source identity crop",
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 21,
+      "type": "CLIPTextEncode",
+      "pos": [
+        580,
+        -500
+      ],
+      "size": [
+        430,
+        250
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 26
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            28
+          ]
+        }
+      ],
+      "title": "Face swap instruction",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "Replace only the target face, visible head identity, hairline, and local head details with the source identity. Preserve the target body, pose, clothing, lighting, scene, camera, and background. Blend seamless realistic skin and neck boundaries."
+      ]
+    },
+    {
+      "id": 22,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1040,
+        -500
+      ],
+      "size": [
+        400,
+        230
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 27
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            38
+          ]
+        }
+      ],
+      "title": "Face swap exclusions",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "wrong identity, duplicate face, warped eyes, altered body, altered clothing, altered background, text, watermark"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "ReferenceLatent",
+      "pos": [
+        1040,
+        240
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 28
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 29
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            30
+          ]
+        }
+      ],
+      "title": "Source identity reference latent",
+      "properties": {
+        "Node name for S&R": "ReferenceLatent"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 24,
+      "type": "ReferenceLatent",
+      "pos": [
+        1400,
+        240
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 30
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            37
+          ]
+        }
+      ],
+      "title": "Target crop reference latent",
+      "properties": {
+        "Node name for S&R": "ReferenceLatent"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "GetImageSize",
+      "pos": [
+        1040,
+        -40
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 32
+        }
+      ],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            33
+          ]
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "slot_index": 1,
+          "links": [
+            34
+          ]
+        },
+        {
+          "name": "batch_size",
+          "type": "INT",
+          "slot_index": 2,
+          "links": [
+            35
+          ]
+        }
+      ],
+      "title": "Target crop dimensions",
+      "properties": {
+        "Node name for S&R": "GetImageSize"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 26,
+      "type": "EmptyFlux2LatentImage",
+      "pos": [
+        1400,
+        -80
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 25,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 33
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 34
+        },
+        {
+          "name": "batch_size",
+          "type": "INT",
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            39
+          ]
+        }
+      ],
+      "title": "Target crop generation latent",
+      "properties": {
+        "Node name for S&R": "EmptyFlux2LatentImage"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1
+      ]
+    },
+    {
+      "id": 27,
+      "type": "KSampler",
+      "pos": [
+        1800,
+        -150
+      ],
+      "size": [
+        340,
+        430
+      ],
+      "flags": {},
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 36
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "link": null
+        },
+        {
+          "name": "cfg",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "sampler_name",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "scheduler",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 37
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 38
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 39
+        },
+        {
+          "name": "denoise",
+          "type": "FLOAT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            40
+          ]
+        }
+      ],
+      "title": "IDENTITY_LAB_SAMPLER",
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        347129883,
+        "fixed",
+        28,
+        3.0,
+        "euler",
+        "beta",
+        0.72
+      ]
+    },
+    {
+      "id": 28,
+      "type": "VAEDecode",
+      "pos": [
+        2180,
+        -100
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 27,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 40
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 41
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            43
+          ]
+        }
+      ],
+      "title": "Decode generated head crop",
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 29,
+      "type": "BatchUncropAdvanced",
+      "pos": [
+        2540,
+        -100
+      ],
+      "size": [
+        400,
+        350
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "original_images",
+          "type": "IMAGE",
+          "link": 42
+        },
+        {
+          "name": "cropped_images",
+          "type": "IMAGE",
+          "link": 43
+        },
+        {
+          "name": "cropped_masks",
+          "type": "MASK",
+          "link": 44
+        },
+        {
+          "name": "combined_crop_mask",
+          "type": "MASK",
+          "link": 45
+        },
+        {
+          "name": "bboxes",
+          "type": "BBOX",
+          "link": 46
+        },
+        {
+          "name": "combined_bounding_box",
+          "type": "BBOX",
+          "link": 47
+        },
+        {
+          "name": "border_blending",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "crop_rescale",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "use_combined_mask",
+          "type": "BOOLEAN",
+          "link": null
+        },
+        {
+          "name": "use_square_mask",
+          "type": "BOOLEAN",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            18,
+            19,
+            50
+          ]
+        }
+      ],
+      "title": "Composite generated head back to base",
+      "properties": {
+        "Node name for S&R": "BatchUncropAdvanced"
+      },
+      "widgets_values": [
+        0.35,
+        1.0,
+        true,
+        true
+      ]
+    },
+    {
+      "id": 30,
+      "type": "DualIdentityScore",
+      "pos": [
+        2980,
+        280
+      ],
+      "size": [
+        420,
+        390
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "base_image",
+          "type": "IMAGE",
+          "link": 48
+        },
+        {
+          "name": "reference_image",
+          "type": "IMAGE",
+          "link": 49
+        },
+        {
+          "name": "generated_image",
+          "type": "IMAGE",
+          "link": 50
+        },
+        {
+          "name": "experiment_mode",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "face_score_threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "same_identity_threshold",
+          "type": "FLOAT",
+          "link": null
+        },
+        {
+          "name": "face_selection",
+          "type": "COMBO",
+          "link": null
+        },
+        {
+          "name": "write_manifest",
+          "type": "BOOLEAN",
+          "link": null
+        },
+        {
+          "name": "manifest_dir",
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "run_label",
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "metadata_key",
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "experiment_id",
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "run_id",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "reference_cosine_similarity",
+          "type": "FLOAT",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "reference_detected",
+          "type": "BOOLEAN",
+          "slot_index": 1,
+          "links": []
+        },
+        {
+          "name": "reference_same_identity",
+          "type": "BOOLEAN",
+          "slot_index": 2,
+          "links": []
+        },
+        {
+          "name": "base_cosine_similarity",
+          "type": "FLOAT",
+          "slot_index": 3,
+          "links": []
+        },
+        {
+          "name": "base_detected",
+          "type": "BOOLEAN",
+          "slot_index": 4,
+          "links": []
+        },
+        {
+          "name": "base_same_identity",
+          "type": "BOOLEAN",
+          "slot_index": 5,
+          "links": []
+        },
+        {
+          "name": "generated_detected",
+          "type": "BOOLEAN",
+          "slot_index": 6,
+          "links": []
+        },
+        {
+          "name": "active_cosine_similarity",
+          "type": "FLOAT",
+          "slot_index": 7,
+          "links": []
+        },
+        {
+          "name": "active_same_identity",
+          "type": "BOOLEAN",
+          "slot_index": 8,
+          "links": []
+        },
+        {
+          "name": "rankable",
+          "type": "BOOLEAN",
+          "slot_index": 9,
+          "links": []
+        },
+        {
+          "name": "report_json",
+          "type": "STRING",
+          "slot_index": 10,
+          "links": []
+        },
+        {
+          "name": "extra_metadata",
+          "type": "EXTRA_METADATA",
+          "slot_index": 11,
+          "links": []
+        }
+      ],
+      "title": "IDENTITY_LAB_SCORE",
+      "properties": {
+        "Node name for S&R": "DualIdentityScore"
+      },
+      "widgets_values": [
+        "face_swap",
+        0.7,
+        0.363,
+        "largest",
+        true,
+        "default/identity_score_runs",
+        "identity-lab-face_swap",
+        "identity_score_report"
+      ]
+    },
+    {
+      "id": 31,
+      "type": "SaveImage",
+      "pos": [
+        2980,
+        -100
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Save identity-lab output",
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "identity_lab/face_swap"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "PreviewImage",
+      "pos": [
+        3340,
+        -100
+      ],
+      "size": [
+        320,
+        220
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Preview identity-lab final output",
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 33,
+      "type": "MarkdownNote",
+      "pos": [
+        -1900,
+        1320
+      ],
+      "size": [
+        850,
+        260
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "Face-swap experiment notes",
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Flux 9B face-swap identity lab\n\nBase image supplies body and scene. Reference image supplies identity. Face/head detection is refined by SAM before target-crop generation and uncrop compositing. The three Flux LoRAs start at model strength 0 for controlled runner sweeps."
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      3,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      4,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      5,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      9,
+      0,
+      11,
+      0,
+      "BBOX_DETECTOR"
+    ],
+    [
+      5,
+      1,
+      0,
+      11,
+      1,
+      "IMAGE"
+    ],
+    [
+      6,
+      10,
+      0,
+      12,
+      0,
+      "SAM_MODEL"
+    ],
+    [
+      7,
+      11,
+      0,
+      12,
+      1,
+      "SEGS"
+    ],
+    [
+      8,
+      1,
+      0,
+      12,
+      2,
+      "IMAGE"
+    ],
+    [
+      9,
+      1,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      12,
+      0,
+      13,
+      1,
+      "MASK"
+    ],
+    [
+      11,
+      9,
+      0,
+      14,
+      0,
+      "BBOX_DETECTOR"
+    ],
+    [
+      12,
+      2,
+      0,
+      14,
+      1,
+      "IMAGE"
+    ],
+    [
+      13,
+      10,
+      0,
+      15,
+      0,
+      "SAM_MODEL"
+    ],
+    [
+      14,
+      14,
+      0,
+      15,
+      1,
+      "SEGS"
+    ],
+    [
+      15,
+      2,
+      0,
+      15,
+      2,
+      "IMAGE"
+    ],
+    [
+      16,
+      2,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      15,
+      0,
+      16,
+      1,
+      "MASK"
+    ],
+    [
+      18,
+      29,
+      0,
+      31,
+      0,
+      "IMAGE"
+    ],
+    [
+      19,
+      29,
+      0,
+      32,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      13,
+      1,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      21,
+      16,
+      1,
+      18,
+      0,
+      "IMAGE"
+    ],
+    [
+      22,
+      17,
+      0,
+      19,
+      0,
+      "IMAGE"
+    ],
+    [
+      23,
+      8,
+      0,
+      19,
+      1,
+      "VAE"
+    ],
+    [
+      24,
+      18,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      25,
+      8,
+      0,
+      20,
+      1,
+      "VAE"
+    ],
+    [
+      26,
+      7,
+      0,
+      21,
+      0,
+      "CLIP"
+    ],
+    [
+      27,
+      7,
+      0,
+      22,
+      0,
+      "CLIP"
+    ],
+    [
+      28,
+      21,
+      0,
+      23,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      29,
+      20,
+      0,
+      23,
+      1,
+      "LATENT"
+    ],
+    [
+      30,
+      23,
+      0,
+      24,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      31,
+      19,
+      0,
+      24,
+      1,
+      "LATENT"
+    ],
+    [
+      32,
+      17,
+      0,
+      25,
+      0,
+      "IMAGE"
+    ],
+    [
+      33,
+      25,
+      0,
+      26,
+      0,
+      "INT"
+    ],
+    [
+      34,
+      25,
+      1,
+      26,
+      1,
+      "INT"
+    ],
+    [
+      35,
+      25,
+      2,
+      26,
+      2,
+      "INT"
+    ],
+    [
+      36,
+      6,
+      0,
+      27,
+      0,
+      "MODEL"
+    ],
+    [
+      37,
+      24,
+      0,
+      27,
+      6,
+      "CONDITIONING"
+    ],
+    [
+      38,
+      22,
+      0,
+      27,
+      7,
+      "CONDITIONING"
+    ],
+    [
+      39,
+      26,
+      0,
+      27,
+      8,
+      "LATENT"
+    ],
+    [
+      40,
+      27,
+      0,
+      28,
+      0,
+      "LATENT"
+    ],
+    [
+      41,
+      8,
+      0,
+      28,
+      1,
+      "VAE"
+    ],
+    [
+      42,
+      1,
+      0,
+      29,
+      0,
+      "IMAGE"
+    ],
+    [
+      43,
+      28,
+      0,
+      29,
+      1,
+      "IMAGE"
+    ],
+    [
+      44,
+      13,
+      2,
+      29,
+      2,
+      "MASK"
+    ],
+    [
+      45,
+      13,
+      4,
+      29,
+      3,
+      "MASK"
+    ],
+    [
+      46,
+      13,
+      5,
+      29,
+      4,
+      "BBOX"
+    ],
+    [
+      47,
+      13,
+      6,
+      29,
+      5,
+      "BBOX"
+    ],
+    [
+      48,
+      1,
+      0,
+      30,
+      0,
+      "IMAGE"
+    ],
+    [
+      49,
+      2,
+      0,
+      30,
+      1,
+      "IMAGE"
+    ],
+    [
+      50,
+      29,
+      0,
+      30,
+      2,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "identity_lab_template": {
+      "mode": "face_swap",
+      "version": 1,
+      "target_model": "Flux2-Klein-9B"
+    }
+  },
+  "version": 0.4
+}
