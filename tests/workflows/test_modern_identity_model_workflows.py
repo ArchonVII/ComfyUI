@@ -386,6 +386,37 @@ def test_controlled_face_swap_evidence_is_complete_and_not_cherry_picked():
         )
 
 
+def test_native_krea_identity_evidence_is_committed_and_documented():
+    image_path = (
+        REPO_ROOT
+        / "output"
+        / "agent"
+        / "modern-identity"
+        / "krea2-identity-v1-2_00001_.png"
+    )
+    report_path = (
+        REPO_ROOT
+        / "user"
+        / "default"
+        / "identity_score_runs"
+        / "20260726-205004-krea2-native-proof.json"
+    )
+    assert image_path.is_file()
+    assert image_path.stat().st_size > 1_000_000
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    identity = report["identity_report"]["source_identity"]
+    assert identity["same_identity"] is True
+    assert identity["same_identity_threshold"] == pytest.approx(0.363)
+    assert identity["cosine_similarity"] == pytest.approx(0.771222)
+
+    guide = (REPO_ROOT / "docs" / "modern-identity-workflows.md").read_text(
+        encoding="utf-8"
+    )
+    assert "krea2-identity-v1-2_00001_.png" in guide
+    assert "20260726-205004-krea2-native-proof.json" in guide
+    assert "`0.771222`" in guide
+
+
 def test_firered_encoder_documentation_matches_flat_selector_contract():
     guide = (REPO_ROOT / "docs" / "modern-identity-workflows.md").read_text(
         encoding="utf-8"

@@ -56,6 +56,28 @@ Starting values:
 - Grounding 1024 for likeness; try 512-768 for stronger edit adherence
 - 1024x1024 output; stay at or below 2 MP
 
+The committed API graph was run end to end on the synthetic benchmark pair
+without retuning. ComfyUI completed the eight-step native edit in 50.57
+seconds. Visual inspection confirmed that the result preserved the target
+café scene, clothing, and framing while transferring the source identity's
+face structure, skin tone, short gray hair, and beard.
+
+Native Krea proof artifacts:
+
+- Source identity: `input/identity-benchmark/source_identity.png`
+- Target scene: `input/identity-benchmark/target_scene_v2.png`
+- Native output:
+  `output/agent/modern-identity/krea2-identity-v1-2_00001_.png`
+- Executable graph:
+  `user/default/api_workflows/agent/42 - Krea 2 Identity Edit v1.2 API.json`
+- Machine-readable identity report:
+  `user/default/identity_score_runs/20260726-205004-krea2-native-proof.json`
+
+The first submitted native result scored `0.771222` cosine similarity against
+the configured `0.363` same-identity threshold and was classified as the same
+identity. This is native Krea evidence and remains separate from the controlled
+ReActor benchmark below.
+
 Krea 2 uses the Krea 2 Community License. The identity LoRA is SFW-trained, and its author explicitly rejects non-consensual sexual deepfake use.
 
 ### 43 - FireRed 1.1 Identity MultiRef
@@ -198,8 +220,9 @@ FireRed was selected over LongCat for the first wave because it is purpose-built
 
 ## Validation boundary
 
-The native Z-Image, Krea 2, and FireRed graphs were checked against their
-installed model selectors and registered node/input schemas. They are ready for
-interactive evaluation after restarting ComfyUI so the newly installed Krea
-node registers. No native output is presented here as benchmark evidence; the
-saved and measured result is explicitly the ReActor/GFPGAN control baseline.
+All native graphs were checked against their installed model selectors and
+registered node/input schemas. Krea 2 additionally completed its committed API
+graph end to end, and its saved output and identity report are listed above.
+Z-Image and FireRed have not yet produced committed runtime evidence and should
+still be treated as experimental lanes. The ReActor/GFPGAN result remains a
+separately labeled control baseline rather than evidence for a native model.

@@ -86,21 +86,23 @@ The eight downloaded model files total 52.77 GiB. Final verification left
 
 ## Closeout
 
-- **Status:** Completed on 2026-07-26 for the workflow/build scope and the
-  controlled face-swap proof.
+- **Status:** Completed on 2026-07-26 for the workflow/build scope, native Krea
+  identity proof, and controlled ReActor face-swap proof.
 - **Issue:** Not created. Issues are disabled on the owner fork, so this uses
   the established `no-issue` branch convention.
 - **Branch:** `agent/codex/no-issue-modern-identity-suite`.
 - **PR target:** `ArchonVII/ComfyUI:master`.
 - **Delivered:** Five editable workflows, two executable API graphs, a
   deterministic workflow builder, model/download manifest, usage guide,
-  focused tests, synthetic source/target fixtures, and a saved ReActor/GFPGAN
-  proof result.
-- **Proof:** The preferred restored result scored `0.780879` cosine identity
-  similarity against the configured `0.363` same-identity threshold. The
-  highest raw result scored `0.812342`.
+  focused tests, synthetic source/target fixtures, a saved native Krea result,
+  and saved ReActor/GFPGAN control results.
+- **Proof:** The first submitted native Krea API run completed in 50.57 seconds,
+  visibly transferred the source identity while preserving the target scene,
+  and scored `0.771222` cosine identity similarity against the configured
+  `0.363` same-identity threshold. The preferred restored ReActor control
+  scored `0.780879`; the highest raw control result scored `0.812342`.
 - **Verification:** All eight model files matched their expected sizes and
-  SHA-256 hashes; 23 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
+  SHA-256 hashes; 25 workflow tests, 2 Krea node tests, Ruff, JSON parsing,
   live/direct node schema checks, and proof-integrity checks passed.
 - **Review closeout:** A P1 portability review found OS-native separators in
   nested model selector values. The final workflows use separator-free model
@@ -124,9 +126,19 @@ The eight downloaded model files total 52.77 GiB. Final verification left
   `agent/modern-identity/krea2-identity-v1-2`; the manifest pins the swap
   model's ReActor URL, destination, size, SHA-256 hash, and InsightFace
   non-commercial terms. Tests enforce both behaviors.
-- **Runtime scope clarification:** The native Z-Image, Krea 2, and FireRed
-  graphs were model-selector and node-schema validated, but no native result is
-  presented as benchmark evidence. The running shared ComfyUI process predated
-  the Krea node installation and was not restarted during the controlled proof
-  run. The separately labeled ReActor result satisfies the required visible
-  face-swap proof without overstating native-model performance.
+- **Z-Image schema closeout:** A later P1 review found both `ImageStitch`
+  declarations placing `image2` before the registered widget inputs. Both
+  declarations and generated links now follow the live schema order, with
+  `image2` in target slot 5; a focused regression covers both nodes.
+- **Native runtime closeout:** An isolated ComfyUI 0.26.0 server on the final PR
+  head registered the Krea v1.2 nodes and ran the committed Krea API graph
+  against the synthetic source/target pair. Prompt
+  `0df57a3f-f7c7-4455-ae22-1df9dc495803` completed successfully on its first
+  submission and saved
+  `output/agent/modern-identity/krea2-identity-v1-2_00001_.png` plus
+  `user/default/identity_score_runs/20260726-205004-krea2-native-proof.json`.
+  Visual inspection confirmed identity transfer and target-scene preservation;
+  the report classified the result as the same identity at `0.771222`.
+  Z-Image and FireRed remain schema/selector-validated experimental lanes with
+  no committed runtime result. The separately labeled ReActor evidence remains
+  the controlled baseline.
