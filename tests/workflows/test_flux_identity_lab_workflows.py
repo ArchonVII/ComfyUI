@@ -171,7 +171,10 @@ def test_templates_have_editor_metadata_stable_roles_and_safe_runtime_defaults(n
 
 
 def test_runtime_loader_defaults_are_real_installed_assets():
-    runtime = Path(os.environ.get("COMFY_RUNTIME_BASE", REPO_ROOT))
+    runtime_base = os.environ.get("COMFY_RUNTIME_BASE")
+    if not runtime_base:
+        pytest.skip("set COMFY_RUNTIME_BASE to run installed runtime asset checks")
+    runtime = Path(runtime_base)
     assert (runtime / "models" / "diffusion_models" / MODEL).is_file()
     assert (runtime / "models" / "text_encoders" / CLIP).is_file()
     assert (runtime / "models" / "vae" / VAE).is_file()
