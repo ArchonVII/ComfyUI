@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -10,9 +11,11 @@ SCRIPT_PATH = (
     / "web"
     / "prompt_composer.js"
 )
+NODE_EXECUTABLE = shutil.which("node")
 
 
 def test_prompt_composer_uses_compact_directly_clickable_badges():
+    assert NODE_EXECUTABLE, "Node.js is required for the frontend regression test"
     node_script = f"""
 const fs = require("fs");
 const vm = require("vm");
@@ -102,6 +105,13 @@ const schema = {{
     ].map(([key, label]) => ({{ key, label }})),
     garment_keys: [],
   }},
+  PromptComposerClothing: {{
+    category: "clothing",
+    slots: [
+      {{ key: "headwear", label: "Headwear" }},
+    ],
+    garment_keys: [],
+  }},
 }};
 const libraries = {{
   quality: {{
@@ -134,6 +144,8 @@ const api = {{
     else if (url.endsWith("/libraries")) data = libraries;
     else if (url.includes("/presets?category=body")) {{
       data = {{ Portrait: {{ hair: "long red hair", eyes: "green eyes" }} }};
+    }} else if (url.includes("/presets?category=clothing")) {{
+      data = {{}};
     }} else {{
       throw new Error(`Unexpected request: ${{url}}`);
     }}
@@ -189,6 +201,8 @@ function baseNode(widgets) {{
 }}
 
 function SlotNodeType() {{}}
+function ClothingNodeType() {{}}
+function LegacySlotNodeType() {{}}
 function SnippetNodeType() {{}}
 
 (async () => {{
@@ -209,7 +223,7 @@ function SnippetNodeType() {{}}
   for (const {{ key }} of schema.PromptComposerBody.slots) {{
     assertEqual(slotNode.widgets.find((item) => item.name === key)?.type, "pc_hidden", `${{key}} hidden`);
   }}
-  assertEqual(slotNode.widgets.find((item) => item.name === "separator")?.type, "pc_hidden", "separator hidden");
+  assertEqual(slotNode.widgets.find((item) => item.name === "separator")?.type, "string", "separator remains editable");
   assertEqual(slotNode.widgets.filter((item) => item.type === "button").length, 0, "no stacked native action buttons");
   assertEqual(slotNode.domWidgets.length, 1, "one compact slot DOM widget");
 
@@ -244,6 +258,43 @@ function SnippetNodeType() {{}}
   assert(prevented, "wheel does not get trapped by DOM widget");
 
   await extension.beforeRegisterNodeDef(
+    ClothingNodeType,
+    {{ name: "PromptComposerClothing" }},
+  );
+  const clothingNode = Object.assign(
+    Object.create(ClothingNodeType.prototype),
+    baseNode([
+      {{ ...widget("nude", false), type: "toggle" }},
+      widget("headwear"),
+      widget("nude_text", "nude"),
+      widget("separator", ", "),
+    ]),
+  );
+  clothingNode.onNodeCreated();
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assertEqual(clothingNode.widgets.find((item) => item.name === "nude")?.type, "pc_hidden", "nude uses a compact badge");
+  assertEqual(clothingNode.widgets.find((item) => item.name === "headwear")?.type, "pc_hidden", "clothing slot hidden");
+  assertEqual(clothingNode.widgets.find((item) => item.name === "nude_text")?.type, "string", "nude text remains editable");
+  assertEqual(clothingNode.widgets.find((item) => item.name === "separator")?.type, "string", "clothing separator remains editable");
+
+  await extension.beforeRegisterNodeDef(
+    LegacySlotNodeType,
+    {{ name: "PromptComposerBody" }},
+  );
+  const legacyNodeState = baseNode([
+    ...schema.PromptComposerBody.slots.map((slot) => widget(slot.key)),
+    widget("separator", ", "),
+  ]);
+  delete legacyNodeState.addDOMWidget;
+  const legacyNode = Object.assign(Object.create(LegacySlotNodeType.prototype), legacyNodeState);
+  legacyNode.onNodeCreated();
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assertEqual(legacyNode.widgets.find((item) => item.name === "subject")?.type, "string", "legacy build keeps native slots");
+  assertEqual(legacyNode.widgets.find((item) => item.name === "separator")?.type, "string", "legacy build keeps separator");
+
+  await extension.beforeRegisterNodeDef(
     SnippetNodeType,
     {{ name: "PromptComposerSnippets" }},
   );
@@ -270,7 +321,7 @@ function SnippetNodeType() {{}}
 """
 
     result = subprocess.run(
-        ["C:\\Program Files\\nodejs\\node.exe", "-e", node_script],
+        [NODE_EXECUTABLE, "-e", node_script],
         check=False,
         capture_output=True,
         text=True,

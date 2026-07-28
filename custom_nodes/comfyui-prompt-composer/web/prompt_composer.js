@@ -252,12 +252,6 @@ async function buildPresetBar(node, nodeId) {
   const category = info.category;
   const slotKeys = info.slots.map((s) => s.key);
 
-  for (const key of [...slotKeys, "separator"]) hideWidget(node, key);
-  if (category === "clothing") {
-    hideWidget(node, "nude");
-    hideWidget(node, "nude_text");
-  }
-
   let presets = await getPresets(category);
   let activeKey = slotKeys[0] || "";
   let activePreset = "";
@@ -290,6 +284,10 @@ async function buildPresetBar(node, nodeId) {
   const actions = compactRow("slot-actions");
   root.append(presetGrid, fieldGrid, editorRow, actions);
   const domWidget = attachCompactWidget(node, "pc_compact_slots", root);
+  if (!domWidget) return;
+
+  for (const key of slotKeys) hideWidget(node, key);
+  if (category === "clothing") hideWidget(node, "nude");
 
   const fieldButtons = new Map();
 
@@ -476,10 +474,6 @@ function setupSnippetNode(nodeType) {
 }
 
 async function buildSnippetUI(node) {
-  hideWidget(node, "library");
-  hideWidget(node, "selected");
-  hideWidget(node, "separator");
-
   await loadLibraries();
 
   const libNames = () => Object.keys(LIBRARIES);
@@ -513,6 +507,10 @@ async function buildSnippetUI(node) {
   });
   root.append(libraryGrid, libraryActions, snippetGrid, snippetActions, preview);
   const domWidget = attachCompactWidget(node, "pc_snippet_editor", root);
+  if (!domWidget) return;
+
+  hideWidget(node, "library");
+  hideWidget(node, "selected");
   let activeSnippet = "";
 
   const sizeWidget = () => {
