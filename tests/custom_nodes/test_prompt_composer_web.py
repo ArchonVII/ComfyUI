@@ -229,6 +229,11 @@ function SnippetNodeType() {{}}
   editor.dispatchEvent({{ type: "input" }});
   assertEqual(slotNode.widgets.find((item) => item.name === "hair").value, "short black hair", "editor updates serialized widget");
 
+  slotNode.widgets.find((item) => item.name === "hair").value = "restored auburn hair";
+  slotNode.onConfigure?.({{ widgets_values: [] }});
+  const restoredHairBadge = byRole(slotRoot, "field-badge").find((button) => button.dataset.slotKey === "hair");
+  assert(restoredHairBadge.textContent.includes("restored auburn hair"), "badges refresh after workflow values restore");
+
   let prevented = false;
   slotRoot.dispatchEvent({{
     type: "wheel",

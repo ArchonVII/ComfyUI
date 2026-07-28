@@ -68,18 +68,27 @@ Feed the final `prompt` into your `CLIP Text Encode` (or any text input).
 
 ---
 
-## Presets & saving (frontend)
+## Compact picker & saving (frontend)
 
-On the slot nodes a small bar appears at the top of the node:
-- **`📋 preset`** dropdown — pick a saved preset to fill all slots
-- **`💾 save preset`** — name the current slot values and store them
-- **`🗑 delete preset`** / **`✖ clear slots`**
+The slot nodes keep their Python fields for workflow compatibility but replace
+the long native widget list with one compact picker:
 
-On the Snippet Library node:
-- **`📚 library`** dropdown + **`🗂 new library`** / **`🗑 delete library`**
-- **`➕ add snippet`**, and per-row **✎ edit** / **✕ delete**
-- tick the checkboxes to choose which snippets to chain; a live preview shows
-  the result
+- every field is a directly clickable badge in a wrapping row
+- filled badges show a shortened value for quick scanning
+- one shared text box edits whichever badge is active
+- saved presets are badges too, so applying one is a single click
+- **`+ preset`**, **`delete preset`**, and **`clear`** share one small action row
+
+The Snippet Library uses the same flat interaction:
+
+- libraries appear as category badges; snippets appear as option badges
+- clicking a snippet toggles it in the combined prompt
+- **`+ snippet`**, **`edit`**, and **`delete`** are single shared actions instead
+  of controls repeated after every entry
+- the live preview shows the combined text
+
+There are no nested option panels or internal vertical scroll areas. Mouse-wheel
+input over either compact picker is passed through to the ComfyUI canvas.
 
 Presets are keyed by category, so a "Casual" clothing preset and a "Casual" body
 preset never collide.
