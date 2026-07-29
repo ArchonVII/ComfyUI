@@ -78,6 +78,127 @@ function hideWidget(node, name) {
 // widget values correctly across ComfyUI frontend versions. JS-added controls
 // (all serialize:false) therefore stay appended after the Python widgets.
 
+function element(tag, role, styles = {}) {
+  const el = document.createElement(tag);
+  if (role) el.dataset.pcRole = role;
+  Object.assign(el.style, styles);
+  return el;
+}
+
+function compactRow(role) {
+  return element("div", role, {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "3px",
+  });
+}
+
+function button(text, title, role, onClick) {
+  const el = element("button", role, {
+    cursor: "pointer",
+    border: "1px solid var(--border-color, #555)",
+    borderRadius: "999px",
+    background: "var(--comfy-input-bg, #222)",
+    color: "var(--input-text, #ddd)",
+    padding: "2px 7px",
+    lineHeight: "1.3",
+    font: "11px sans-serif",
+    maxWidth: "100%",
+  });
+  el.type = "button";
+  el.textContent = text;
+  el.title = title || text;
+  el.addEventListener("click", (event) => {
+    event.stopPropagation?.();
+    onClick?.(event);
+  });
+  return el;
+}
+
+function paintBadge(el, { active = false, selected = false, filled = false } = {}) {
+  el.style.borderColor = active
+    ? "var(--p-primary-color, #6aa9ff)"
+    : "var(--border-color, #555)";
+  el.style.background = selected
+    ? "var(--p-primary-700, #245b92)"
+    : filled
+      ? "var(--p-surface-700, #3a3a3a)"
+      : "var(--comfy-input-bg, #222)";
+  el.style.opacity = selected || filled || active ? "1" : "0.82";
+}
+
+function shortLabel(label) {
+  return String(label || "").split(" (", 1)[0];
+}
+
+function shortValue(value, max = 24) {
+  const text = String(value || "").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function forwardWheelToCanvas(root) {
+  root.addEventListener("wheel", (event) => {
+    const canvas = app.canvas?.canvas;
+    if (!canvas?.dispatchEvent || typeof WheelEvent !== "function") return;
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    canvas.dispatchEvent(new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaX: event.deltaX || 0,
+      deltaY: event.deltaY || 0,
+      deltaZ: event.deltaZ || 0,
+      deltaMode: event.deltaMode || 0,
+      clientX: event.clientX || 0,
+      clientY: event.clientY || 0,
+      ctrlKey: Boolean(event.ctrlKey),
+      shiftKey: Boolean(event.shiftKey),
+      altKey: Boolean(event.altKey),
+      metaKey: Boolean(event.metaKey),
+    }));
+  }, { passive: false });
+}
+
+function compactRoot(role) {
+  const root = element("div", role, {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    width: "100%",
+    padding: "3px",
+    boxSizing: "border-box",
+    color: "var(--input-text, #ddd)",
+    font: "11px sans-serif",
+  });
+  forwardWheelToCanvas(root);
+  return root;
+}
+
+function attachCompactWidget(node, name, root) {
+  if (typeof node.addDOMWidget !== "function") {
+    notify("This ComfyUI build lacks DOM widgets.", "warn");
+    return null;
+  }
+  const widget = node.addDOMWidget(name, "div", root, { serialize: false });
+  makeTransient(widget);
+  widget.computeSize = () => [
+    Math.max(300, node.size?.[0] || 300),
+    Math.max(38, root.scrollHeight + 6),
+  ];
+  return widget;
+}
+
+function resizeNodeToContent(node) {
+  if (typeof node.computeSize !== "function" || typeof node.setSize !== "function") return;
+  const measured = node.computeSize();
+  if (!Array.isArray(measured) || measured.length < 2) return;
+  const width = Math.max(node.size?.[0] || 0, Number(measured[0]) || 0);
+  const height = Number(measured[1]);
+  if (!width || !height) return;
+  node.setSize([width, height]);
+}
+
 // ---------- data ----------
 async function loadSchema() {
   try {
@@ -120,6 +241,19 @@ function setupSlotNode(nodeType, nodeId) {
       console.error("[PromptComposer] preset bar failed", e);
     }
   };
+
+  const onConfigure = nodeType.prototype.onConfigure;
+  nodeType.prototype.onConfigure = function () {
+    onConfigure?.apply(this, arguments);
+    const node = this;
+    setTimeout(() => {
+      try {
+        node._pcRenderSlots?.();
+      } catch (e) {
+        console.error("[PromptComposer] slot restore failed", e);
+      }
+    }, 0);
+  };
 }
 
 async function buildPresetBar(node, nodeId) {
@@ -129,7 +263,111 @@ async function buildPresetBar(node, nodeId) {
   const slotKeys = info.slots.map((s) => s.key);
 
   let presets = await getPresets(category);
-  const names = () => ["(select preset…)", ...Object.keys(presets)];
+  let activeKey = slotKeys[0] || "";
+  let activePreset = "";
+
+  const root = compactRoot("slot-root");
+  const presetGrid = compactRow("preset-grid");
+  const fieldGrid = compactRow("field-grid");
+  const editorRow = element("div", "field-editor-row", {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  });
+  const editorLabel = element("span", "field-editor-label", {
+    flex: "0 0 auto",
+    opacity: "0.72",
+  });
+  const editor = element("input", "field-editor", {
+    flex: "1 1 auto",
+    minWidth: "80px",
+    border: "1px solid var(--border-color, #555)",
+    borderRadius: "4px",
+    background: "var(--comfy-input-bg, #222)",
+    color: "var(--input-text, #ddd)",
+    padding: "3px 5px",
+    font: "11px sans-serif",
+  });
+  editor.type = "text";
+  editorRow.append(editorLabel, editor);
+
+  const actions = compactRow("slot-actions");
+  root.append(presetGrid, fieldGrid, editorRow, actions);
+  const domWidget = attachCompactWidget(node, "pc_compact_slots", root);
+  if (!domWidget) return;
+
+  for (const key of slotKeys) hideWidget(node, key);
+  if (category === "clothing") hideWidget(node, "nude");
+
+  const fieldButtons = new Map();
+
+  const sizeWidget = () => {
+    if (domWidget) {
+      domWidget.computeSize = () => [
+        Math.max(300, node.size?.[0] || 300),
+        Math.max(38, root.scrollHeight + 6),
+      ];
+    }
+    resizeNodeToContent(node);
+    node.setDirtyCanvas(true, true);
+  };
+
+  const renderFields = () => {
+    for (const { key, label } of info.slots) {
+      const value = getWidget(node, key)?.value || "";
+      const badge = fieldButtons.get(key);
+      if (!badge) continue;
+      const compact = shortValue(value);
+      badge.textContent = compact ? `${shortLabel(label)}: ${compact}` : shortLabel(label);
+      badge.title = value ? `${label}\n${value}` : label;
+      paintBadge(badge, { active: key === activeKey, filled: Boolean(String(value).trim()) });
+    }
+    const nudeButton = fieldButtons.get("__nude");
+    if (nudeButton) {
+      const nude = Boolean(getWidget(node, "nude")?.value);
+      nudeButton.textContent = nude ? "Nude ✓" : "Nude";
+      paintBadge(nudeButton, { selected: nude });
+    }
+  };
+
+  const selectField = (key, focusEditor = false) => {
+    activeKey = key;
+    const slot = info.slots.find((item) => item.key === key);
+    const value = getWidget(node, key)?.value || "";
+    editor.dataset.slotKey = key;
+    editor.value = value;
+    editor.placeholder = slot?.label || key;
+    editor.title = slot?.label || key;
+    editorLabel.textContent = `${shortLabel(slot?.label || key)}:`;
+    renderFields();
+    if (focusEditor) editor.focus?.();
+  };
+
+  for (const { key, label } of info.slots) {
+    const badge = button(shortLabel(label), label, "field-badge", () => selectField(key, true));
+    badge.dataset.slotKey = key;
+    fieldButtons.set(key, badge);
+    fieldGrid.appendChild(badge);
+  }
+
+  if (category === "clothing") {
+    const nudeButton = button("Nude", "Toggle nude mode", "state-badge", () => {
+      const widget = getWidget(node, "nude");
+      setWidgetValue(node, "nude", !Boolean(widget?.value));
+      renderFields();
+    });
+    fieldButtons.set("__nude", nudeButton);
+    fieldGrid.appendChild(nudeButton);
+  }
+
+  editor.addEventListener("input", () => {
+    if (!activeKey) return;
+    setWidgetValue(node, activeKey, editor.value);
+    activePreset = "";
+    renderFields();
+    renderPresets();
+    sizeWidget();
+  });
 
   const fillFrom = (name) => {
     const data = presets[name];
@@ -137,27 +375,30 @@ async function buildPresetBar(node, nodeId) {
     // Clear every slot first so a preset never leaves stale values behind.
     for (const key of slotKeys) setWidgetValue(node, key, "");
     for (const [key, val] of Object.entries(data)) setWidgetValue(node, key, val);
-    node.setDirtyCanvas(true, true);
+    activePreset = name;
+    selectField(activeKey);
+    renderPresets();
+    sizeWidget();
   };
 
-  const presetWidget = makeTransient(node.addWidget(
-    "combo",
-    "📋 preset",
-    "(select preset…)",
-    (v) => {
-      if (v && v !== "(select preset…)") fillFrom(v);
-    },
-    { values: names(), serialize: false }
-  ));
+  const renderPresets = () => {
+    presetGrid.innerHTML = "";
+    for (const name of Object.keys(presets)) {
+      const preset = button(name, `Apply ${name}`, "preset-badge", () => fillFrom(name));
+      preset.dataset.presetName = name;
+      paintBadge(preset, { selected: name === activePreset });
+      presetGrid.appendChild(preset);
+    }
+  };
 
-  const refresh = async (selectName) => {
+  const refresh = async (selectName = "") => {
     presets = await getPresets(category);
-    presetWidget.options.values = names();
-    presetWidget.value = selectName || "(select preset…)";
-    node.setDirtyCanvas(true, true);
+    activePreset = selectName;
+    renderPresets();
+    sizeWidget();
   };
 
-  const saveBtn = makeTransient(node.addWidget("button", "💾 save preset", null, async () => {
+  actions.appendChild(button("+ preset", "Save current fields as a preset", "preset-save", async () => {
     const name = prompt("Save current slots as preset named:");
     if (!name) return;
     const data = {};
@@ -177,14 +418,14 @@ async function buildPresetBar(node, nodeId) {
     } catch (e) {
       notify(`Save failed: ${e.message}`, "error");
     }
-  }, { serialize: false }));
+  }));
 
-  const deleteBtn = makeTransient(node.addWidget("button", "🗑 delete preset", null, async () => {
-    const name = presetWidget.value;
-    if (!name || name === "(select preset…)") {
-      notify("Pick a preset to delete first.", "warn");
+  actions.appendChild(button("delete preset", "Delete the last applied preset", "preset-delete", async () => {
+    if (!activePreset) {
+      notify("Click a preset to select it first.", "warn");
       return;
     }
+    const name = activePreset;
     if (!confirm(`Delete preset “${name}”?`)) return;
     try {
       await jpost(`${API}/presets/delete`, { category, name });
@@ -193,17 +434,25 @@ async function buildPresetBar(node, nodeId) {
     } catch (e) {
       notify(`Delete failed: ${e.message}`, "error");
     }
-  }, { serialize: false }));
+  }));
 
-  const clearBtn = makeTransient(node.addWidget("button", "✖ clear slots", null, () => {
+  actions.appendChild(button("clear", "Clear every field", "slot-clear", () => {
     for (const key of slotKeys) setWidgetValue(node, key, "");
-    presetWidget.value = "(select preset…)";
-    node.setDirtyCanvas(true, true);
-  }, { serialize: false }));
+    activePreset = "";
+    selectField(activeKey);
+    renderPresets();
+    sizeWidget();
+  }));
 
-  // (preset bar widgets are appended after the slots; see moveToTop note)
-  void saveBtn; void deleteBtn; void clearBtn;
-  node.setDirtyCanvas(true, true);
+  node._pcRenderSlots = () => {
+    selectField(activeKey);
+    renderPresets();
+    sizeWidget();
+  };
+
+  renderPresets();
+  selectField(activeKey);
+  sizeWidget();
 }
 
 // ==========================================================================
@@ -236,9 +485,6 @@ function setupSnippetNode(nodeType) {
 }
 
 async function buildSnippetUI(node) {
-  hideWidget(node, "library");
-  hideWidget(node, "selected");
-
   await loadLibraries();
 
   const libNames = () => Object.keys(LIBRARIES);
@@ -258,90 +504,102 @@ async function buildSnippetUI(node) {
     node.setDirtyCanvas(true, true);
   };
 
-  // --- DOM widget (checklist + preview) ---------------------------------
-  const root = document.createElement("div");
-  Object.assign(root.style, {
-    display: "flex", flexDirection: "column", gap: "4px",
-    font: "12px sans-serif", color: "var(--input-text, #ddd)",
-    padding: "4px", boxSizing: "border-box",
+  const root = compactRoot("snippet-root");
+  const libraryGrid = compactRow("library-grid");
+  const snippetGrid = compactRow("snippet-grid");
+  const libraryActions = compactRow("library-actions");
+  const snippetActions = compactRow("snippet-actions");
+  const preview = element("div", "snippet-preview", {
+    opacity: "0.78",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    borderTop: "1px solid var(--border-color, #444)",
+    paddingTop: "3px",
   });
+  root.append(libraryGrid, libraryActions, snippetGrid, snippetActions, preview);
+  const domWidget = attachCompactWidget(node, "pc_snippet_editor", root);
+  if (!domWidget) return;
 
-  const list = document.createElement("div");
-  Object.assign(list.style, {
-    display: "flex", flexDirection: "column", gap: "2px",
-    maxHeight: "220px", overflowY: "auto",
-    background: "var(--comfy-input-bg, #222)", borderRadius: "4px", padding: "4px",
-  });
+  hideWidget(node, "library");
+  hideWidget(node, "selected");
+  let activeSnippet = "";
 
-  const preview = document.createElement("div");
-  Object.assign(preview.style, {
-    opacity: "0.75", fontStyle: "italic", whiteSpace: "normal",
-    wordBreak: "break-word", borderTop: "1px solid #444", paddingTop: "4px",
-  });
+  const sizeWidget = () => {
+    if (domWidget) {
+      domWidget.computeSize = () => [
+        Math.max(300, node.size?.[0] || 300),
+        Math.max(38, root.scrollHeight + 6),
+      ];
+    }
+    resizeNodeToContent(node);
+    node.setDirtyCanvas(true, true);
+  };
 
-  root.appendChild(list);
-  root.appendChild(preview);
+  const renderLibraries = () => {
+    libraryGrid.innerHTML = "";
+    for (const name of libNames()) {
+      const badge = button(name, `Show ${name}`, "library-badge", () => {
+        setWidgetValue(node, "library", name);
+        writeSelected([]);
+        activeSnippet = "";
+        renderLibraries();
+        renderSnippets(false);
+      });
+      badge.dataset.libraryName = name;
+      paintBadge(badge, { selected: name === currentLib() });
+      libraryGrid.appendChild(badge);
+    }
+  };
 
-  let domWidget = null;
-  if (typeof node.addDOMWidget === "function") {
-    domWidget = node.addDOMWidget("pc_snippet_editor", "div", root, { serialize: false });
-  } else {
-    notify("This ComfyUI build lacks DOM widgets — type the library/selected fields directly.", "warn");
-  }
+  const targetSnippet = (title) => {
+    activeSnippet = title;
+    const selected = readSelected();
+    for (const badge of snippetGrid.children) {
+      if (badge.dataset?.pcRole !== "snippet-badge") continue;
+      paintBadge(badge, {
+        active: badge.dataset.snippetTitle === activeSnippet,
+        selected: selected.includes(badge.dataset.snippetTitle),
+      });
+    }
+  };
 
-  // --- rendering --------------------------------------------------------
-  const renderList = (preserveSelected) => {
+  const renderSnippets = (preserveSelected) => {
     const snippets = currentSnippets();
     const titles = Object.keys(snippets);
     let selected = readSelected();
     if (!preserveSelected) selected = selected.filter((t) => titles.includes(t));
-
-    list.innerHTML = "";
+    if (activeSnippet && !titles.includes(activeSnippet)) activeSnippet = "";
+    snippetGrid.innerHTML = "";
     if (!titles.length) {
-      const empty = document.createElement("div");
+      const empty = element("div", "snippet-empty");
       empty.textContent = "No snippets yet — use ➕ Add snippet.";
       empty.style.opacity = "0.6";
-      list.appendChild(empty);
+      snippetGrid.appendChild(empty);
     }
 
     for (const title of titles) {
-      const row = document.createElement("div");
-      Object.assign(row.style, { display: "flex", alignItems: "center", gap: "6px" });
-
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = selected.includes(title);
-      cb.onchange = () => {
-        // Keep selection in library order so chained output is deterministic.
-        const chosen = Object.keys(currentSnippets()).filter((t) =>
-          t === title ? cb.checked : readSelected().includes(t)
+      const badge = button(
+        title,
+        `${snippets[title]}\nClick to include or remove; hover or focus to target edit/delete.`,
+        "snippet-badge",
+        () => {
+        targetSnippet(title);
+        const wasSelected = readSelected().includes(title);
+        const chosen = Object.keys(currentSnippets()).filter((candidate) =>
+          candidate === title ? !wasSelected : readSelected().includes(candidate)
         );
         writeSelected(chosen);
+        renderSnippets(true);
         renderPreview();
-      };
-
-      const label = document.createElement("span");
-      label.textContent = title;
-      label.title = snippets[title];
-      Object.assign(label.style, { flex: "1", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
-      label.onclick = () => { cb.checked = !cb.checked; cb.onchange(); };
-
-      const edit = mkBtn("✎", "Edit snippet", async () => {
-        const newText = prompt(`Edit text for “${title}”:`, snippets[title]);
-        if (newText == null) return;
-        const lib = { ...currentSnippets(), [title]: newText };
-        await persistLibrary(lib);
       });
-
-      const del = mkBtn("✕", "Delete snippet", async () => {
-        if (!confirm(`Delete snippet “${title}”?`)) return;
-        const lib = { ...currentSnippets() };
-        delete lib[title];
-        await persistLibrary(lib);
+      badge.dataset.snippetTitle = title;
+      badge.addEventListener("mouseenter", () => targetSnippet(title));
+      badge.addEventListener("focus", () => targetSnippet(title));
+      paintBadge(badge, {
+        active: title === activeSnippet,
+        selected: selected.includes(title),
       });
-
-      row.append(cb, label, edit, del);
-      list.appendChild(row);
+      snippetGrid.appendChild(badge);
     }
     renderPreview();
     sizeWidget();
@@ -354,64 +612,69 @@ async function buildSnippetUI(node) {
     preview.textContent = text ? `→ ${text}` : "→ (nothing selected)";
   };
 
-  const sizeWidget = () => {
-    if (domWidget) domWidget.computeSize = () => [node.size[0], Math.min(320, 60 + list.scrollHeight)];
-    node.setDirtyCanvas(true, true);
-  };
-
-  // --- persistence ------------------------------------------------------
   const persistLibrary = async (snippets) => {
     const name = currentLib();
     if (!name) { notify("Create a library first.", "warn"); return; }
     try {
       const res = await jpost(`${API}/libraries/save`, { name, snippets });
       LIBRARIES = res.libraries || LIBRARIES;
-      renderList(true);
+      renderLibraries();
+      renderSnippets(true);
     } catch (e) {
       notify(`Save failed: ${e.message}`, "error");
     }
   };
 
-  // --- library picker + action buttons (litegraph widgets) --------------
-  const libCombo = makeTransient(node.addWidget("combo", "📚 library", currentLib() || "(none)",
-    (v) => {
-      setWidgetValue(node, "library", v);
-      writeSelected([]);
-      renderList(false);
-    },
-    { values: libNames().length ? libNames() : ["(none)"], serialize: false }));
-
-  const refreshCombo = (select) => {
-    libCombo.options.values = libNames().length ? libNames() : ["(none)"];
-    if (select) { libCombo.value = select; setWidgetValue(node, "library", select); }
-  };
-
-  const addSnippetBtn = makeTransient(node.addWidget("button", "➕ add snippet", null, async () => {
+  snippetActions.appendChild(button("+ snippet", "Add a snippet", "snippet-add", async () => {
     if (!currentLib()) { notify("Create a library first.", "warn"); return; }
     const title = prompt("Snippet title:");
     if (!title) return;
     const text = prompt(`Text for “${title}”:`);
     if (text == null) return;
+    activeSnippet = title.trim();
     await persistLibrary({ ...currentSnippets(), [title.trim()]: text });
-  }, { serialize: false }));
+  }));
 
-  const newLibBtn = makeTransient(node.addWidget("button", "🗂 new library", null, async () => {
+  snippetActions.appendChild(button("edit", "Edit the highlighted snippet", "snippet-edit", async () => {
+    if (!activeSnippet || !(activeSnippet in currentSnippets())) {
+      notify("Click a snippet to edit it first.", "warn");
+      return;
+    }
+    const newText = prompt(`Edit text for “${activeSnippet}”:`, currentSnippets()[activeSnippet]);
+    if (newText == null) return;
+    await persistLibrary({ ...currentSnippets(), [activeSnippet]: newText });
+  }));
+
+  snippetActions.appendChild(button("delete", "Delete the highlighted snippet", "snippet-delete", async () => {
+    if (!activeSnippet || !(activeSnippet in currentSnippets())) {
+      notify("Click a snippet to delete it first.", "warn");
+      return;
+    }
+    if (!confirm(`Delete snippet “${activeSnippet}”?`)) return;
+    const lib = { ...currentSnippets() };
+    delete lib[activeSnippet];
+    activeSnippet = "";
+    await persistLibrary(lib);
+  }));
+
+  libraryActions.appendChild(button("+ library", "Create a library", "library-add", async () => {
     const name = prompt("New library name:");
     if (!name) return;
     try {
       const res = await jpost(`${API}/libraries/save`, { name: name.trim(), snippets: {} });
       LIBRARIES = res.libraries || LIBRARIES;
-      refreshCombo(name.trim());
       setWidgetValue(node, "library", name.trim());
       writeSelected([]);
-      renderList(false);
+      activeSnippet = "";
+      renderLibraries();
+      renderSnippets(false);
       notify(`Created library “${name.trim()}”.`);
     } catch (e) {
       notify(`Create failed: ${e.message}`, "error");
     }
-  }, { serialize: false }));
+  }));
 
-  const delLibBtn = makeTransient(node.addWidget("button", "🗑 delete library", null, async () => {
+  libraryActions.appendChild(button("delete library", "Delete the selected library", "library-delete", async () => {
     const name = currentLib();
     if (!name) return;
     if (!confirm(`Delete the entire library “${name}”?`)) return;
@@ -419,43 +682,31 @@ async function buildSnippetUI(node) {
       const res = await jpost(`${API}/libraries/delete`, { name });
       LIBRARIES = res.libraries || {};
       const next = libNames()[0] || "";
-      refreshCombo(next);
       setWidgetValue(node, "library", next);
       writeSelected([]);
-      renderList(false);
+      activeSnippet = "";
+      renderLibraries();
+      renderSnippets(false);
       notify(`Deleted “${name}”.`);
     } catch (e) {
       notify(`Delete failed: ${e.message}`, "error");
     }
-  }, { serialize: false }));
+  }));
 
-  const reloadBtn = makeTransient(node.addWidget("button", "↻ reload", null, async () => {
+  libraryActions.appendChild(button("reload", "Reload libraries", "library-reload", async () => {
     await loadLibraries();
-    refreshCombo(currentLib());
-    renderList(true);
-  }, { serialize: false }));
+    renderLibraries();
+    renderSnippets(true);
+  }));
 
   // expose a re-render hook for onConfigure (workflow load restores `library`)
   node._pcRender = (preserve) => {
-    refreshCombo(currentLib());
-    renderList(preserve);
+    renderLibraries();
+    renderSnippets(preserve);
   };
 
-  void addSnippetBtn; void newLibBtn; void delLibBtn; void reloadBtn;
-  renderList(true);
-}
-
-function mkBtn(text, title, onClick) {
-  const b = document.createElement("button");
-  b.textContent = text;
-  b.title = title;
-  Object.assign(b.style, {
-    cursor: "pointer", border: "none", borderRadius: "3px",
-    background: "var(--comfy-menu-bg, #333)", color: "inherit",
-    padding: "1px 6px", lineHeight: "1.4",
-  });
-  b.onclick = (e) => { e.stopPropagation(); onClick(); };
-  return b;
+  renderLibraries();
+  renderSnippets(true);
 }
 
 // ==========================================================================
