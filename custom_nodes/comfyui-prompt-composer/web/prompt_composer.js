@@ -319,7 +319,7 @@ async function buildPresetBar(node, nodeId) {
     }
   };
 
-  const selectField = (key) => {
+  const selectField = (key, focusEditor = false) => {
     activeKey = key;
     const slot = info.slots.find((item) => item.key === key);
     const value = getWidget(node, key)?.value || "";
@@ -329,11 +329,11 @@ async function buildPresetBar(node, nodeId) {
     editor.title = slot?.label || key;
     editorLabel.textContent = `${shortLabel(slot?.label || key)}:`;
     renderFields();
-    editor.focus?.();
+    if (focusEditor) editor.focus?.();
   };
 
   for (const { key, label } of info.slots) {
-    const badge = button(shortLabel(label), label, "field-badge", () => selectField(key));
+    const badge = button(shortLabel(label), label, "field-badge", () => selectField(key, true));
     badge.dataset.slotKey = key;
     fieldButtons.set(key, badge);
     fieldGrid.appendChild(badge);

@@ -35,6 +35,7 @@ class FakeElement {{
     this.type = "";
     this.value = "";
     this.checked = false;
+    this.focusCalls = 0;
   }}
   appendChild(child) {{
     child.parentElement = this;
@@ -62,6 +63,9 @@ class FakeElement {{
   }}
   get scrollHeight() {{
     return this.children.length * 24;
+  }}
+  focus() {{
+    this.focusCalls += 1;
   }}
 }}
 
@@ -236,8 +240,10 @@ function SnippetNodeType() {{}}
   assertEqual(byRole(slotRoot, "preset-badge").length, 1, "presets are directly visible");
 
   const hairBadge = byRole(slotRoot, "field-badge").find((button) => button.dataset.slotKey === "hair");
-  hairBadge.dispatchEvent({{ type: "click" }});
   const editor = byRole(slotRoot, "field-editor")[0];
+  assertEqual(editor.focusCalls, 0, "initial render does not steal canvas focus");
+  hairBadge.dispatchEvent({{ type: "click" }});
+  assertEqual(editor.focusCalls, 1, "clicking a badge focuses the shared editor");
   assertEqual(editor.dataset.slotKey, "hair", "shared editor targets clicked badge");
   editor.value = "short black hair";
   editor.dispatchEvent({{ type: "input" }});
@@ -247,6 +253,7 @@ function SnippetNodeType() {{}}
   slotNode.onConfigure?.({{ widgets_values: [] }});
   const restoredHairBadge = byRole(slotRoot, "field-badge").find((button) => button.dataset.slotKey === "hair");
   assert(restoredHairBadge.textContent.includes("restored auburn hair"), "badges refresh after workflow values restore");
+  assertEqual(editor.focusCalls, 1, "workflow restore does not steal canvas focus");
 
   let prevented = false;
   slotRoot.dispatchEvent({{
