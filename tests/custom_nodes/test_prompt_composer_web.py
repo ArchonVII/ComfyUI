@@ -190,6 +190,7 @@ function baseNode(widgets) {{
     widgets,
     size: [360, 300],
     domWidgets: [],
+    setSizeCalls: 0,
     addWidget(type, name, value, callback, options = {{}}) {{
       const added = {{ type, name, value, callback, options }};
       this.widgets.push(added);
@@ -200,6 +201,13 @@ function baseNode(widgets) {{
       this.widgets.push(added);
       this.domWidgets.push(added);
       return added;
+    }},
+    computeSize() {{
+      return [this.size[0], 120 + this.domWidgets.length * 20];
+    }},
+    setSize(size) {{
+      this.size = size;
+      this.setSizeCalls += 1;
     }},
     setDirtyCanvas() {{}},
   }};
@@ -231,6 +239,8 @@ function SnippetNodeType() {{}}
   assertEqual(slotNode.widgets.find((item) => item.name === "separator")?.type, "string", "separator remains editable");
   assertEqual(slotNode.widgets.filter((item) => item.type === "button").length, 0, "no stacked native action buttons");
   assertEqual(slotNode.domWidgets.length, 1, "one compact slot DOM widget");
+  assert(slotNode.setSizeCalls > 0, "slot node recomputes its compact size");
+  assert(slotNode.size[1] < 300, "slot node removes the oversized native-widget height");
 
   const slotRoot = slotNode.domWidgets[0].element;
   const fieldGrid = byRole(slotRoot, "field-grid")[0];
@@ -316,6 +326,7 @@ function SnippetNodeType() {{}}
 
   assertEqual(snippetNode.widgets.filter((item) => item.type === "button").length, 0, "snippet actions are not stacked native buttons");
   assertEqual(snippetNode.domWidgets.length, 1, "one compact snippet DOM widget");
+  assert(snippetNode.setSizeCalls > 0, "snippet node recomputes its badge-row size");
   const snippetRoot = snippetNode.domWidgets[0].element;
   assertEqual(byRole(snippetRoot, "library-badge").length, 2, "libraries are direct category badges");
   assertEqual(byRole(snippetRoot, "snippet-badge").length, 3, "snippet options are direct badges");

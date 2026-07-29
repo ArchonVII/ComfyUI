@@ -189,6 +189,16 @@ function attachCompactWidget(node, name, root) {
   return widget;
 }
 
+function resizeNodeToContent(node) {
+  if (typeof node.computeSize !== "function" || typeof node.setSize !== "function") return;
+  const measured = node.computeSize();
+  if (!Array.isArray(measured) || measured.length < 2) return;
+  const width = Math.max(node.size?.[0] || 0, Number(measured[0]) || 0);
+  const height = Number(measured[1]);
+  if (!width || !height) return;
+  node.setSize([width, height]);
+}
+
 // ---------- data ----------
 async function loadSchema() {
   try {
@@ -298,6 +308,7 @@ async function buildPresetBar(node, nodeId) {
         Math.max(38, root.scrollHeight + 6),
       ];
     }
+    resizeNodeToContent(node);
     node.setDirtyCanvas(true, true);
   };
 
@@ -520,6 +531,7 @@ async function buildSnippetUI(node) {
         Math.max(38, root.scrollHeight + 6),
       ];
     }
+    resizeNodeToContent(node);
     node.setDirtyCanvas(true, true);
   };
 
