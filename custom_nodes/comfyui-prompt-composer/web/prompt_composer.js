@@ -539,6 +539,18 @@ async function buildSnippetUI(node) {
     }
   };
 
+  const targetSnippet = (title) => {
+    activeSnippet = title;
+    const selected = readSelected();
+    for (const badge of snippetGrid.children) {
+      if (badge.dataset?.pcRole !== "snippet-badge") continue;
+      paintBadge(badge, {
+        active: badge.dataset.snippetTitle === activeSnippet,
+        selected: selected.includes(badge.dataset.snippetTitle),
+      });
+    }
+  };
+
   const renderSnippets = (preserveSelected) => {
     const snippets = currentSnippets();
     const titles = Object.keys(snippets);
@@ -554,8 +566,12 @@ async function buildSnippetUI(node) {
     }
 
     for (const title of titles) {
-      const badge = button(title, snippets[title], "snippet-badge", () => {
-        activeSnippet = title;
+      const badge = button(
+        title,
+        `${snippets[title]}\nClick to include or remove; hover or focus to target edit/delete.`,
+        "snippet-badge",
+        () => {
+        targetSnippet(title);
         const wasSelected = readSelected().includes(title);
         const chosen = Object.keys(currentSnippets()).filter((candidate) =>
           candidate === title ? !wasSelected : readSelected().includes(candidate)
@@ -565,6 +581,8 @@ async function buildSnippetUI(node) {
         renderPreview();
       });
       badge.dataset.snippetTitle = title;
+      badge.addEventListener("mouseenter", () => targetSnippet(title));
+      badge.addEventListener("focus", () => targetSnippet(title));
       paintBadge(badge, {
         active: title === activeSnippet,
         selected: selected.includes(title),
@@ -605,7 +623,7 @@ async function buildSnippetUI(node) {
     await persistLibrary({ ...currentSnippets(), [title.trim()]: text });
   }));
 
-  snippetActions.appendChild(button("edit", "Edit the last clicked snippet", "snippet-edit", async () => {
+  snippetActions.appendChild(button("edit", "Edit the highlighted snippet", "snippet-edit", async () => {
     if (!activeSnippet || !(activeSnippet in currentSnippets())) {
       notify("Click a snippet to edit it first.", "warn");
       return;
@@ -615,7 +633,7 @@ async function buildSnippetUI(node) {
     await persistLibrary({ ...currentSnippets(), [activeSnippet]: newText });
   }));
 
-  snippetActions.appendChild(button("delete", "Delete the last clicked snippet", "snippet-delete", async () => {
+  snippetActions.appendChild(button("delete", "Delete the highlighted snippet", "snippet-delete", async () => {
     if (!activeSnippet || !(activeSnippet in currentSnippets())) {
       notify("Click a snippet to delete it first.", "warn");
       return;

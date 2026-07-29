@@ -130,6 +130,7 @@ const libraries = {{
 
 let extension = null;
 let canvasWheelEvents = 0;
+const promptMessages = [];
 const app = {{
   canvas: {{
     canvas: {{
@@ -164,7 +165,7 @@ const context = {{
   console,
   document: {{ createElement(tagName) {{ return new FakeElement(tagName); }} }},
   globalThis: null,
-  prompt() {{ return null; }},
+  prompt(message) {{ promptMessages.push(message); return null; }},
   setTimeout(callback) {{ callback(); return 1; }},
   WheelEvent: class WheelEvent {{
     constructor(type, source = {{}}) {{ this.type = type; Object.assign(this, source); }}
@@ -321,6 +322,12 @@ function SnippetNodeType() {{}}
   assertEqual(byRole(snippetRoot, "snippet-edit").length, 1, "one shared edit action");
   assertEqual(byRole(snippetRoot, "snippet-delete").length, 1, "one shared delete action");
   assert(!descendants(snippetRoot).some((element) => element.style.overflowY === "auto"), "snippet UI has no inner scroll trap");
+
+  const photorealBadge = byRole(snippetRoot, "snippet-badge").find((button) => button.dataset.snippetTitle === "Photoreal");
+  photorealBadge.dispatchEvent({{ type: "mouseenter" }});
+  byRole(snippetRoot, "snippet-edit")[0].dispatchEvent({{ type: "click", stopPropagation() {{}} }});
+  assert(promptMessages.at(-1).includes("Photoreal"), "hover targets the shared edit action");
+  assertEqual(snippetNode.widgets.find((item) => item.name === "selected").value, "[]", "targeting edit does not toggle inclusion");
 }})().catch((error) => {{
   console.error(error.stack || error.message);
   process.exit(1);
