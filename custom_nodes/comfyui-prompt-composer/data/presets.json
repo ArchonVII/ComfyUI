@@ -84,6 +84,10 @@
       "Wide": "24mm wide angle, deep focus",
       "Low angle": "low camera angle, looking up",
       "Overhead": "top-down overhead shot"
+    },
+    "Start": {
+      "Subject": "A photo of the subject,",
+      "Maintain Identity": "maintain her facial identity and facial proportions"
     }
   }
 }
