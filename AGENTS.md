@@ -8,13 +8,16 @@ the working tree at `C:\tools\image\ComfyUI` is the running product.
 
 ## Owner decisions
 
-- **2026-08-25 — no upstream, everything is local.** Owner: "WE do not do
-  anything upstream" / "every thing is local". Upstream
+- **2026-08-25 — no upstream; images never leave the machine.** Owner: "WE do
+  not do anything upstream", "everything stays local to the machine or our
+  repo, and all images are local to the machine only". Upstream
   `comfyanonymous/ComfyUI` (`origin`) is consume-only: fetching updates is
-  fine; never push, open PRs, or file issues there. The `origin` push URL is
-  set to a disabled placeholder to enforce this. The fork
+  fine; never push, open PRs, or file issues there (`origin` push URL is set
+  to a disabled placeholder to enforce this). The fork
   `github.com/ArchonVII/ComfyUI` (`fork`) is the only remote target, and
-  delivery is merge to `master`.
+  delivery is merge to `master`. **Owner-generated or personal images (and
+  video) are never committed or pushed anywhere** — not even to the fork;
+  upstream/pack documentation images that ship with code are exempt.
 - **2026-08-25 — saved workflows are owner data.** Owner: "never modify, move
   or delete a workflow file" (saved workflow JSONs under `user/`,
   `blueprints/`, `input*/`). Agents may read them, write sidecars beside them
