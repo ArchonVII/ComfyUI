@@ -52,7 +52,14 @@ if (-not (Test-Path (Join-Path $ComfyRoot 'custom_nodes'))) {
 }
 
 $customNodes = Join-Path $ComfyRoot 'custom_nodes'
+
+# Requirements must land in the interpreter that runs ComfyUI, which on this
+# install is the venv beside it - bare `python` would be whatever is on PATH.
+$python = Join-Path $ComfyRoot 'venv\Scripts\python.exe'
+if (-not (Test-Path $python)) { $python = 'python' }
+
 Write-Host "ComfyUI root: $ComfyRoot" -ForegroundColor Cyan
+Write-Host "Python:       $python" -ForegroundColor Cyan
 Write-Host ""
 
 foreach ($addon in $addons) {
@@ -82,7 +89,7 @@ foreach ($addon in $addons) {
     $requirements = Join-Path $target 'requirements.txt'
     if (Test-Path $requirements) {
         Write-Host "  installing requirements..." -NoNewline
-        python -m pip install -q -r $requirements
+        & $python -m pip install -q -r $requirements
         Write-Host " done" -ForegroundColor Green
     }
 }
