@@ -72,9 +72,11 @@ def identity_bundle_with_lora(*, text="woman", lora=None, instance_id="fragment-
     return ArchPtIdentity().build("flux", json.dumps(state))[1]
 
 
-def test_exactly_the_seven_arch_pt_node_mappings_and_display_names_are_exported():
-    assert set(NODE_CLASS_MAPPINGS) == set(FOCUSED_NODES)
-    assert set(NODE_DISPLAY_NAME_MAPPINGS) == set(FOCUSED_NODES)
+def test_exactly_the_eight_arch_pt_node_mappings_and_display_names_are_exported():
+    expected = set(FOCUSED_NODES) | {"ArchPtRandom"}
+    assert set(NODE_CLASS_MAPPINGS) == expected
+    assert set(NODE_DISPLAY_NAME_MAPPINGS) == expected
+    assert NODE_DISPLAY_NAME_MAPPINGS["ArchPtRandom"] == "arch-pt-Random"
     for mapping_name, (node_class, _, display_name) in FOCUSED_NODES.items():
         assert NODE_CLASS_MAPPINGS[mapping_name] is node_class
         assert NODE_DISPLAY_NAME_MAPPINGS[mapping_name] == display_name

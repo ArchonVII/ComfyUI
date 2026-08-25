@@ -28,7 +28,8 @@ FOCUSED_TYPES = {
 COMBINE_TYPES = {
     node_type: node_class
     for node_type, node_class in NODE_CLASS_MAPPINGS.items()
-    if not getattr(node_class, "NODE_KEY", "")
+    # ArchPtRandom also has no NODE_KEY but is a bundle transformer, not the combiner.
+    if not getattr(node_class, "NODE_KEY", "") and node_type != "ArchPtRandom"
 }
 assert len(COMBINE_TYPES) == 1
 COMBINE_TYPE, COMBINE_CLASS = next(iter(COMBINE_TYPES.items()))
@@ -151,7 +152,9 @@ def test_arch_nodes_match_the_live_package_display_and_io_contracts():
     arch_nodes = [
         node for node in workflow["nodes"] if node["type"] in NODE_CLASS_MAPPINGS
     ]
-    assert {node["type"] for node in arch_nodes} == set(NODE_CLASS_MAPPINGS)
+    # The builder example demonstrates the focused chain plus Combine.
+    # ArchPtRandom has its own example ("39 - Arch PT Random Builder.json").
+    assert {node["type"] for node in arch_nodes} == set(NODE_CLASS_MAPPINGS) - {"ArchPtRandom"}
 
     for node in arch_nodes:
         node_class = NODE_CLASS_MAPPINGS[node["type"]]

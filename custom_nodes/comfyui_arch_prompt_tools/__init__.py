@@ -8,6 +8,7 @@ from .nodes import (
     ArchPtIdentity,
     ArchPtLighting,
     ArchPtPose,
+    ArchPtRandom,
 )
 from .routes import register_routes
 
@@ -19,6 +20,7 @@ NODE_CLASS_MAPPINGS = {
     "ArchPtEnvironment": ArchPtEnvironment,
     "ArchPtCamera": ArchPtCamera,
     "ArchPtLighting": ArchPtLighting,
+    "ArchPtRandom": ArchPtRandom,
     "ArchPtCombine": ArchPtCombine,
 }
 
@@ -29,6 +31,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArchPtEnvironment": "arch-pt-Environment",
     "ArchPtCamera": "arch-pt-Camera",
     "ArchPtLighting": "arch-pt-Lighting",
+    "ArchPtRandom": "arch-pt-Random",
     "ArchPtCombine": "arch-pt-Combine",
 }
 

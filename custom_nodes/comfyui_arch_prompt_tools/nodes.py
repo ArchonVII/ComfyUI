@@ -7,6 +7,7 @@ catalog and assembly engine, and return ordinary JSON-compatible values.
 from __future__ import annotations
 
 import json
+import random
 import re
 import threading
 from pathlib import Path
@@ -206,6 +207,161 @@ class ArchPtCombine:
             separator.join(normalized_fragments),
             _json_dump(metadata),
             _json_dump(unique_loras),
+        )
+
+
+# Which fields each preset rolls. The curation mirrors the owner-accepted
+# wildcard templates (comfyui-adaptiveprompts/wildcards/templates/scene.txt and
+# portrait.txt, 2026-08-25); "everything" is resolved at roll time to every
+# field that has at least one catalog option for the chosen family.
+_RANDOM_PRESETS: dict[str, dict[str, tuple[str, ...]]] = {
+    "scene": {
+        "identity": ("hair_color", "hair_style", "skin_details", "expression"),
+        "clothing": ("outfit_type",),
+        "pose": ("base_pose",),
+        "environment": ("location_type",),
+        "lighting": ("lighting_techniques",),
+        "camera": ("focal_length", "framing"),
+    },
+    "portrait": {
+        "identity": ("hair_color", "hair_style", "eye_color", "expression", "skin_details"),
+        "lighting": ("lighting_techniques",),
+        "camera": ("focal_length", "aperture_character"),
+    },
+    "everything": {},
+}
+
+
+class ArchPtRandom:
+    """Roll catalog options for every field the user left blank.
+
+    Sits between the focused nodes and Combine: wire any hand-built bundles
+    through it and it fills only the untouched fields, deterministically per
+    seed. A field with any hand-picked fragment or specifics text is never
+    overridden.
+    """
+
+    CATEGORY = "arch-pt/prompt"
+    RETURN_TYPES = ("ARCH_PT_BUNDLE",) * len(_FOCUSED_NODE_KEYS) + ("STRING",)
+    RETURN_NAMES = (*_FOCUSED_NODE_KEYS, "rolled_summary")
+    FUNCTION = "roll"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model_family": (["flux", "qwen"], {"default": DEFAULT_MODEL_FAMILY}),
+                "preset": (list(_RANDOM_PRESETS), {"default": "scene"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
+            },
+            "optional": {node_key: ("ARCH_PT_BUNDLE",) for node_key in _FOCUSED_NODE_KEYS},
+        }
+
+    def roll(
+        self,
+        model_family: str,
+        preset: str,
+        seed: int,
+        identity: Mapping[str, Any] | None = None,
+        pose: Mapping[str, Any] | None = None,
+        clothing: Mapping[str, Any] | None = None,
+        environment: Mapping[str, Any] | None = None,
+        camera: Mapping[str, Any] | None = None,
+        lighting: Mapping[str, Any] | None = None,
+    ):
+        if model_family not in SUPPORTED_MODEL_FAMILIES:
+            raise ValueError(f"unsupported model_family: {model_family}")
+        if preset not in _RANDOM_PRESETS:
+            raise ValueError(f"unknown preset: {preset}")
+        catalog = _catalog()
+        rng = random.Random(seed)
+        incoming = {
+            "identity": identity,
+            "pose": pose,
+            "clothing": clothing,
+            "environment": environment,
+            "camera": camera,
+            "lighting": lighting,
+        }
+
+        bundles: list[dict[str, Any]] = []
+        summary_lines: list[str] = []
+        for node_key in _FOCUSED_NODE_KEYS:
+            fields: dict[str, Any] = {}
+            used_ids: set[str] = set()
+            bundle_in = incoming[node_key]
+            if bundle_in is not None:
+                _validate_bundle(bundle_in, node_key)
+                for field in bundle_in["fields"]:
+                    if field["fragments"] or field["specifics"]:
+                        fields[field["key"]] = {
+                            "fragments": [dict(fragment) for fragment in field["fragments"]],
+                            "specifics": field["specifics"],
+                        }
+                        used_ids.update(f["instance_id"] for f in field["fragments"])
+
+            for field_key in self._target_fields(catalog, node_key, preset, model_family):
+                existing = fields.get(field_key)
+                if existing and (existing["fragments"] or existing["specifics"]):
+                    continue
+                options = [
+                    option
+                    for option in catalog.options_for(node_key, field_key, model_family)
+                    if option.phrase_for(model_family)
+                ]
+                if not options:
+                    continue
+                option = rng.choice(options)
+                instance_id = f"arch-pt-random-{seed}-{node_key}-{field_key}"
+                while instance_id in used_ids:
+                    instance_id += "-x"
+                used_ids.add(instance_id)
+                fields[field_key] = {
+                    "fragments": [
+                        {
+                            "instance_id": instance_id,
+                            "source_option_id": option.id,
+                            "label": option.label,
+                            "node": node_key,
+                            "field": field_key,
+                            "group": option.group,
+                            "text": option.phrase_for(model_family),
+                            "model_family": model_family,
+                            "lora_enabled": False,
+                        }
+                    ],
+                    "specifics": "",
+                }
+                summary_lines.append(f"{node_key}.{field_key}: {option.phrase_for(model_family)}")
+
+            state = {
+                "version": BUNDLE_VERSION,
+                "node": node_key,
+                "model_family": model_family,
+                "fields": fields,
+            }
+            result = assemble(catalog, state)
+            bundle = result.bundle
+            bundle["metadata"] = result.metadata
+            bundles.append(bundle)
+
+        summary = "\n".join(summary_lines) if summary_lines else "(nothing rolled - all target fields were already set)"
+        return (*bundles, summary)
+
+    @staticmethod
+    def _target_fields(catalog: Catalog, node_key: str, preset: str, model_family: str) -> tuple[str, ...]:
+        chosen = _RANDOM_PRESETS[preset]
+        if chosen:
+            return chosen.get(node_key, ())
+        schema = catalog.schemas_by_node[node_key]
+        return tuple(
+            field.key
+            for section in schema.sections
+            for field in section.fields
+            if any(
+                option.phrase_for(model_family)
+                for option in catalog.options_for(node_key, field.key, model_family)
+            )
         )
 
 

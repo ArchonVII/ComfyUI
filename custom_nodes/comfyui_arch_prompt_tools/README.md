@@ -48,6 +48,14 @@ saved workflows unless you explicitly mean to replace it.
   lighting techniques.
 - `arch-pt-Combine` assembles the six bundles in that order between the base
   prompt and extra prompt. It emits only positive prompt material.
+- `arch-pt-Random` sits between the focused nodes and Combine and fills every
+  field you left blank with a seeded roll from the catalog. A field with any
+  hand-picked choice or specifics text is never overridden, so you control what
+  you care about and the dice cover the rest. `preset` picks the field set:
+  `scene` and `portrait` mirror the curated wildcard templates; `everything`
+  rolls all fields that have options. Same seed, same roll. Its
+  `rolled_summary` output lists exactly what was rolled. Example:
+  `user/default/workflows/agent/39 - Arch PT Random Builder.json`.
 
 ## Choosing and editing
 
