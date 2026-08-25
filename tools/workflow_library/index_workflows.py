@@ -93,6 +93,10 @@ def build_index(
         packs: list[str] = []
         unresolved: list[str] = []
         for node_type in sorted(set(workflow.node_types)):
+            if node_type in workflow.local_types:
+                # A subgraph instance; its definition travels inside the same
+                # file, so no pack needs to provide it.
+                continue
             owner = known.get(node_type)
             if owner is None:
                 unresolved.append(node_type)

@@ -67,6 +67,11 @@ class Workflow:
     models: list[str] = field(default_factory=list)
     prompts: list[str] = field(default_factory=list)
     title: str | None = None
+    # Subgraph definition ids from this file's ``definitions.subgraphs``. A
+    # subgraph *instance* uses its definition's UUID as the node ``type``, so
+    # these appear in ``node_types`` but are file-local, never registered by
+    # any pack, and must not be reported as missing nodes.
+    local_types: frozenset[str] = frozenset()
 
     @property
     def node_count(self) -> int:
@@ -183,6 +188,11 @@ def _parse_ui(path: Path, data: dict[str, Any]) -> Workflow:
         models=_dedupe(models),
         prompts=_dedupe(prompts),
         title=_ui_title(data),
+        local_types=frozenset(
+            subgraph["id"]
+            for subgraph in _iter_subgraph_defs(data)
+            if isinstance(subgraph.get("id"), str)
+        ),
     )
 
 

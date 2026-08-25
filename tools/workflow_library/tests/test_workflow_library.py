@@ -110,6 +110,24 @@ def test_counts_nodes_inside_subgraph_definitions(tmp_path: Path) -> None:
     assert any(e.target_type == "SaveImage" for e in workflow.edges)
 
 
+def test_local_subgraph_instances_are_not_reported_missing(tmp_path: Path) -> None:
+    defined = "0198c0a4-6bce-7a39-8d5f-000000000001"
+    dangling = "0198c0a4-6bce-7a39-8d5f-000000000002"
+    payload = ui_workflow()
+    payload["nodes"].append({"id": 9, "type": defined})
+    payload["nodes"].append({"id": 10, "type": dangling})
+    payload["definitions"] = {
+        "subgraphs": [{"id": defined, "nodes": [{"id": 90, "type": "VAEDecode"}], "links": []}]
+    }
+    write(tmp_path, "sub.json", payload)
+
+    entries, _ = index_workflows.build_index([tmp_path], tmp_path)
+
+    (entry,) = entries
+    assert defined not in entry.unresolved
+    assert dangling in entry.unresolved
+
+
 def test_accepts_object_style_links(tmp_path: Path) -> None:
     payload = ui_workflow()
     payload["links"] = [
