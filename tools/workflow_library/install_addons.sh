@@ -64,7 +64,10 @@ echo
 if [ -d "$wildcard_source" ] && [ -d "$CUSTOM_NODES/comfyui-adaptiveprompts" ]; then
   echo "Copying arch-pt wildcards into adaptiveprompts..."
   mkdir -p "$wildcard_target"
-  cp -r "$wildcard_source" "$wildcard_target/"
+  # cp -r onto an existing directory of the same name nests it, so a second
+  # run would create archpt/archpt. Clear it first.
+  rm -rf "$wildcard_target/archpt"
+  cp -r "$wildcard_source" "$wildcard_target/archpt"
 else
   echo "Wildcard export not found at $wildcard_source"
   echo "  run: python -m tools.workflow_library.export_wildcards"

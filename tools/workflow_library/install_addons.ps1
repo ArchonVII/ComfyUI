@@ -94,7 +94,11 @@ if (-not $SkipWildcards) {
     if ((Test-Path $wildcardSource) -and (Test-Path (Split-Path $wildcardTarget))) {
         Write-Host "Copying arch-pt wildcards into adaptiveprompts..." -NoNewline
         New-Item -ItemType Directory -Force -Path $wildcardTarget | Out-Null
-        Copy-Item -Recurse -Force $wildcardSource (Join-Path $wildcardTarget 'archpt')
+        $archptTarget = Join-Path $wildcardTarget 'archpt'
+        # Copy-Item -Recurse onto an existing folder of the same name nests it,
+        # so a second run would create archpt\archpt. Clear it first.
+        if (Test-Path $archptTarget) { Remove-Item -Recurse -Force $archptTarget }
+        Copy-Item -Recurse -Force $wildcardSource $archptTarget
         Write-Host " done" -ForegroundColor Green
     }
     else {

@@ -130,7 +130,9 @@ def _looks_like_api(data: dict[str, Any]) -> bool:
 def parse_workflow(path: Path) -> Workflow:
     """Parse one workflow file. Never opens the file for writing."""
     try:
-        raw = path.read_text(encoding="utf-8")
+        # utf-8-sig: workflows exported through Windows tooling often carry a
+        # BOM, which json.loads rejects as an invalid leading character.
+        raw = path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError as exc:  # pragma: no cover - depends on disk state
         raise WorkflowParseError(f"not utf-8: {exc}") from exc
     try:
@@ -407,7 +409,20 @@ def load_object_info(path: Path) -> dict[str, str]:
     Each entry carries ``python_module`` such as ``nodes``,
     ``comfy_extras.nodes_video`` or ``custom_nodes.ComfyUI-GGUF``.
     """
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    # PowerShell's `>` redirect writes UTF-16 and `Out-File` adds a BOM, so a
+    # dump captured the obvious way is rarely plain UTF-8.
+    raw = Path(path).read_bytes()
+    for encoding in ("utf-8-sig", "utf-16"):
+        try:
+            data = json.loads(raw.decode(encoding))
+            break
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+    else:
+        raise WorkflowParseError(
+            "could not read object_info dump as JSON; capture it with "
+            "`curl.exe -s <url> -o object_info.json` rather than a `>` redirect"
+        )
     if not isinstance(data, dict):
         raise WorkflowParseError("object_info dump is not a JSON object")
 

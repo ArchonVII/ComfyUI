@@ -432,3 +432,29 @@ def test_export_reports_an_empty_catalog(tmp_path: Path) -> None:
     catalog.write_text(json.dumps({"options": []}), encoding="utf-8")
 
     assert export_wildcards.main(["--catalog", str(catalog), "--out", str(tmp_path)]) == 1
+
+
+# ---------------------------------------------------------------- windows quirks
+
+
+def test_parses_workflow_with_utf8_bom(tmp_path: Path) -> None:
+    path = tmp_path / "bom.json"
+    path.write_text(json.dumps(ui_workflow()), encoding="utf-8-sig")
+
+    assert parse_workflow(path).fmt == "ui"
+
+
+def test_object_info_accepts_a_powershell_utf16_dump(tmp_path: Path) -> None:
+    """`curl ... > file` in PowerShell writes UTF-16, not UTF-8."""
+    dump = tmp_path / "object_info.json"
+    dump.write_text(json.dumps({"KSampler": {"python_module": "nodes"}}), encoding="utf-16")
+
+    assert load_object_info(dump)["KSampler"] == "comfyui-core"
+
+
+def test_object_info_rejects_unreadable_dump_with_guidance(tmp_path: Path) -> None:
+    dump = tmp_path / "object_info.json"
+    dump.write_bytes(b"\xff\xfe not json at all")
+
+    with pytest.raises(WorkflowParseError, match="curl.exe"):
+        load_object_info(dump)
