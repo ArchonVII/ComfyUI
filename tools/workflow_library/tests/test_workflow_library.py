@@ -223,6 +223,17 @@ def test_frontend_virtual_nodes_are_not_reported_missing(tmp_path: Path) -> None
     assert owners["Reroute"] == "comfyui-frontend"
 
 
+def test_pack_virtual_nodes_resolve_only_when_the_pack_is_installed(tmp_path: Path) -> None:
+    assert "Label (rgthree)" not in collect_known_nodes(tmp_path)
+
+    (tmp_path / "custom_nodes" / "rgthree-comfy").mkdir(parents=True)
+    owners = collect_known_nodes(tmp_path)
+
+    assert owners["Label (rgthree)"] == "rgthree-comfy"
+    assert owners["Fast Groups Bypasser (rgthree)"] == "rgthree-comfy"
+    assert "SetNode" not in owners  # comfyui-kjnodes is not installed here
+
+
 def test_load_object_info_attributes_nodes_to_packs(tmp_path: Path) -> None:
     dump = tmp_path / "object_info.json"
     dump.write_text(

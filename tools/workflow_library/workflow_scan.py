@@ -369,6 +369,30 @@ FRONTEND_VIRTUAL_NODES = frozenset(
     }
 )
 
+# Nodes a pack implements purely in its web/ JavaScript. They register no
+# NODE_CLASS_MAPPINGS entry and never appear in /object_info, so they resolve
+# only when their pack directory is installed. Names verified against the
+# packs' own registrations: rgthree-comfy/web/comfyui/constants.js,
+# comfyui-kjnodes/web/js/setgetnodes.js, comfy-mtb/web/note_plus.js.
+PACK_VIRTUAL_NODES: dict[str, tuple[str, ...]] = {
+    "rgthree-comfy": (
+        "Fast Groups Bypasser (rgthree)",
+        "Fast Groups Muter (rgthree)",
+        "Fast Muter (rgthree)",
+        "Fast Bypasser (rgthree)",
+        "Fast Actions Button (rgthree)",
+        "Label (rgthree)",
+        "Bookmark (rgthree)",
+        "Node Collector (rgthree)",
+        "Mute / Bypass Repeater (rgthree)",
+        "Mute / Bypass Relay (rgthree)",
+        "Reroute (rgthree)",
+        "Random Unmuter (rgthree)",
+    ),
+    "comfyui-kjnodes": ("SetNode", "GetNode"),
+    "comfy-mtb": ("Note Plus (mtb)",),
+}
+
 
 def collect_known_nodes(comfy_root: Path) -> dict[str, str]:
     """Map node type -> owning pack, by static reading of ``NODE_CLASS_MAPPINGS``.
@@ -395,6 +419,12 @@ def collect_known_nodes(comfy_root: Path) -> dict[str, str]:
 
     custom_nodes = comfy_root / "custom_nodes"
     if custom_nodes.is_dir():
+        installed = {p.name.lower(): p.name for p in custom_nodes.iterdir() if p.is_dir()}
+        for pack_key, names in PACK_VIRTUAL_NODES.items():
+            actual = installed.get(pack_key)
+            if actual:
+                for name in names:
+                    owners.setdefault(name, actual)
         for pack_dir in sorted(p for p in custom_nodes.iterdir() if p.is_dir()):
             if pack_dir.name in _SKIPPED_DIR_NAMES:
                 continue
