@@ -28,28 +28,41 @@ class Rule:
         return re.search(self.pattern, haystack, re.IGNORECASE) is not None
 
 
-# Model families. Matched against model filenames first, node types second,
-# because a checkpoint name is the most reliable signal of what a graph is for.
+# Model families. Matched against model filenames only (scope="model"):
+# node types recycle family words across models (FluxKontextImageScale is a
+# stock resize in Qwen edit graphs; 61 non-flux workflows fired "flux" from it
+# in the 2026-08 library audit), so a loaded file is the only reliable signal.
 # Patterns anchor at the start of a word but not the end: real checkpoint
 # names carry version digits directly against the family name (flux1-dev,
 # qwen2511, klein9b), so a trailing \b would never match them.
 MODEL_RULES: tuple[Rule, ...] = (
-    Rule("wan", r"\bwan[\s._-]?\d"),
-    Rule("wan-2.2", r"wan[\s._-]?2[._]2"),
-    Rule("ltxv", r"ltxv?[\s._-]?\d|ltx[\s._-]?video"),
-    Rule("flux", r"\bflux"),
-    Rule("qwen", r"\bqwen"),
-    Rule("klein", r"\bklein"),
-    Rule("krea", r"\bkrea"),
-    Rule("z-image", r"\bz[\s._-]?image"),
-    Rule("firered", r"\bfire[\s._-]?red"),
-    Rule("sdxl", r"\bsdxl|\bxl[\s._-]?base"),
-    Rule("quantized", r"\bq\d[\s._-]?k?[\s._-]?[ms]?\b|\bgguf\b|\bfp8\b|\bnf4\b"),
+    Rule("wan", r"\bwan[\s._-]?\d", scope="model"),
+    Rule("wan-2.2", r"wan[\s._-]?2[._]2", scope="model"),
+    Rule("ltxv", r"ltxv?[\s._-]?\d|ltx[\s._-]?video", scope="model"),
+    Rule("flux", r"\bflux", scope="model"),
+    # Qwen the *image model* (qwen_image_vae, Qwen-Image-Edit-2509/2511,
+    # Qwen_Snofs finetunes), not Qwen the text encoder: qwen_3_8b / qwen3_4b /
+    # qwen2.5vl serve Klein, Z-Image and Stable Audio graphs, and matching them
+    # tagged 84% of the library "qwen" in the 2026-08 audit.
+    Rule("qwen", r"qwen[\s._-]?image|qwen[\s._-]?edit|qwen[\s._-]?25\d\d|qwen[\s._-]?snofs", scope="model"),
+    Rule("klein", r"\bklein", scope="model"),
+    Rule("krea", r"\bkrea", scope="model"),
+    # The finetune ecosystem abbreviates Z-Image Turbo to ZIT ("Mystic-XXX-ZIT-V5",
+    # "moodyPornMix_zitV10DPO"), so the long form alone misses those files.
+    Rule("z-image", r"\bz[\s._-]?image|\bzit", scope="model"),
+    Rule("firered", r"\bfire[\s._-]?red", scope="model"),
+    Rule("sdxl", r"\bsdxl|\bxl[\s._-]?base", scope="model"),
+    # "illu" is the community shorthand in lora names ("skin texture illu xl v5").
+    Rule("illustrious", r"illustrious|\billu\b", scope="model"),
+    # fp8 deliberately excluded: it is the default dtype in this library (74% of
+    # workflows fired on it in the 2026-08 audit), so it separates nothing.
+    Rule("quantized", r"\bq\d[\s._-]?k?[\s._-]?[ms]?\b|\bgguf\b|\bnf4\b", scope="model"),
 )
 
-# Technique / capability, keyed off the node types present.
+# Technique / capability, keyed off the node types present. No "lora" rule:
+# 87% of the library loads a lora somewhere (2026-08 audit), so the tag
+# filtered nothing.
 TECHNIQUE_RULES: tuple[Rule, ...] = (
-    Rule("lora", r"lora", scope="node"),
     Rule("controlnet", r"controlnet", scope="node"),
     Rule("ipadapter", r"ipadapter|ip_adapter", scope="node"),
     Rule("pulid", r"pulid", scope="node"),
@@ -61,15 +74,18 @@ TECHNIQUE_RULES: tuple[Rule, ...] = (
     Rule("detailer", r"detailer", scope="node"),
     Rule("teacache", r"teacache|magcache", scope="node"),
     Rule("sageattention", r"sage[\s._-]?attention|patchsage", scope="node"),
+    Rule("seedvr", r"seedvr", scope="node"),
 )
 
-# What the graph consumes and emits.
+# What the graph consumes and emits. No "img-input" rule: 86% of the library
+# loads an image (2026-08 audit) -- i2i is this library's default mode, so
+# neither tag separates anything.
 MODE_RULES: tuple[Rule, ...] = (
     Rule("video", r"videocombine|savewebm|savevideo|vhs_|createvideo", scope="node"),
+    Rule("audio", r"\baudio|audio\b|voxcpm|melband|mmaudio", scope="any"),
     Rule("i2v", r"image[\s._-]?to[\s._-]?video|i2v|imagetovideo", scope="any"),
     Rule("t2v", r"text[\s._-]?to[\s._-]?video|\bt2v\b", scope="any"),
     Rule("i2i", r"\bi2i\b|image[\s._-]?to[\s._-]?image", scope="any"),
-    Rule("img-input", r"loadimage", scope="node"),
 )
 
 # Our own packs, so a workflow can be found by the tooling it depends on.

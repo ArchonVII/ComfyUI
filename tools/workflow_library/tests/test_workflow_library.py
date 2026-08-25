@@ -265,7 +265,49 @@ def test_derive_tags_reads_models_and_nodes(tmp_path: Path) -> None:
     assert "wan" in tags
     assert "wan-2.2" in tags
     assert "quantized" in tags
-    assert "lora" in tags
+    # No lora tag: 87% of the library loads a lora, so the rule was dropped.
+    assert "lora" not in tags
+
+
+def test_family_tags_ignore_node_types(tmp_path: Path) -> None:
+    # FluxKontextImageScale is a stock resize node in non-flux edit graphs.
+    payload = ui_workflow(checkpoint="qwen_image_edit_2509_fp8_e4m3fn.safetensors")
+    payload["nodes"].append({"id": 5, "type": "FluxKontextImageScale", "widgets_values": []})
+    tags = tagging.derive_tags(parse_workflow(write(tmp_path, "w.json", payload)))
+
+    assert "flux" not in tags
+    assert "qwen" in tags
+
+
+def test_qwen_fires_on_the_image_model_not_the_text_encoder(tmp_path: Path) -> None:
+    encoder_only = ui_workflow(checkpoint="qwen_3_8b_fp8mixed.safetensors")
+    assert "qwen" not in tagging.derive_tags(
+        parse_workflow(write(tmp_path, "enc.json", encoder_only))
+    )
+
+    for name in (
+        "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-fp32.safetensors",
+        "qwen_image_vae.safetensors",
+        "Qwen_Snofs_1_3.safetensors",
+    ):
+        tags = tagging.derive_tags(
+            parse_workflow(write(tmp_path, "img.json", ui_workflow(checkpoint=name)))
+        )
+        assert "qwen" in tags, name
+
+
+def test_zit_shorthand_fires_z_image(tmp_path: Path) -> None:
+    tags = tagging.derive_tags(
+        parse_workflow(write(tmp_path, "w.json", ui_workflow(checkpoint="Mystic-XXX-ZIT-V5.safetensors")))
+    )
+    assert "z-image" in tags
+
+
+def test_fp8_alone_is_not_quantized(tmp_path: Path) -> None:
+    tags = tagging.derive_tags(
+        parse_workflow(write(tmp_path, "w.json", ui_workflow(checkpoint="flux-2-klein-9b-fp8.safetensors")))
+    )
+    assert "quantized" not in tags
 
 
 def test_duplicate_tag_is_shared_across_a_family(tmp_path: Path) -> None:
