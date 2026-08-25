@@ -1,0 +1,7 @@
+## identity/hair_style -- exported from arch-pt, 6 options ##
+a clean bob haircut
+hair tied in a ponytail
+neatly braided hair
+hair gathered in a bun
+a styled undercut
+hair in loose layered styling

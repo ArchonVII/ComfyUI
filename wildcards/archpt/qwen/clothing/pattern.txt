@@ -1,0 +1,7 @@
+## clothing/pattern -- exported from arch-pt, 6 options ##
+with a solid color pattern
+with a striped pattern
+with a plaid pattern
+with a floral pattern
+with a geometric pattern
+with an animal-inspired print

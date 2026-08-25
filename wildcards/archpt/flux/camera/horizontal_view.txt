@@ -1,0 +1,8 @@
+## camera/horizontal_view -- exported from arch-pt, 7 options ##
+camera looking straight toward the subject
+camera viewing from the subject's left oblique side
+camera viewing from the subject's right oblique side
+camera viewing the subject side-on
+camera viewing from a rear oblique position
+a first-person point-of-view photograph
+an over-the-shoulder photographic viewpoint

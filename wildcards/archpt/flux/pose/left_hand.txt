@@ -1,0 +1,9 @@
+## pose/left_hand -- exported from arch-pt, 8 options ##
+the subject's left hand holds a phone near the face
+the subject's left hand is raised
+the subject's left hand reaches outward
+the subject's left hand bends gently at the wrist
+the subject's left hand rests naturally
+the subject's left hand rests behind the back
+the subject's left hand shows an open palm
+the subject's left hand forms a fist

@@ -1,0 +1,6 @@
+## pose/balance_contact -- exported from arch-pt, 5 options ##
+body weight balanced evenly
+body weight carried on the subject's left side
+body weight carried on the subject's right side
+the pose balanced on a single contact point
+the body supported against a nearby surface

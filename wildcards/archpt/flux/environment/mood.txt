@@ -1,0 +1,8 @@
+## environment/mood -- exported from arch-pt, 7 options ##
+a serene mood
+a joyful mood
+a mysterious mood
+a tense mood
+a romantic mood
+a melancholic mood
+a triumphant mood

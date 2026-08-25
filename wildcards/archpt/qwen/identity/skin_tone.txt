@@ -1,0 +1,7 @@
+## identity/skin_tone -- exported from arch-pt, 6 options ##
+porcelain skin
+fair skin
+light brown skin
+medium brown skin
+deep brown skin
+rich ebony skin

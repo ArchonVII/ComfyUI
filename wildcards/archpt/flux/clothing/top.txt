@@ -1,0 +1,7 @@
+## clothing/top -- exported from arch-pt, 6 options ##
+wearing a fitted T-shirt
+wearing a button-up shirt
+wearing a flowing blouse
+wearing a knit sweater
+wearing a crop top
+wearing a tank top

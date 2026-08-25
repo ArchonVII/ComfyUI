@@ -1,0 +1,8 @@
+## identity/expression -- exported from arch-pt, 7 options ##
+a neutral expression
+a gentle smile
+a joyful expression
+a serious expression
+a confident expression
+a surprised expression
+a pensive expression

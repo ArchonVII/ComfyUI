@@ -1,0 +1,6 @@
+## lighting/fill_light -- exported from arch-pt, 5 options ##
+a reflector providing fill light
+a softbox providing fill light
+ambient light providing gentle fill
+a bounce card providing fill light
+a colored light providing fill

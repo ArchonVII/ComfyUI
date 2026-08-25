@@ -1,0 +1,7 @@
+## environment/color_palette -- exported from arch-pt, 6 options ##
+a warm earth-tone palette
+a cool blue palette
+a soft pastel palette
+a rich jewel-tone palette
+a restrained monochrome palette
+a vibrant multicolor palette

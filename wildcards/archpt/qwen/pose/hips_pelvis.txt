@@ -1,0 +1,6 @@
+## pose/hips_pelvis -- exported from arch-pt, 5 options ##
+the hips level
+the hips shifted to the subject's left
+the hips shifted to the subject's right
+the pelvis tilted
+the hips rotated through the pose

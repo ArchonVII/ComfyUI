@@ -1,0 +1,7 @@
+## pose/left_foot -- exported from arch-pt, 6 options ##
+the subject's left foot is balanced on tiptoe
+the subject's left foot is planted
+the subject's left foot is lifted
+the subject's left foot is pointed
+the subject's left foot is flexed
+the subject's left foot is turned outward

@@ -1,0 +1,7 @@
+## environment/period -- exported from arch-pt, 6 options ##
+an ancient historical period
+a medieval period setting
+a Victorian-era setting
+a mid-century setting
+a contemporary setting
+a near-future setting

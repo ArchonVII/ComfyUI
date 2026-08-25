@@ -1,0 +1,6 @@
+## clothing/bags_accessories -- exported from arch-pt, 5 options ##
+carrying a structured handbag
+wearing a backpack
+wearing a crossbody bag
+holding a small clutch
+carrying an umbrella

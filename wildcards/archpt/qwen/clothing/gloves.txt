@@ -1,0 +1,5 @@
+## clothing/gloves -- exported from arch-pt, 4 options ##
+wearing leather gloves
+wearing lace gloves
+wearing fingerless gloves
+wearing long opera gloves

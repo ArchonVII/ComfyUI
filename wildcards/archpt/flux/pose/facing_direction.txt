@@ -1,0 +1,8 @@
+## pose/facing_direction -- exported from arch-pt, 7 options ##
+the subject faces the camera
+the subject turns three-quarter toward the subject's anatomical left
+the subject turns three-quarter toward the subject's anatomical right
+the subject faces in profile toward the subject's anatomical left
+the subject faces in profile toward the subject's anatomical right
+the subject is shown from a back three-quarter view
+the subject faces away from the camera

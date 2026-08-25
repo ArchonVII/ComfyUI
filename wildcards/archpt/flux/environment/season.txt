@@ -1,0 +1,5 @@
+## environment/season -- exported from arch-pt, 4 options ##
+the setting is in spring
+the setting is in summer
+the setting is in autumn
+the setting is in winter

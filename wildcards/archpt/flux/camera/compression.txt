@@ -1,0 +1,5 @@
+## camera/compression -- exported from arch-pt, 4 options ##
+expanded spatial depth from a wide lens
+natural perspective depth
+compressed perspective depth
+strong telephoto perspective compression

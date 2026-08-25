@@ -1,0 +1,5 @@
+## clothing/waist -- exported from arch-pt, 4 options ##
+with a high waistline
+with a mid-rise waistline
+with a low-rise waistline
+with a cinched waist

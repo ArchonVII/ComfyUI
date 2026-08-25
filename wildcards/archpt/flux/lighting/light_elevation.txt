@@ -1,0 +1,4 @@
+## lighting/light_elevation -- exported from arch-pt, 3 options ##
+the primary light is set at a low elevation
+the primary light is level with the subject
+the primary light is set at a high elevation

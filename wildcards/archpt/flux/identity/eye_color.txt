@@ -1,0 +1,6 @@
+## identity/eye_color -- exported from arch-pt, 5 options ##
+brown eyes
+blue eyes
+green eyes
+hazel eyes
+gray eyes

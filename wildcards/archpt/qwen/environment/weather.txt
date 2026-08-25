@@ -1,0 +1,8 @@
+## environment/weather -- exported from arch-pt, 7 options ##
+clear weather
+overcast weather
+rainy weather
+snowy weather
+windy weather
+stormy weather
+misty weather

@@ -1,0 +1,7 @@
+## environment/furniture -- exported from arch-pt, 6 options ##
+a sofa in the scene
+an armchair in the scene
+a table in the scene
+a bed in the scene
+a working desk in the scene
+open shelving in the scene

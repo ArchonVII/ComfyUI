@@ -1,0 +1,6 @@
+## identity/gaze -- exported from arch-pt, 5 options ##
+looking directly at the camera
+looking just off camera
+gazing upward
+gazing downward
+a distant, contemplative gaze

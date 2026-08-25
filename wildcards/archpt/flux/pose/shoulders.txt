@@ -1,0 +1,6 @@
+## pose/shoulders -- exported from arch-pt, 5 options ##
+the shoulders level
+the shoulders set at an angle
+the shoulders raised
+the shoulders relaxed downward
+one shoulder turned forward

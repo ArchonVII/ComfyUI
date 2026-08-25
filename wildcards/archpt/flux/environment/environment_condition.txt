@@ -1,0 +1,7 @@
+## environment/environment_condition -- exported from arch-pt, 6 options ##
+a pristine environment
+a lived-in environment
+a naturally weathered environment
+an overgrown environment
+a ruined environment
+a futuristic environment

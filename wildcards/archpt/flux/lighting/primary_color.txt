@@ -1,0 +1,7 @@
+## lighting/primary_color -- exported from arch-pt, 6 options ##
+white primary light
+warm amber primary light
+cool blue primary light
+red primary light
+green primary light
+magenta primary light

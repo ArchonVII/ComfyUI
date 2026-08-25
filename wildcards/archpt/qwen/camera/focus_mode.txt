@@ -1,0 +1,7 @@
+## camera/focus_mode -- exported from arch-pt, 6 options ##
+focus locked on the main subject
+precise focus on the subject's eyes
+focus on the foreground
+focus on the background
+split focus across near and far subjects
+selective focus on a chosen detail

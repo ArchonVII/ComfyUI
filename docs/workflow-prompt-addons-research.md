@@ -226,25 +226,36 @@ models and tag autocomplete **in one node**.
 
 ---
 
-## Part 3 — The gap worth building
+## Part 3 — The gap, now built
 
 Nothing surveyed indexes a workflow *library* by content and reports
-near-duplicates, and that is precisely the shape of the problem here. It is also
-a small job against files we already parse:
+near-duplicates, and that is precisely the shape of the problem here. So it is
+built, in [`tools/workflow_library/`](../tools/workflow_library/README.md):
 
-- Walk every workflow root, parse each JSON, extract node types, model and LoRA
-  filenames, and any literal prompt text.
-- Hash the graph structure (node types plus edges, ignoring widget values and
-  positions) to group the save-as-a-new-number families. Report each family with
-  its members and their mtimes so a keeper can be chosen.
-- Emit `.tags.txt` sidecars in the g-workflows format, seeded from detected
-  models and node packs (`wan-q4`, `ltxv`, `i2v`, `pulid`, `reactor`). That
-  turns hundreds of manual tagging decisions into a review pass.
-- Flag workflows whose required custom nodes are missing or known-broken.
+- `index_workflows.py` walks every workflow root, parses each JSON, and extracts
+  node types, model and LoRA filenames, and prompt text.
+- It hashes the graph structure — node types plus edges, ignoring widget values,
+  ids, positions and titles — to group the save-as-a-new-number families, and
+  reports each family with its members and mtimes so a keeper can be chosen. A
+  second, looser hash catches variants where the same nodes were re-wired.
+- Every family member gets a shared `dup:<hash>` tag, and `--write-tags` emits
+  `.tags.txt` sidecars in the g-workflows format, seeded from detected models
+  and node packs. Hundreds of manual tagging decisions become one review pass.
+- It flags workflows referencing node types this install cannot resolve. The
+  offline scan reads both `NODE_CLASS_MAPPINGS` and V3 `node_id=`
+  registrations; `--object-info` takes a dump from a running ComfyUI and makes
+  the audit exact.
+- `export_wildcards.py` converts the 596-option arch-pt catalog into 216
+  adaptiveprompts wildcard files, so the six-node chain becomes one text field.
 
-Read-only over the workflow files, writing only sidecars — consistent with the
-do-not-edit constraint. It also makes whichever browser gets adopted immediately
-useful instead of empty.
+Read-only over the workflow files, writing only sidecars and reports —
+consistent with the do-not-edit constraint. It also makes whichever browser gets
+adopted immediately useful instead of empty.
+
+On the 25 workflows present in this repo it finds one duplicate family
+(`31 - WAN Q4 FAST Preview 17f` and `32 - WAN Q4 Prompt Camera 49f` are the same
+graph with different widget values) and derives tags such as `wan-2.2`,
+`quantized`, `i2v`, `pulid` and `reactor`.
 
 ---
 
@@ -257,8 +268,8 @@ useful instead of empty.
    Reduces both the node count and the number of prompt stores.
 3. **Autocomplete-Plus.** No workflow changes, helps in every text field.
    Disable Custom-Scripts autocomplete if it is installed.
-4. **The indexer script** from Part 3 — content index, structural dedupe report,
-   seeded tags.
+4. **The indexer** from Part 3 — content index, structural dedupe report,
+   seeded tags. Already written; just needs pointing at the real library.
 5. **g-workflows**, pointed at the seeded tags, if a browser inside ComfyUI is
    still wanted after 1 and 4.
 6. Evaluate **workflow-finder** for its node-pack dependency audit; evaluate

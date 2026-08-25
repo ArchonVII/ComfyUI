@@ -1,0 +1,6 @@
+## clothing/sleeves -- exported from arch-pt, 5 options ##
+with a sleeveless cut
+with short sleeves
+with long sleeves
+with sleeves rolled to the forearms
+with sculpted puffed sleeves

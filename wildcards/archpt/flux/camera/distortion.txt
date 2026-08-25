@@ -1,0 +1,5 @@
+## camera/distortion -- exported from arch-pt, 4 options ##
+minimal optical distortion
+controlled wide-angle edge stretch
+visible barrel distortion
+pronounced fisheye curvature

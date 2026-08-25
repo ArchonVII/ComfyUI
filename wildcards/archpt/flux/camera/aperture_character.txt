@@ -1,0 +1,5 @@
+## camera/aperture_character -- exported from arch-pt, 4 options ##
+a wide-open aperture with a narrow focus plane
+a moderate aperture balancing focus and separation
+a stopped-down aperture with broad detail
+an aperture rendering smooth creamy bokeh

@@ -1,0 +1,6 @@
+## identity/skin_details -- exported from arch-pt, 5 options ##
+natural freckles
+distinct beauty marks
+natural visible skin texture
+visible healed scars
+visible tattoos

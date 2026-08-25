@@ -1,0 +1,5 @@
+## clothing/clothing_state -- exported from arch-pt, 4 options ##
+the adult subject is fully clothed
+keep the adult subject's clothing from the source image unchanged
+dress the adult subject in the clothing shown in the reference image
+the adult subject is nude

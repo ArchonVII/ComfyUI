@@ -1,0 +1,11 @@
+## lighting/primary_direction -- exported from arch-pt, 10 options ##
+the primary light comes from the camera-side front of the image frame
+the primary light comes from the camera-side front-left of the image frame
+the primary light comes from the camera-side front-right of the image frame
+the primary light comes from the left edge of the image frame
+the primary light comes from the right edge of the image frame
+the primary light comes from the far-side back of the image frame
+the primary light comes from the far-side back-left of the image frame
+the primary light comes from the far-side back-right of the image frame
+the primary light comes from above the top edge of the image frame
+the primary light comes from below the bottom edge of the image frame

@@ -1,0 +1,7 @@
+## environment/props -- exported from arch-pt, 6 options ##
+books arranged in the scene
+a mirror in the scene
+displayed artwork in the scene
+purposeful tools in the scene
+tableware arranged in the scene
+consumer electronics in the scene

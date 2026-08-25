@@ -1,0 +1,7 @@
+## clothing/bottom -- exported from arch-pt, 6 options ##
+wearing denim jeans
+wearing tailored trousers
+wearing shorts
+wearing a midi skirt
+wearing a miniskirt
+wearing fitted leggings

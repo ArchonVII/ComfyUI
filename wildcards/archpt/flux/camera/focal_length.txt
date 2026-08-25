@@ -1,0 +1,8 @@
+## camera/focal_length -- exported from arch-pt, 7 options ##
+photographed with a 14mm lens
+photographed with a 24mm lens
+photographed with a 35mm lens
+photographed with a 50mm lens
+photographed with an 85mm lens
+photographed with a 135mm lens
+photographed with a 200mm lens

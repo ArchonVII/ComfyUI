@@ -1,0 +1,6 @@
+## environment/architecture -- exported from arch-pt, 5 options ##
+modern architecture with clean forms
+industrial architecture with exposed structure
+Gothic architecture with pointed forms
+Art Deco architecture with geometric ornament
+local vernacular architecture

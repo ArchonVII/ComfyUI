@@ -1,0 +1,7 @@
+## lighting/primary_light -- exported from arch-pt, 6 options ##
+sunlight as the primary light source
+window light as the primary light source
+a softbox as the primary light source
+a focused spotlight as the primary light source
+firelight as the primary light source
+neon fixtures as the primary light source

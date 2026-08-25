@@ -1,0 +1,8 @@
+## camera/framing -- exported from arch-pt, 7 options ##
+an extreme close-up photograph
+a close-up photograph
+a medium shot
+a three-quarter-length shot
+a full-body shot
+a wide shot showing the subject and setting
+an extreme-wide shot emphasizing the setting

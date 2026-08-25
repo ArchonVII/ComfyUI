@@ -1,0 +1,6 @@
+## environment/scene_type -- exported from arch-pt, 5 options ##
+an indoor scene
+an outdoor scene
+a scene spanning indoor and outdoor space
+a purpose-built studio setting
+an abstract spatial setting

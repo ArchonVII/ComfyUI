@@ -1,0 +1,6 @@
+## lighting/practical_lights -- exported from arch-pt, 5 options ##
+visible lamps acting as practical lights
+visible candles acting as practical lights
+visible neon signs acting as practical lights
+visible string lights in the scene
+visible screens contributing practical light

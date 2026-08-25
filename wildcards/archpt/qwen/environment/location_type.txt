@@ -1,0 +1,9 @@
+## environment/location_type -- exported from arch-pt, 8 options ##
+inside or around a lived-in home
+on a city street
+in a working environment
+in a forest
+along a coast
+in mountainous terrain
+in a desert
+in a cultivated garden

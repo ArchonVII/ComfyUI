@@ -1,0 +1,7 @@
+## clothing/footwear -- exported from arch-pt, 6 options ##
+wearing sneakers
+wearing ankle boots
+wearing high heels
+wearing loafers
+wearing sandals
+wearing knee-high boots

@@ -1,0 +1,5 @@
+## clothing/neckwear -- exported from arch-pt, 4 options ##
+wearing a scarf around the neck
+wearing a neatly tied necktie
+wearing a bow tie
+wearing a close-fitting choker

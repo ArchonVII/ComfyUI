@@ -1,0 +1,7 @@
+## camera/optical_effects -- exported from arch-pt, 6 options ##
+visible optical bokeh
+a natural lens flare
+controlled subject motion blur in the still image
+subtle chromatic aberration at high-contrast edges
+a gentle optical vignette
+starburst highlights from the lens aperture

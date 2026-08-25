@@ -1,0 +1,5 @@
+## clothing/hosiery -- exported from arch-pt, 4 options ##
+wearing sheer tights
+wearing opaque tights
+wearing thigh-high stockings
+wearing fishnet hosiery

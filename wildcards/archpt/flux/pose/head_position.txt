@@ -1,0 +1,7 @@
+## pose/head_position -- exported from arch-pt, 6 options ##
+the head held upright
+the head tilted to the subject's left
+the head tilted to the subject's right
+the chin lifted
+the chin lowered
+the head turned back over a shoulder

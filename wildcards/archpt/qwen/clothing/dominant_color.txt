@@ -1,0 +1,7 @@
+## clothing/dominant_color -- exported from arch-pt, 6 options ##
+the outfit is predominantly black
+the outfit is predominantly white
+the outfit is predominantly red
+the outfit is predominantly blue
+the outfit is predominantly green
+the outfit uses dominant earth tones

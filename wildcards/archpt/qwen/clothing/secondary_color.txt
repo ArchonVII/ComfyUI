@@ -1,0 +1,6 @@
+## clothing/secondary_color -- exported from arch-pt, 5 options ##
+with white as the secondary outfit color
+with black as the secondary outfit color
+with gold as the secondary outfit color
+with silver as the secondary outfit color
+with soft pastel secondary colors

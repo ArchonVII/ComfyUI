@@ -1,0 +1,5 @@
+## lighting/source_count -- exported from arch-pt, 4 options ##
+one visible or implied light source
+two distinct light sources
+three distinct light sources
+multiple coordinated light sources

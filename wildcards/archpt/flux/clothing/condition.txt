@@ -1,0 +1,6 @@
+## clothing/condition -- exported from arch-pt, 5 options ##
+the clothing looks pristine
+the clothing looks newly made
+the clothing has a lived-in character
+the clothing looks naturally weathered
+the clothing has intentional distressed details

@@ -1,0 +1,6 @@
+## clothing/fit -- exported from arch-pt, 5 options ##
+a skin-tight fit
+a fitted silhouette
+a precisely tailored fit
+a relaxed fit
+an oversized fit

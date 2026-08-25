@@ -1,0 +1,8 @@
+## clothing/material -- exported from arch-pt, 7 options ##
+made from natural cotton
+made from lustrous silk
+made from structured denim
+made from supple leather
+made from textured linen
+made from rich velvet
+made with delicate lace

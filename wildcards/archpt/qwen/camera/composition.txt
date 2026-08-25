@@ -1,0 +1,8 @@
+## camera/composition -- exported from arch-pt, 7 options ##
+a rule-of-thirds composition
+a centered symmetrical composition
+strong leading lines guiding the eye
+a frame-within-a-frame composition
+purposeful open space around the subject
+a dynamic diagonal composition
+a golden-ratio composition

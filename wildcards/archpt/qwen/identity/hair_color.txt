@@ -1,0 +1,7 @@
+## identity/hair_color -- exported from arch-pt, 6 options ##
+black hair
+dark brown hair
+blonde hair
+auburn hair
+silver hair
+vividly colored hair

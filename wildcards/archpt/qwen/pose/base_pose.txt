@@ -1,0 +1,8 @@
+## pose/base_pose -- exported from arch-pt, 7 options ##
+the subject stands
+the subject is seated
+the subject kneels
+the subject crouches
+the subject lies down
+the subject is on all fours
+the subject is airborne

@@ -1,0 +1,6 @@
+## camera/lens_type -- exported from arch-pt, 5 options ##
+using a rectilinear lens
+using a fisheye lens
+using a macro lens
+using a tilt-shift lens
+using an anamorphic still-photography lens

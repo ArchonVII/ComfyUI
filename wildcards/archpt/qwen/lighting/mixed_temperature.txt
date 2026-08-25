@@ -1,0 +1,5 @@
+## lighting/mixed_temperature -- exported from arch-pt, 4 options ##
+a warm key light balanced by a cool fill light
+a cool key light balanced by a warm fill light
+warm practical lights within cool ambient light
+a deliberate mix of daylight and tungsten color temperatures

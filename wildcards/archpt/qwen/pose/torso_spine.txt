@@ -1,0 +1,7 @@
+## pose/torso_spine -- exported from arch-pt, 6 options ##
+the torso upright with a straight spine
+the spine gently arched
+the torso curled inward
+the torso twisted
+the torso leaning forward
+the torso leaning back

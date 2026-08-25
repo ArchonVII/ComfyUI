@@ -1,0 +1,7 @@
+## pose/right_leg -- exported from arch-pt, 6 options ##
+the subject's right leg has one knee down
+the subject's right leg is planted firmly
+the subject's right leg is lifted
+the subject's right leg crosses the other leg
+the subject's right leg is bent
+the subject's right leg is extended

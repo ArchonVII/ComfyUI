@@ -1,0 +1,5 @@
+## clothing/headwear -- exported from arch-pt, 4 options ##
+wearing a wide-brim hat
+wearing a knit beanie
+wearing a baseball cap
+wearing a draped headscarf

@@ -1,0 +1,9 @@
+## clothing/outfit_type -- exported from arch-pt, 8 options ##
+wearing a complete dress
+wearing a tailored suit
+wearing a coordinated uniform
+wearing a complete costume
+wearing a coordinated swimwear outfit
+wearing a coordinated sleepwear outfit
+wearing a layered streetwear outfit
+wearing a coordinated activewear outfit

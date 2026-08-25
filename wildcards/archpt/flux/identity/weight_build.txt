@@ -1,0 +1,6 @@
+## identity/weight_build -- exported from arch-pt, 5 options ##
+a lean body composition
+a light body composition
+a medium body composition
+a solid body composition
+a heavy body composition

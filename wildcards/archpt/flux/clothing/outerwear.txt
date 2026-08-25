@@ -1,0 +1,6 @@
+## clothing/outerwear -- exported from arch-pt, 5 options ##
+wearing a tailored blazer
+wearing a leather jacket
+wearing a trench coat
+wearing a denim jacket
+wearing a flowing cape

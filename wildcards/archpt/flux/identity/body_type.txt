@@ -1,0 +1,6 @@
+## identity/body_type -- exported from arch-pt, 5 options ##
+a slender adult build
+an athletic adult build
+an average adult build
+a curvy adult build
+a muscular adult build

@@ -1,0 +1,4 @@
+## lighting/source_nature -- exported from arch-pt, 3 options ##
+light from natural sources
+light from artificial sources
+a mix of natural and artificial light sources

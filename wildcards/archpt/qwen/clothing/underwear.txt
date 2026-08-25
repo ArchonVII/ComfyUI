@@ -1,0 +1,5 @@
+## clothing/underwear -- exported from arch-pt, 4 options ##
+wearing fitted briefs
+wearing boxer briefs
+wearing high-waist briefs
+wearing a thong

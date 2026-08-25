@@ -1,0 +1,7 @@
+## identity/facial_features -- exported from arch-pt, 6 options ##
+high cheekbones
+a strong jawline
+soft facial features
+an aquiline nose
+full lips
+visible dimples

@@ -1,0 +1,4 @@
+## pose/depth_orientation -- exported from arch-pt, 3 options ##
+the subject's head is closer to the camera than the feet
+the subject's feet are closer to the camera than the head
+the subject's head and feet lie nearly parallel to the camera plane

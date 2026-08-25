@@ -1,0 +1,9 @@
+## pose/body_axis -- exported from arch-pt, 8 options ##
+the head is at the top of the image frame and the feet are at the bottom
+the head points toward the upper-right of the image frame and the feet toward the lower-left
+the head points toward the right edge of the image frame and the feet toward the left edge
+the head points toward the lower-right of the image frame and the feet toward the upper-left
+the head is at the bottom of the image frame and the feet are at the top
+the head points toward the lower-left of the image frame and the feet toward the upper-right
+the head points toward the left edge of the image frame and the feet toward the right edge
+the head points toward the upper-left of the image frame and the feet toward the lower-right

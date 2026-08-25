@@ -1,0 +1,7 @@
+## pose/right_arm -- exported from arch-pt, 6 options ##
+the subject's right arm holds a phone near the face
+the subject's right arm is raised
+the subject's right arm is extended
+the subject's right arm is bent
+the subject's right arm rests naturally
+the subject's right arm reaches behind the back

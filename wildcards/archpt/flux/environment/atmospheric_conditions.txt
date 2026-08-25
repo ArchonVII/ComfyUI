@@ -1,0 +1,6 @@
+## environment/atmospheric_conditions -- exported from arch-pt, 5 options ##
+crisp, clear air
+a soft atmospheric haze
+layers of natural fog
+fine dust suspended in the air
+a visibly humid atmosphere

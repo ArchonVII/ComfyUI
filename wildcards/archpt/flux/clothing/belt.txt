@@ -1,0 +1,5 @@
+## clothing/belt -- exported from arch-pt, 4 options ##
+wearing a slim belt
+wearing a wide belt
+wearing a utility belt
+wearing a chain belt

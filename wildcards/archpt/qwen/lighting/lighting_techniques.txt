@@ -1,0 +1,12 @@
+## lighting/lighting_techniques -- exported from arch-pt, 11 options ##
+a defined rim light outlining the subject
+strong backlighting behind the subject
+a classic three-point lighting setup
+a Rembrandt lighting pattern across the face
+dramatic chiaroscuro lighting
+visible volumetric light through the scene
+defined rays of light through the atmosphere
+optical caustic patterns across surfaces
+soft bounced light shaping the subject
+studio lights modified with colored gels
+the subject rendered as a strong light-defined silhouette

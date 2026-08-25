@@ -1,0 +1,6 @@
+## camera/subject_framing -- exported from arch-pt, 5 options ##
+the subject centered in the frame
+the subject placed off-center in the frame
+tight headroom around the subject
+generous space around the subject
+the subject framed within the surrounding environment

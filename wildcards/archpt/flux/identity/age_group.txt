@@ -1,0 +1,8 @@
+## identity/age_group -- exported from arch-pt, 7 options ##
+a young adult age 18 to 24
+an adult in their 20s
+an adult in their 30s
+an adult in their 40s
+an adult in their 50s
+an adult in their 60s
+an elderly adult

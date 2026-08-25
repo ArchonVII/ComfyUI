@@ -1,0 +1,6 @@
+## environment/crowd_level -- exported from arch-pt, 5 options ##
+a solitary setting
+a few people in the setting
+a small group in the setting
+a busy setting with many people
+a crowded setting

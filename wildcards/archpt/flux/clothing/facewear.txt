@@ -1,0 +1,5 @@
+## clothing/facewear -- exported from arch-pt, 4 options ##
+wearing eyeglasses
+wearing sunglasses
+wearing a decorative half mask
+wearing a sheer face veil

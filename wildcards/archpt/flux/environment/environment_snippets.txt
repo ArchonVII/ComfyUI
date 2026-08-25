@@ -1,0 +1,6 @@
+## environment/environment_snippets -- exported from arch-pt, 5 options ##
+a symmetrically arranged setting
+a setting with clear foreground, midground, and background layers
+an intimate human-scale setting
+a monumental large-scale setting
+an organically arranged setting

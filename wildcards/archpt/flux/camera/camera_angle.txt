@@ -1,0 +1,8 @@
+## camera/camera_angle -- exported from arch-pt, 7 options ##
+camera at the subject's eye level
+camera above the subject at a high angle
+camera below the subject at a low angle
+camera directly overhead
+camera close to ground level
+camera set at a deliberate Dutch angle
+camera at the subject's shoulder height

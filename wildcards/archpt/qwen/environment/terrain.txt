@@ -1,0 +1,7 @@
+## environment/terrain -- exported from arch-pt, 6 options ##
+flat terrain
+gently rolling hills
+rocky terrain
+sandy terrain
+snow-covered terrain
+marshy wetland terrain

@@ -1,0 +1,6 @@
+## lighting/fill_color -- exported from arch-pt, 5 options ##
+white fill light
+warm amber fill light
+cool blue fill light
+cyan fill light
+magenta fill light

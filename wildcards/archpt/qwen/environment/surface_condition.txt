@@ -1,0 +1,6 @@
+## environment/surface_condition -- exported from arch-pt, 5 options ##
+dry ground and surfaces
+wet ground and surfaces
+muddy ground
+icy ground and surfaces
+dusty ground and surfaces

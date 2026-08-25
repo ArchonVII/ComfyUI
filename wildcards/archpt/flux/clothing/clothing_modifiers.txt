@@ -1,0 +1,6 @@
+## clothing/clothing_modifiers -- exported from arch-pt, 5 options ##
+the adult subject is topless
+the adult subject is bottomless
+the adult subject is partially undressed
+the adult subject's underwear is visible
+the adult subject's clothing is open or unfastened

@@ -1,0 +1,7 @@
+## pose/right_foot -- exported from arch-pt, 6 options ##
+the subject's right foot is balanced on tiptoe
+the subject's right foot is planted
+the subject's right foot is lifted
+the subject's right foot is pointed
+the subject's right foot is flexed
+the subject's right foot is turned outward

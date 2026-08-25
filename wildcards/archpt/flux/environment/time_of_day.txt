@@ -1,0 +1,8 @@
+## environment/time_of_day -- exported from arch-pt, 7 options ##
+the scene takes place at dawn
+the scene takes place in the morning
+the scene takes place at midday
+the scene takes place in the afternoon
+the scene takes place at dusk
+the scene takes place in the evening
+the scene takes place at night
