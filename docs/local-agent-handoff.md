@@ -11,6 +11,15 @@ Read this whole file before starting. The companion documents are
 [`tools/workflow_library/README.md`](../tools/workflow_library/README.md)
 (what the tooling does).
 
+There is also a **[step-by-step runbook][runbook]** covering the same work as 22
+manual steps. It is the owner's copy, written for a human at the keyboard, and
+it is a private page you will not be able to fetch — do not try. It matters to
+you only because the Track B items below are the steps in it that were never
+delegated, so when you hand back, referring to them by number ("runbook steps
+10–13") is the clearest way to say what is left.
+
+[runbook]: https://claude.ai/code/artifact/effc0246-c4ae-4e6c-89f7-74c54c77722b
+
 ---
 
 ## 1. The problem you are solving
@@ -208,17 +217,18 @@ move, rename, archive or delete anything.
 
 ## 5. Track B — needs the owner
 
-Do not attempt these unattended. Prepare whatever you can, then hand over.
+Do not attempt these unattended. Prepare whatever you can, then hand over. The
+numbers in brackets are the corresponding steps in the [owner's runbook][runbook].
 
-- **B1. SmartGallery install and first index.** You may download the portable
+- **B1. SmartGallery install and first index** (runbook 10–13). You may download the portable
   build from <https://github.com/biagiomaf/smart-comfyui-gallery> and unpack it,
   but the owner points it at the output folder and judges the results. The
   workflow-recovery test (select an image, `W` / `C`, paste onto canvas) is a
   human check.
-- **B2. Duplicate deletion.** Prepared in A9, decided by the owner. Rule 2.
-- **B3. Tag taste.** You propose rules in A6; the owner confirms the vocabulary
+- **B2. Duplicate deletion** (runbook 22). Prepared in A9, decided by the owner. Rule 2.
+- **B3. Tag taste** (runbook 15). You propose rules in A6; the owner confirms the vocabulary
   matches how they actually think about their work.
-- **B4. Addon install**, if they want you to run it rather than doing it
+- **B4. Addon install** (runbook 16–17), if they want you to run it rather than doing it
   themselves:
   ```
   powershell -ExecutionPolicy Bypass -File .\tools\workflow_library\install_addons.ps1 -ComfyRoot C:\tools\image\ComfyUI
@@ -227,11 +237,11 @@ Do not attempt these unattended. Prepare whatever you can, then hand over.
   wildcards into place. Ask first — it writes into `custom_nodes`. Afterwards
   the server needs a full restart and the browser a hard refresh (`Ctrl+F5`);
   you can do the former, not the latter.
-- **B5. Browser-side verification.** That the g-workflows button appears, that
+- **B5. Browser-side verification** (runbook 18, 21). That the g-workflows button appears, that
   tag suggestions raise in a text widget. You can confirm the *backend* half —
   new node types present in a fresh `/object_info`, extension files on disk —
   and should, but the UI check is theirs.
-- **B6. Disabling ComfyUI-Custom-Scripts autocomplete**, if that pack is
+- **B6. Disabling ComfyUI-Custom-Scripts autocomplete** (runbook 19), if that pack is
   installed. It binds the same text widgets as Autocomplete-Plus and the two
   conflict. Find the setting key in the pack's source and the settings file
   under `user/default/`, and propose the exact edit rather than making it blind.
