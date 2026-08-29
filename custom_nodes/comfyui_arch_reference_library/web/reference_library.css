@@ -1,0 +1,154 @@
+.arch-ref-library {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  color: var(--fg-color, #eee);
+  font-size: 0.85rem;
+}
+
+.arch-ref-library h2,
+.arch-ref-library h3 {
+  margin: 0;
+}
+
+.arch-ref-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--comfy-menu-bg, #222) 92%, white 8%);
+}
+
+.arch-ref-row,
+.arch-ref-tabs,
+.arch-ref-pin-row,
+.arch-ref-lora-row,
+.arch-ref-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.4rem;
+}
+
+.arch-ref-tabs button {
+  flex: 1 1 10rem;
+}
+
+.arch-ref-tabs button.active {
+  border-color: #78a9ff;
+  background: #315d9b;
+}
+
+.arch-ref-field {
+  display: flex;
+  flex: 1 1 8rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.arch-ref-library input,
+.arch-ref-library select,
+.arch-ref-library textarea,
+.arch-ref-library button {
+  box-sizing: border-box;
+  min-height: 2rem;
+}
+
+.arch-ref-library textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.arch-ref-library button.danger,
+.arch-ref-library .danger {
+  color: #ffb3b3;
+}
+
+.arch-ref-status {
+  min-height: 1.25rem;
+  margin: 0;
+  opacity: 0.85;
+}
+
+.arch-ref-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.55rem;
+}
+
+.arch-ref-card,
+.arch-ref-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.45rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 0.4rem;
+}
+
+.arch-ref-card img,
+.arch-ref-slot img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 0.3rem;
+}
+
+.arch-ref-card strong,
+.arch-ref-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arch-ref-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.arch-ref-tag-list,
+.arch-ref-loras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.arch-ref-tag-row input,
+.arch-ref-tag-row select,
+.arch-ref-lora-row span {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.arch-ref-node-preview {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.arch-ref-node-images {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.arch-ref-node-images img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+@media (max-width: 520px) {
+  .arch-ref-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
