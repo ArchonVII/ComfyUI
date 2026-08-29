@@ -29,6 +29,8 @@ __pycache__/
 !/custom_nodes/comfyui_image_metadata_extension/**
 !/custom_nodes/comfyui_prompt_library/
 !/custom_nodes/comfyui_prompt_library/**
+!/custom_nodes/comfyui_arch_reference_library/
+!/custom_nodes/comfyui_arch_reference_library/**
 !/custom_nodes/comfyui_reverse_prompter/
 !/custom_nodes/comfyui_reverse_prompter/**
 !/custom_nodes/comfyui_session_watchdog/
