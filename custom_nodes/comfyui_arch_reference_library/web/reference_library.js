@@ -157,6 +157,7 @@ function renderCollectionControls(parent, state, status, refresh) {
     if (!chooser.value) return;
     await request(`/active/${state.kind}`, { method: "PUT", body: { collection_id: chooser.value } });
     state.collectionId = chooser.value;
+    state.page = 1;
     state.selectedImages.clear();
     await refresh();
   }));
@@ -169,6 +170,8 @@ function renderCollectionControls(parent, state, status, refresh) {
     const created = await request("/collections", { method: "POST", body: { kind: state.kind, name: name.value, description: description.value } });
     await request(`/active/${state.kind}`, { method: "PUT", body: { collection_id: created.collection.id } });
     state.collectionId = created.collection.id;
+    state.page = 1;
+    state.selectedImages.clear();
     await refresh();
   })));
   section.append(createRow);
@@ -189,6 +192,7 @@ function renderCollectionControls(parent, state, status, refresh) {
         if (globalThis.confirm && !globalThis.confirm(`Delete ${detail.collection.name}? Managed images will be kept.`)) return;
         await request(`/collections/${detail.collection.id}`, { method: "DELETE" });
         state.collectionId = "";
+        state.page = 1;
         state.selectedImages.clear();
         await refresh();
       }), "danger"),
@@ -206,6 +210,7 @@ function renderCollectionControls(parent, state, status, refresh) {
       for (const file of fileInput.files) form.append("files", file, file.name);
       await request(`/import/${detail.collection.id}`, { method: "POST", body: form });
       fileInput.value = "";
+      state.page = 1;
       await refresh();
     }));
     importRow.append(fileInput, upload);
@@ -258,6 +263,8 @@ function renderTagsAndFilters(parent, state, status, refresh) {
     ], filterMode(filters, tag.id));
     mode.addEventListener("change", safe(status, async () => {
       await request(`/selections/${detail.collection.id}`, { method: "PUT", body: { filters: filtersWithMode(filters, tag.id, mode.value) } });
+      state.page = 1;
+      state.selectedImages.clear();
       await refresh();
     }));
     row.append(
@@ -329,7 +336,8 @@ function renderGallery(parent, state, status, refresh) {
   const detail = selectedDetail(state);
   if (!detail) return;
   const section = element("section", undefined, "arch-ref-section");
-  section.append(element("h3", `Filtered images (${detail.images.length})`));
+  const pagination = detail.pagination ?? { page: 1, page_size: detail.images.length, total: detail.images.length, total_pages: 1 };
+  section.append(element("h3", `Filtered images (${pagination.total})`));
   const batch = element("div", undefined, "arch-ref-row");
   const tagSelect = selectInput([{ value: "", label: "Choose tag" }, ...(state.data.tags ?? []).map((tag) => ({ value: tag.id, label: `${tag.group_name ? `${tag.group_name}: ` : ""}${tag.name}` }))]);
   batch.append(
@@ -379,6 +387,19 @@ function renderGallery(parent, state, status, refresh) {
     gallery.append(card);
   }
   section.append(gallery);
+  const pages = element("div", undefined, "arch-ref-row");
+  const previous = button("Previous page", safe(status, async () => {
+    state.page = Math.max(1, pagination.page - 1);
+    await refresh();
+  }));
+  previous.disabled = pagination.page <= 1;
+  const next = button("Next page", safe(status, async () => {
+    state.page = Math.min(pagination.total_pages, pagination.page + 1);
+    await refresh();
+  }));
+  next.disabled = pagination.page >= pagination.total_pages;
+  pages.append(previous, element("span", `Page ${pagination.page} of ${pagination.total_pages}`), next);
+  section.append(pages);
   parent.append(section);
 }
 
@@ -488,9 +509,10 @@ function renderProfiles(parent, state, status, refresh) {
 function renderOrphans(parent, state, status, refresh) {
   const orphans = state.data?.orphans ?? [];
   if (!orphans.length) return;
+  const pagination = state.data?.orphan_pagination ?? { page: 1, total: orphans.length, total_pages: 1 };
   const section = element("section", undefined, "arch-ref-section");
   section.append(
-    element("h3", "Unassigned managed images"),
+    element("h3", `Unassigned managed images (${pagination.total})`),
     element("p", "These local copies no longer belong to a collection. Permanent deletion cannot be undone."),
   );
   const gallery = element("div", undefined, "arch-ref-gallery");
@@ -511,21 +533,40 @@ function renderOrphans(parent, state, status, refresh) {
     gallery.append(card);
   }
   section.append(gallery);
+  const pages = element("div", undefined, "arch-ref-row");
+  const previous = button("Previous unassigned page", safe(status, async () => {
+    state.orphanPage = Math.max(1, pagination.page - 1);
+    await refresh();
+  }));
+  previous.disabled = pagination.page <= 1;
+  const next = button("Next unassigned page", safe(status, async () => {
+    state.orphanPage = Math.min(pagination.total_pages, pagination.page + 1);
+    await refresh();
+  }));
+  next.disabled = pagination.page >= pagination.total_pages;
+  pages.append(previous, element("span", `Page ${pagination.page} of ${pagination.total_pages}`), next);
+  section.append(pages);
   parent.append(section);
 }
 
 function renderPanel(container) {
   installCss();
-  const state = { kind: "subject", collectionId: "", data: null, selectedImages: new Set() };
+  const state = { kind: "subject", collectionId: "", page: 1, pageSize: 100, orphanPage: 1, orphanPageSize: 50, data: null, selectedImages: new Set() };
   const status = element("p", "Loading…", "arch-ref-status");
   status.setAttribute("aria-live", "polite");
 
   const refresh = async () => {
-    const query = new URLSearchParams({ kind: state.kind });
+    const query = new URLSearchParams({
+      kind: state.kind,
+      page: String(state.page),
+      page_size: String(state.pageSize),
+      orphan_page: String(state.orphanPage),
+      orphan_page_size: String(state.orphanPageSize),
+    });
     if (state.collectionId) query.set("collection_id", state.collectionId);
     state.data = await request(`/bootstrap?${query}`);
-    const available = new Set((state.data.detail?.images ?? []).map((item) => item.id));
-    state.selectedImages = new Set([...state.selectedImages].filter((id) => available.has(id)));
+    state.page = state.data.detail?.pagination?.page ?? 1;
+    state.orphanPage = state.data.orphan_pagination?.page ?? 1;
     draw();
   };
 
@@ -537,6 +578,7 @@ function renderPanel(container) {
       const tab = button(kind === "subject" ? "Subjects / Characters" : "Environments / Locations", safe(status, async () => {
         state.kind = kind;
         state.collectionId = "";
+        state.page = 1;
         state.selectedImages.clear();
         await refresh();
       }), state.kind === kind ? "active" : "");

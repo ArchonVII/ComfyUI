@@ -57,15 +57,23 @@ class _ReferenceSelector:
             "required": {
                 "selection_mode": (
                     [FOLLOW_SIDEBAR, PINNED],
-                    {"tooltip": "Follow the Reference Library sidebar, or pin stable local IDs."},
+                    {
+                        "tooltip": "Follow the Reference Library sidebar, or pin stable local IDs."
+                    },
                 ),
                 "collection_id": (
                     "STRING",
-                    {"default": "", "tooltip": "Stable collection ID used only in pinned mode."},
+                    {
+                        "default": "",
+                        "tooltip": "Stable collection ID used only in pinned mode.",
+                    },
                 ),
                 "profile_id": (
                     "STRING",
-                    {"default": "", "tooltip": "Optional stable profile ID used only in pinned mode."},
+                    {
+                        "default": "",
+                        "tooltip": "Optional stable profile ID used only in pinned mode.",
+                    },
                 ),
             }
         }
@@ -94,7 +102,18 @@ class _ReferenceSelector:
         "metadata_json",
         "collection_id",
     )
-    OUTPUT_IS_LIST = (False, False, False, False, True, False, False, False, False, False)
+    OUTPUT_IS_LIST = (
+        False,
+        False,
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+    )
     FUNCTION = "select"
     CATEGORY = CATEGORY
 
@@ -126,7 +145,9 @@ class _ReferenceSelector:
                 else service.store.get_active_profile(collection["id"])
             )
             if profile["collection_id"] != collection["id"]:
-                raise ValueError("pinned profile does not belong to the pinned collection")
+                raise ValueError(
+                    "pinned profile does not belong to the pinned collection"
+                )
         else:
             raise ValueError("selection mode must be follow_sidebar or pinned")
 
@@ -136,13 +157,15 @@ class _ReferenceSelector:
             raise ValueError(
                 f"{collection['name']} needs four locked references; use Reroll references in the sidebar"
             )
-        membership_records = {
-            image["id"]: image for image in service.store.list_images(collection["id"])
-        }
-        if any(slot["image_id"] not in membership_records for slot in slots):
-            raise ValueError("one or more locked references no longer belong to this collection")
-
-        records = [membership_records[slot["image_id"]] for slot in slots]
+        try:
+            records = [
+                service.store.get_collection_image(collection["id"], slot["image_id"])
+                for slot in slots
+            ]
+        except KeyError as exc:
+            raise ValueError(
+                "one or more locked references no longer belong to this collection"
+            ) from exc
         images = [_load_image(service.managed_path(record)) for record in records]
         loras = [
             {
@@ -156,8 +179,16 @@ class _ReferenceSelector:
         ]
         manifest = {
             "version": 1,
-            "collection": {"id": collection["id"], "kind": collection["kind"], "name": collection["name"]},
-            "profile": {"id": profile["id"], "name": profile["name"], "model_family": profile["model_family"]},
+            "collection": {
+                "id": collection["id"],
+                "kind": collection["kind"],
+                "name": collection["name"],
+            },
+            "profile": {
+                "id": profile["id"],
+                "name": profile["name"],
+                "model_family": profile["model_family"],
+            },
             "loras": loras,
         }
         metadata = {
@@ -198,7 +229,9 @@ class _ReferenceSelector:
 
 class SubjectReferenceSelector(_ReferenceSelector):
     COLLECTION_KIND = "subject"
-    DESCRIPTION = "Load the four locked references and prompt/LoRA profile for a local subject."
+    DESCRIPTION = (
+        "Load the four locked references and prompt/LoRA profile for a local subject."
+    )
 
 
 class EnvironmentReferenceSelector(_ReferenceSelector):
@@ -237,11 +270,18 @@ class ApplyReferenceProfileLoras:
                 "clip": ("CLIP",),
                 "lora_manifest_json": (
                     "STRING",
-                    {"default": '{"version":1,"loras":[]}', "multiline": True, "dynamicPrompts": False},
+                    {
+                        "default": '{"version":1,"loras":[]}',
+                        "multiline": True,
+                        "dynamicPrompts": False,
+                    },
                 ),
                 "strict_missing": (
                     "BOOLEAN",
-                    {"default": True, "tooltip": "Fail when an enabled LoRA is not installed locally."},
+                    {
+                        "default": True,
+                        "tooltip": "Fail when an enabled LoRA is not installed locally.",
+                    },
                 ),
             }
         }
@@ -250,7 +290,9 @@ class ApplyReferenceProfileLoras:
     RETURN_NAMES = ("model", "clip", "applied_metadata_json")
     FUNCTION = "apply"
     CATEGORY = CATEGORY
-    DESCRIPTION = "Apply the ordered local LoRAs emitted by a Reference Library selector."
+    DESCRIPTION = (
+        "Apply the ordered local LoRAs emitted by a Reference Library selector."
+    )
 
     def apply(self, model, clip, lora_manifest_json, strict_missing=True):
         if not isinstance(strict_missing, bool):
@@ -266,10 +308,14 @@ class ApplyReferenceProfileLoras:
                 skipped.append({"name": item["name"], "reason": "zero_strength"})
                 continue
             try:
-                path_text = self.folder_paths.get_full_path_or_raise("loras", item["name"])
+                path_text = self.folder_paths.get_full_path_or_raise(
+                    "loras", item["name"]
+                )
             except (FileNotFoundError, KeyError, ValueError) as exc:
                 if strict_missing:
-                    raise ValueError(f"LoRA is not available in the local catalog: {item['name']}") from exc
+                    raise ValueError(
+                        f"LoRA is not available in the local catalog: {item['name']}"
+                    ) from exc
                 skipped.append({"name": item["name"], "reason": "missing"})
                 continue
             path = Path(path_text).resolve()
@@ -277,7 +323,9 @@ class ApplyReferenceProfileLoras:
                 stat = path.stat()
             except OSError as exc:
                 if strict_missing:
-                    raise ValueError(f"LoRA is not available in the local catalog: {item['name']}") from exc
+                    raise ValueError(
+                        f"LoRA is not available in the local catalog: {item['name']}"
+                    ) from exc
                 skipped.append({"name": item["name"], "reason": "missing"})
                 continue
             cache_key = (str(path), stat.st_mtime_ns, stat.st_size)
@@ -287,9 +335,13 @@ class ApplyReferenceProfileLoras:
                     str(path), safe_load=True, return_metadata=True
                 )
                 if not isinstance(loaded, tuple) or len(loaded) != 2:
-                    raise ValueError(f"LoRA loader returned an invalid result for {item['name']}")
+                    raise ValueError(
+                        f"LoRA loader returned an invalid result for {item['name']}"
+                    )
                 self._cache = {
-                    key: value for key, value in self._cache.items() if key[0] != str(path)
+                    key: value
+                    for key, value in self._cache.items()
+                    if key[0] != str(path)
                 }
                 self._cache[cache_key] = loaded
                 while len(self._cache) > 16:
@@ -310,7 +362,11 @@ class ApplyReferenceProfileLoras:
                     "strength_clip": item["strength_clip"],
                 }
             )
-        return model, clip, _json({"version": 1, "applied": applied, "skipped": skipped})
+        return (
+            model,
+            clip,
+            _json({"version": 1, "applied": applied, "skipped": skipped}),
+        )
 
 
 def _parse_lora_manifest(value: Any) -> list[dict[str, Any]]:
@@ -325,7 +381,9 @@ def _parse_lora_manifest(value: Any) -> list[dict[str, Any]]:
     allowed_manifest = {"version", "collection", "profile", "loras"}
     unknown_manifest = set(manifest) - allowed_manifest
     if unknown_manifest:
-        raise ValueError(f"LoRA manifest contains unknown fields: {', '.join(sorted(unknown_manifest))}")
+        raise ValueError(
+            f"LoRA manifest contains unknown fields: {', '.join(sorted(unknown_manifest))}"
+        )
     if manifest.get("version") != 1 or not isinstance(manifest.get("loras"), list):
         raise ValueError("LoRA manifest requires version 1 and a loras array")
     result: list[dict[str, Any]] = []
@@ -336,7 +394,9 @@ def _parse_lora_manifest(value: Any) -> list[dict[str, Any]]:
             raise ValueError("LoRA manifest entry must be an object")
         unknown = set(raw) - allowed_entry
         if unknown:
-            raise ValueError(f"LoRA manifest entry contains unknown fields: {', '.join(sorted(unknown))}")
+            raise ValueError(
+                f"LoRA manifest entry contains unknown fields: {', '.join(sorted(unknown))}"
+            )
         if not required_entry <= set(raw):
             raise ValueError("LoRA manifest entry is missing required fields")
         name = raw["name"]
@@ -344,12 +404,21 @@ def _parse_lora_manifest(value: Any) -> list[dict[str, Any]]:
             raise ValueError("LoRA manifest name must be a non-empty relative path")
         normalized_name = name.strip().replace("\\", "/")
         windows = PureWindowsPath(normalized_name)
-        if normalized_name.startswith("/") or windows.is_absolute() or windows.drive or ".." in normalized_name.split("/"):
+        if (
+            normalized_name.startswith("/")
+            or windows.is_absolute()
+            or windows.drive
+            or ".." in normalized_name.split("/")
+        ):
             raise ValueError("LoRA manifest name must be a safe relative path")
         strengths: dict[str, float] = {}
         for key in ("strength_model", "strength_clip"):
             raw_strength = raw[key]
-            if isinstance(raw_strength, bool) or not isinstance(raw_strength, (int, float)) or not isfinite(raw_strength):
+            if (
+                isinstance(raw_strength, bool)
+                or not isinstance(raw_strength, (int, float))
+                or not isfinite(raw_strength)
+            ):
                 raise ValueError("LoRA manifest strengths must be finite numbers")
             if not -100 <= raw_strength <= 100:
                 raise ValueError("LoRA manifest strengths must be between -100 and 100")

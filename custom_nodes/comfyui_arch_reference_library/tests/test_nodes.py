@@ -50,7 +50,9 @@ def test_package_registers_two_selectors_and_lora_applicator():
     }
 
 
-def test_subject_selector_follows_sidebar_and_returns_four_images_list_prompts_and_manifest(service, monkeypatch):
+def test_subject_selector_follows_sidebar_and_returns_four_images_list_prompts_and_manifest(
+    service, monkeypatch
+):
     collection, _images = populated_collection(service, "subject", "Alice")
     default = service.store.get_active_profile(collection["id"])
     service.store.update_profile(
@@ -90,10 +92,15 @@ def test_subject_selector_follows_sidebar_and_returns_four_images_list_prompts_a
     assert nodes.SubjectReferenceSelector.OUTPUT_IS_LIST[4] is True
 
 
-def test_environment_selector_can_pin_stable_collection_and_profile_ids(service, monkeypatch):
+def test_environment_selector_can_pin_stable_collection_and_profile_ids(
+    service, monkeypatch
+):
     environment, _images = populated_collection(service, "environment", "Apartment")
     profile = service.store.create_profile(
-        environment["id"], name="Wan", model_family="wan", positive_prompt="warm apartment"
+        environment["id"],
+        name="Wan",
+        model_family="wan",
+        positive_prompt="warm apartment",
     )
     other, _ = populated_collection(service, "environment", "Forest")
     service.store.set_active("environment", other["id"])
@@ -108,7 +115,24 @@ def test_environment_selector_can_pin_stable_collection_and_profile_ids(service,
     assert result[9] == environment["id"]
 
 
-def test_selector_rejects_kind_mismatch_missing_active_collection_and_empty_slots(service, monkeypatch):
+def test_selector_loads_only_the_four_locked_memberships(service, monkeypatch):
+    collection, _images = populated_collection(service, "subject", "Alice")
+    service.store.set_active("subject", collection["id"])
+    monkeypatch.setattr(nodes, "get_service", lambda: service)
+    monkeypatch.setattr(
+        service.store,
+        "list_images",
+        lambda *args, **kwargs: pytest.fail("selector should not scan the collection"),
+    )
+
+    result = nodes.SubjectReferenceSelector().select("follow_sidebar", "", "")
+
+    assert len(result[4]) == 4
+
+
+def test_selector_rejects_kind_mismatch_missing_active_collection_and_empty_slots(
+    service, monkeypatch
+):
     subject = service.store.create_collection("subject", "Alice")
     environment = service.store.create_collection("environment", "Apartment")
     monkeypatch.setattr(nodes, "get_service", lambda: service)
@@ -141,7 +165,9 @@ class FakeFolderPaths:
         return str(self.paths[name])
 
 
-def test_lora_applicator_applies_enabled_entries_in_order_and_caches_loaded_files(tmp_path):
+def test_lora_applicator_applies_enabled_entries_in_order_and_caches_loaded_files(
+    tmp_path,
+):
     first = tmp_path / "first.safetensors"
     second = tmp_path / "second.safetensors"
     first.write_bytes(b"first")
@@ -156,11 +182,15 @@ def test_lora_applicator_applies_enabled_entries_in_order_and_caches_loaded_file
         return {"path": path}, {"source": "test"}
 
     def apply_lora(model, clip, lora, strength_model, strength_clip, *, lora_metadata):
-        applications.append((lora["path"], strength_model, strength_clip, lora_metadata))
+        applications.append(
+            (lora["path"], strength_model, strength_clip, lora_metadata)
+        )
         return f"{model}>{Path(lora['path']).stem}", f"{clip}>{Path(lora['path']).stem}"
 
     applicator = nodes.ApplyReferenceProfileLoras(
-        folder_paths_module=FakeFolderPaths({"first.safetensors": first, "second.safetensors": second}),
+        folder_paths_module=FakeFolderPaths(
+            {"first.safetensors": first, "second.safetensors": second}
+        ),
         load_torch_file=load_torch_file,
         apply_lora=apply_lora,
     )
@@ -168,9 +198,24 @@ def test_lora_applicator_applies_enabled_entries_in_order_and_caches_loaded_file
         {
             "version": 1,
             "loras": [
-                {"name": "first.safetensors", "strength_model": 0.8, "strength_clip": 0.6, "enabled": True},
-                {"name": "disabled.safetensors", "strength_model": 1.0, "strength_clip": 1.0, "enabled": False},
-                {"name": "second.safetensors", "strength_model": 0.3, "strength_clip": 0.0, "enabled": True},
+                {
+                    "name": "first.safetensors",
+                    "strength_model": 0.8,
+                    "strength_clip": 0.6,
+                    "enabled": True,
+                },
+                {
+                    "name": "disabled.safetensors",
+                    "strength_model": 1.0,
+                    "strength_clip": 1.0,
+                    "enabled": False,
+                },
+                {
+                    "name": "second.safetensors",
+                    "strength_model": 0.3,
+                    "strength_clip": 0.0,
+                    "enabled": True,
+                },
             ],
         }
     )
@@ -180,7 +225,10 @@ def test_lora_applicator_applies_enabled_entries_in_order_and_caches_loaded_file
 
     assert model == "model>first>second"
     assert clip == "clip>first>second"
-    assert [Path(item[0]).name for item in applications[:2]] == ["first.safetensors", "second.safetensors"]
+    assert [Path(item[0]).name for item in applications[:2]] == [
+        "first.safetensors",
+        "second.safetensors",
+    ]
     assert len(loads) == 2
     assert [item["name"] for item in json.loads(metadata_json)["applied"]] == [
         "first.safetensors",
@@ -195,7 +243,9 @@ def test_lora_applicator_passthrough_and_manifest_validation(tmp_path):
         apply_lora=lambda *args, **kwargs: pytest.fail("applicator should not run"),
     )
 
-    model, clip, metadata = applicator.apply("model", "clip", '{"version":1,"loras":[]}', True)
+    model, clip, metadata = applicator.apply(
+        "model", "clip", '{"version":1,"loras":[]}', True
+    )
     assert (model, clip) == ("model", "clip")
     assert json.loads(metadata)["applied"] == []
 
@@ -205,7 +255,20 @@ def test_lora_applicator_passthrough_and_manifest_validation(tmp_path):
         applicator.apply(
             "model",
             "clip",
-            json.dumps({"version": 1, "loras": [{"name": "x", "strength_model": 1, "strength_clip": 1, "enabled": True, "extra": 1}]}),
+            json.dumps(
+                {
+                    "version": 1,
+                    "loras": [
+                        {
+                            "name": "x",
+                            "strength_model": 1,
+                            "strength_clip": 1,
+                            "enabled": True,
+                            "extra": 1,
+                        }
+                    ],
+                }
+            ),
             True,
         )
 
@@ -220,7 +283,12 @@ def test_lora_applicator_can_skip_missing_local_lora_when_not_strict():
         {
             "version": 1,
             "loras": [
-                {"name": "missing.safetensors", "strength_model": 1.0, "strength_clip": 1.0, "enabled": True}
+                {
+                    "name": "missing.safetensors",
+                    "strength_model": 1.0,
+                    "strength_clip": 1.0,
+                    "enabled": True,
+                }
             ],
         }
     )

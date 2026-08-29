@@ -9,7 +9,10 @@ CSS_PATH = Path(__file__).resolve().parents[1] / "web" / "reference_library.css"
 
 def test_reference_library_frontend_is_valid_javascript_and_has_no_owner_data_inner_html():
     result = subprocess.run(
-        ["node", "--check", str(SCRIPT_PATH)], check=False, capture_output=True, text=True
+        ["node", "--check", str(SCRIPT_PATH)],
+        check=False,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stderr
     source = SCRIPT_PATH.read_text(encoding="utf-8")
@@ -87,5 +90,9 @@ def test_frontend_contains_complete_local_management_actions():
         "Pin current sidebar selection",
         "Unassigned managed images",
         "Permanently delete",
+        "Previous page",
+        "Next page",
+        "Previous unassigned page",
+        "Next unassigned page",
     ):
         assert control_text in source

@@ -20,7 +20,9 @@ SELECTION_POLICIES = frozenset({"random", "seeded", "sequential"})
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    )
 
 
 def _normalize_kind(kind: Any) -> str:
@@ -192,7 +194,9 @@ class ReferenceLibraryStore:
         with self._connection() as connection:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
-    def create_collection(self, kind: Any, name: Any, description: Any = "") -> dict[str, Any]:
+    def create_collection(
+        self, kind: Any, name: Any, description: Any = ""
+    ) -> dict[str, Any]:
         normalized_kind = _normalize_kind(kind)
         normalized_name = _normalize_name(name, label="collection name")
         normalized_description = str(description or "")
@@ -223,7 +227,14 @@ class ReferenceLibraryStore:
                         positive_prompt, negative_prompt, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, 'default', '', '', ?, ?)
                     """,
-                    (profile_id, collection_id, DEFAULT_PROFILE_NAME, DEFAULT_PROFILE_NAME.casefold(), now, now),
+                    (
+                        profile_id,
+                        collection_id,
+                        DEFAULT_PROFILE_NAME,
+                        DEFAULT_PROFILE_NAME.casefold(),
+                        now,
+                        now,
+                    ),
                 )
                 connection.execute(
                     "INSERT INTO selection_state(collection_id) VALUES (?)",
@@ -270,8 +281,14 @@ class ReferenceLibraryStore:
         normalized_id = _normalize_id(collection_id, label="collection ID")
         with self._connection() as connection:
             current = self._fetch_collection(connection, normalized_id)
-            next_name = current["name"] if name is None else _normalize_name(name, label="collection name")
-            next_description = current["description"] if description is None else str(description)
+            next_name = (
+                current["name"]
+                if name is None
+                else _normalize_name(name, label="collection name")
+            )
+            next_description = (
+                current["description"] if description is None else str(description)
+            )
             try:
                 connection.execute(
                     """
@@ -279,7 +296,13 @@ class ReferenceLibraryStore:
                     SET name = ?, name_key = ?, description = ?, updated_at = ?
                     WHERE id = ?
                     """,
-                    (next_name, next_name.casefold(), next_description, _utc_now(), normalized_id),
+                    (
+                        next_name,
+                        next_name.casefold(),
+                        next_description,
+                        _utc_now(),
+                        normalized_id,
+                    ),
                 )
             except sqlite3.IntegrityError as exc:
                 if "collections.kind, collections.name_key" in str(exc):
@@ -314,7 +337,9 @@ class ReferenceLibraryStore:
             normalized_id = _normalize_id(collection_id, label="collection ID")
             collection = self._fetch_collection(connection, normalized_id)
             if collection["kind"] != normalized_kind:
-                raise ValueError("active collection kind does not match the requested kind")
+                raise ValueError(
+                    "active collection kind does not match the requested kind"
+                )
             connection.execute(
                 """
                 INSERT INTO settings(key, value_json) VALUES (?, ?)
@@ -399,7 +424,9 @@ class ReferenceLibraryStore:
                 return self._fetch_profile(connection, profile_id)
         except sqlite3.IntegrityError as exc:
             if "profiles.collection_id, profiles.name_key" in str(exc):
-                raise ValueError(f"profile '{normalized_name}' already exists in this collection") from exc
+                raise ValueError(
+                    f"profile '{normalized_name}' already exists in this collection"
+                ) from exc
             raise
 
     def get_profile(self, profile_id: Any) -> dict[str, Any]:
@@ -421,12 +448,31 @@ class ReferenceLibraryStore:
         normalized_loras = None if loras is None else self._normalize_loras(loras)
         with self._connection() as connection:
             current = self._fetch_profile(connection, normalized_id)
-            next_name = current["name"] if name is None else _normalize_name(name, label="profile name")
-            if current["name"].casefold() == DEFAULT_PROFILE_NAME.casefold() and next_name.casefold() != DEFAULT_PROFILE_NAME.casefold():
+            next_name = (
+                current["name"]
+                if name is None
+                else _normalize_name(name, label="profile name")
+            )
+            if (
+                current["name"].casefold() == DEFAULT_PROFILE_NAME.casefold()
+                and next_name.casefold() != DEFAULT_PROFILE_NAME.casefold()
+            ):
                 raise ValueError("the Default profile cannot be renamed")
-            next_family = current["model_family"] if model_family is None else self._normalize_model_family(model_family)
-            next_positive = current["positive_prompt"] if positive_prompt is None else str(positive_prompt)
-            next_negative = current["negative_prompt"] if negative_prompt is None else str(negative_prompt)
+            next_family = (
+                current["model_family"]
+                if model_family is None
+                else self._normalize_model_family(model_family)
+            )
+            next_positive = (
+                current["positive_prompt"]
+                if positive_prompt is None
+                else str(positive_prompt)
+            )
+            next_negative = (
+                current["negative_prompt"]
+                if negative_prompt is None
+                else str(negative_prompt)
+            )
             try:
                 connection.execute(
                     """
@@ -447,7 +493,9 @@ class ReferenceLibraryStore:
                 )
             except sqlite3.IntegrityError as exc:
                 if "profiles.collection_id, profiles.name_key" in str(exc):
-                    raise ValueError(f"profile '{next_name}' already exists in this collection") from exc
+                    raise ValueError(
+                        f"profile '{next_name}' already exists in this collection"
+                    ) from exc
                 raise
             if normalized_loras is not None:
                 self._replace_profile_loras(connection, normalized_id, normalized_loras)
@@ -462,7 +510,10 @@ class ReferenceLibraryStore:
             connection.execute("DELETE FROM profiles WHERE id = ?", (normalized_id,))
             connection.execute(
                 "DELETE FROM settings WHERE key = ? AND value_json = ?",
-                (f"active_profile_{profile['collection_id']}", json.dumps(normalized_id)),
+                (
+                    f"active_profile_{profile['collection_id']}",
+                    json.dumps(normalized_id),
+                ),
             )
             return profile
 
@@ -479,7 +530,10 @@ class ReferenceLibraryStore:
                 INSERT INTO settings(key, value_json) VALUES (?, ?)
                 ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
                 """,
-                (f"active_profile_{normalized_collection_id}", json.dumps(normalized_profile_id)),
+                (
+                    f"active_profile_{normalized_collection_id}",
+                    json.dumps(normalized_profile_id),
+                ),
             )
             return profile
 
@@ -493,7 +547,9 @@ class ReferenceLibraryStore:
             ).fetchone()
             if row is not None:
                 try:
-                    profile = self._fetch_profile(connection, json.loads(row["value_json"]))
+                    profile = self._fetch_profile(
+                        connection, json.loads(row["value_json"])
+                    )
                     if profile["collection_id"] == normalized_collection_id:
                         return profile
                 except (KeyError, TypeError, ValueError):
@@ -523,11 +579,17 @@ class ReferenceLibraryStore:
         height: int,
     ) -> dict[str, Any]:
         normalized_collection_id = _normalize_id(collection_id, label="collection ID")
-        if not isinstance(sha256, str) or len(sha256) != 64 or any(
-            character not in "0123456789abcdef" for character in sha256
+        if (
+            not isinstance(sha256, str)
+            or len(sha256) != 64
+            or any(character not in "0123456789abcdef" for character in sha256)
         ):
             raise ValueError("sha256 must be a lowercase hexadecimal digest")
-        if not isinstance(relative_path, str) or not relative_path or ".." in relative_path.replace("\\", "/").split("/"):
+        if (
+            not isinstance(relative_path, str)
+            or not relative_path
+            or ".." in relative_path.replace("\\", "/").split("/")
+        ):
             raise ValueError("image path must be a safe relative path")
         if isinstance(width, bool) or not isinstance(width, int) or width < 1:
             raise ValueError("image width must be a positive integer")
@@ -536,7 +598,9 @@ class ReferenceLibraryStore:
         now = _utc_now()
         with self._connection() as connection:
             self._fetch_collection(connection, normalized_collection_id)
-            row = connection.execute("SELECT * FROM images WHERE sha256 = ?", (sha256,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM images WHERE sha256 = ?", (sha256,)
+            ).fetchone()
             image_created = row is None
             if image_created:
                 image_id = str(uuid4())
@@ -558,7 +622,9 @@ class ReferenceLibraryStore:
                         now,
                     ),
                 )
-                row = connection.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
+                row = connection.execute(
+                    "SELECT * FROM images WHERE id = ?", (image_id,)
+                ).fetchone()
             position = connection.execute(
                 "SELECT COALESCE(MAX(position), -1) + 1 FROM collection_images WHERE collection_id = ?",
                 (normalized_collection_id,),
@@ -595,26 +661,60 @@ class ReferenceLibraryStore:
                 """,
                 (normalized_collection_id, normalized_image_id, position, _utc_now()),
             )
-            return self._decode_image(image, self._tags_for_images(connection, normalized_collection_id, [normalized_image_id]).get(normalized_image_id, []))
+            return self._decode_image(
+                image,
+                self._tags_for_images(
+                    connection, normalized_collection_id, [normalized_image_id]
+                ).get(normalized_image_id, []),
+            )
 
     def get_image(self, image_id: Any) -> dict[str, Any]:
         normalized_id = _normalize_id(image_id, label="image ID")
         with self._connection() as connection:
             return self._decode_image(self._fetch_image(connection, normalized_id), [])
 
-    def list_orphan_images(self) -> list[dict[str, Any]]:
+    def list_orphan_images(
+        self, *, limit: int | None = None, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        pagination = ""
+        parameters: list[Any] = []
+        if limit is not None:
+            if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+                raise ValueError("limit must be a positive integer")
+            pagination = " LIMIT ? OFFSET ?"
+            parameters.extend((limit, offset))
+        elif offset:
+            raise ValueError("offset requires a limit")
         with self._connection() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT i.*
                 FROM images i
                 WHERE NOT EXISTS (
                     SELECT 1 FROM collection_images ci WHERE ci.image_id = i.id
                 )
                 ORDER BY i.created_at, i.id
-                """
+                {pagination}
+                """,
+                parameters,
             ).fetchall()
             return [self._decode_image(row, []) for row in rows]
+
+    def count_orphan_images(self) -> int:
+        with self._connection() as connection:
+            return int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM images i
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM collection_images ci WHERE ci.image_id = i.id
+                    )
+                    """
+                ).fetchone()[0]
+            )
 
     def list_images(
         self,
@@ -623,7 +723,446 @@ class ReferenceLibraryStore:
         include_all: Any = (),
         include_any: Any = (),
         exclude: Any = (),
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[dict[str, Any]]:
+        clauses, parameters = self._image_filter(
+            collection_id,
+            include_all=include_all,
+            include_any=include_any,
+            exclude=exclude,
+        )
+        normalized_collection_id = parameters[0]
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        pagination = ""
+        if limit is not None:
+            if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+                raise ValueError("limit must be a positive integer")
+            pagination = " LIMIT ? OFFSET ?"
+            parameters.extend((limit, offset))
+        elif offset:
+            raise ValueError("offset requires a limit")
+        with self._connection() as connection:
+            self._fetch_collection(connection, normalized_collection_id)
+            rows = connection.execute(
+                f"""
+                SELECT i.*, ci.notes, ci.position
+                FROM collection_images ci
+                JOIN images i ON i.id = ci.image_id
+                WHERE {" AND ".join(clauses)}
+                ORDER BY ci.position, i.id
+                {pagination}
+                """,
+                parameters,
+            ).fetchall()
+            tags = self._tags_for_images(
+                connection, normalized_collection_id, [row["id"] for row in rows]
+            )
+            return [self._decode_image(row, tags.get(row["id"], [])) for row in rows]
+
+    def count_images(
+        self,
+        collection_id: Any,
+        *,
+        include_all: Any = (),
+        include_any: Any = (),
+        exclude: Any = (),
+    ) -> int:
+        clauses, parameters = self._image_filter(
+            collection_id,
+            include_all=include_all,
+            include_any=include_any,
+            exclude=exclude,
+        )
+        normalized_collection_id = parameters[0]
+        with self._connection() as connection:
+            self._fetch_collection(connection, normalized_collection_id)
+            return int(
+                connection.execute(
+                    f"""
+                    SELECT COUNT(*)
+                    FROM collection_images ci
+                    WHERE {" AND ".join(clauses)}
+                    """,
+                    parameters,
+                ).fetchone()[0]
+            )
+
+    def list_image_ids(
+        self,
+        collection_id: Any,
+        *,
+        include_all: Any = (),
+        include_any: Any = (),
+        exclude: Any = (),
+    ) -> list[str]:
+        clauses, parameters = self._image_filter(
+            collection_id,
+            include_all=include_all,
+            include_any=include_any,
+            exclude=exclude,
+        )
+        normalized_collection_id = parameters[0]
+        with self._connection() as connection:
+            self._fetch_collection(connection, normalized_collection_id)
+            rows = connection.execute(
+                f"""
+                SELECT ci.image_id
+                FROM collection_images ci
+                WHERE {" AND ".join(clauses)}
+                ORDER BY ci.position, ci.image_id
+                """,
+                parameters,
+            ).fetchall()
+            return [str(row["image_id"]) for row in rows]
+
+    def get_collection_image(self, collection_id: Any, image_id: Any) -> dict[str, Any]:
+        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
+        normalized_image_id = _normalize_id(image_id, label="image ID")
+        with self._connection() as connection:
+            self._fetch_collection(connection, normalized_collection_id)
+            row = connection.execute(
+                """
+                SELECT i.*, ci.notes, ci.position
+                FROM collection_images ci
+                JOIN images i ON i.id = ci.image_id
+                WHERE ci.collection_id = ? AND ci.image_id = ?
+                """,
+                (normalized_collection_id, normalized_image_id),
+            ).fetchone()
+            if row is None:
+                raise KeyError(
+                    f"image {normalized_image_id} does not belong to collection "
+                    f"{normalized_collection_id}"
+                )
+            tags = self._tags_for_images(
+                connection, normalized_collection_id, [normalized_image_id]
+            )
+            return self._decode_image(row, tags.get(normalized_image_id, []))
+
+    def create_tag(self, name: Any, group_name: Any = "") -> dict[str, Any]:
+        normalized_name = _normalize_name(name, label="tag name")
+        normalized_group = str(group_name or "").strip()
+        if len(normalized_group) > 80 or any(
+            character in normalized_group for character in "\r\n\t"
+        ):
+            raise ValueError("tag group must be a single line up to 80 characters")
+        tag_id = str(uuid4())
+        now = _utc_now()
+        try:
+            with self._connection() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO tags(id, name, name_key, group_name, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        tag_id,
+                        normalized_name,
+                        normalized_name.casefold(),
+                        normalized_group,
+                        now,
+                        now,
+                    ),
+                )
+                return self._fetch_tag(connection, tag_id)
+        except sqlite3.IntegrityError as exc:
+            if "tags.name_key" in str(exc):
+                raise ValueError(f"tag '{normalized_name}' already exists") from exc
+            raise
+
+    def list_tags(self) -> list[dict[str, Any]]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM tags ORDER BY group_name COLLATE NOCASE, name_key, id"
+            ).fetchall()
+            return [self._decode_tag(row) for row in rows]
+
+    def update_tag(
+        self, tag_id: Any, *, name: Any | None = None, group_name: Any | None = None
+    ) -> dict[str, Any]:
+        normalized_id = _normalize_id(tag_id, label="tag ID")
+        with self._connection() as connection:
+            current = self._fetch_tag(connection, normalized_id)
+            next_name = (
+                current["name"]
+                if name is None
+                else _normalize_name(name, label="tag name")
+            )
+            next_group = (
+                current["group_name"] if group_name is None else str(group_name).strip()
+            )
+            if len(next_group) > 80 or any(
+                character in next_group for character in "\r\n\t"
+            ):
+                raise ValueError("tag group must be a single line up to 80 characters")
+            try:
+                connection.execute(
+                    "UPDATE tags SET name = ?, name_key = ?, group_name = ?, updated_at = ? WHERE id = ?",
+                    (
+                        next_name,
+                        next_name.casefold(),
+                        next_group,
+                        _utc_now(),
+                        normalized_id,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                if "tags.name_key" in str(exc):
+                    raise ValueError(f"tag '{next_name}' already exists") from exc
+                raise
+            return self._fetch_tag(connection, normalized_id)
+
+    def delete_tag(self, tag_id: Any) -> dict[str, Any]:
+        normalized_id = _normalize_id(tag_id, label="tag ID")
+        with self._connection() as connection:
+            tag = self._fetch_tag(connection, normalized_id)
+            states = connection.execute(
+                """
+                SELECT collection_id, include_all_json, include_any_json, exclude_json
+                FROM selection_state
+                """
+            ).fetchall()
+            for state in states:
+                filters = {
+                    column: [
+                        item
+                        for item in json.loads(state[f"{column}_json"])
+                        if item != normalized_id
+                    ]
+                    for column in ("include_all", "include_any", "exclude")
+                }
+                connection.execute(
+                    """
+                    UPDATE selection_state
+                    SET include_all_json = ?, include_any_json = ?, exclude_json = ?
+                    WHERE collection_id = ?
+                    """,
+                    (
+                        json.dumps(filters["include_all"]),
+                        json.dumps(filters["include_any"]),
+                        json.dumps(filters["exclude"]),
+                        state["collection_id"],
+                    ),
+                )
+            connection.execute("DELETE FROM tags WHERE id = ?", (normalized_id,))
+            return tag
+
+    def batch_update_tags(
+        self,
+        collection_id: Any,
+        image_ids: Any,
+        *,
+        add_tag_ids: Any = (),
+        remove_tag_ids: Any = (),
+    ) -> int:
+        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
+        normalized_images = self._normalize_id_list(image_ids, label="image IDs")
+        additions = self._normalize_id_list(add_tag_ids, label="add tag IDs")
+        removals = self._normalize_id_list(remove_tag_ids, label="remove tag IDs")
+        if not normalized_images:
+            raise ValueError("image IDs must not be empty")
+        with self._connection() as connection:
+            self._fetch_collection(connection, normalized_collection_id)
+            self._require_memberships(
+                connection, normalized_collection_id, normalized_images
+            )
+            self._require_tags(connection, additions + removals)
+            for image_id in normalized_images:
+                connection.executemany(
+                    """
+                    INSERT INTO collection_image_tags(collection_id, image_id, tag_id)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(collection_id, image_id, tag_id) DO NOTHING
+                    """,
+                    (
+                        (normalized_collection_id, image_id, tag_id)
+                        for tag_id in additions
+                    ),
+                )
+                connection.executemany(
+                    "DELETE FROM collection_image_tags WHERE collection_id = ? AND image_id = ? AND tag_id = ?",
+                    (
+                        (normalized_collection_id, image_id, tag_id)
+                        for tag_id in removals
+                    ),
+                )
+        return len(normalized_images)
+
+    def set_selection(
+        self,
+        collection_id: Any,
+        *,
+        filters: Any | None = None,
+        slots: Any | None = None,
+        policy: Any | None = None,
+        seed: Any | None = None,
+    ) -> dict[str, Any]:
+        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
+        with self._connection() as connection:
+            current = self._get_selection(connection, normalized_collection_id)
+            next_policy = (
+                current["policy"] if policy is None else self._normalize_policy(policy)
+            )
+            next_seed = current["seed"] if seed is None else self._normalize_seed(seed)
+            next_filters = (
+                current["filters"]
+                if filters is None
+                else self._normalize_filters(filters)
+            )
+            self._require_tags(
+                connection,
+                next_filters["include_all"]
+                + next_filters["include_any"]
+                + next_filters["exclude"],
+            )
+            connection.execute(
+                """
+                UPDATE selection_state
+                SET policy = ?, seed = ?, include_all_json = ?, include_any_json = ?, exclude_json = ?
+                WHERE collection_id = ?
+                """,
+                (
+                    next_policy,
+                    next_seed,
+                    json.dumps(next_filters["include_all"]),
+                    json.dumps(next_filters["include_any"]),
+                    json.dumps(next_filters["exclude"]),
+                    normalized_collection_id,
+                ),
+            )
+            if slots is not None:
+                normalized_slots = self._normalize_slots(slots)
+                merged_by_slot = {item["slot"]: dict(item) for item in current["slots"]}
+                merged_by_slot.update({item["slot"]: item for item in normalized_slots})
+                merged_slots = self._normalize_slots(
+                    list(merged_by_slot.values()), require_all=True
+                )
+                image_ids = [
+                    item["image_id"] for item in merged_slots if item["image_id"]
+                ]
+                self._require_memberships(
+                    connection, normalized_collection_id, image_ids
+                )
+                for item in normalized_slots:
+                    connection.execute(
+                        "UPDATE selection_slots SET image_id = ?, pinned = ? WHERE collection_id = ? AND slot = ?",
+                        (
+                            item["image_id"],
+                            int(item["pinned"]),
+                            normalized_collection_id,
+                            item["slot"],
+                        ),
+                    )
+            return self._get_selection(connection, normalized_collection_id)
+
+    def commit_reroll(
+        self,
+        collection_id: Any,
+        *,
+        expected_reroll_count: int,
+        slots: Any,
+        cursor: int,
+    ) -> dict[str, Any]:
+        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
+        normalized_slots = self._normalize_slots(slots, require_all=True)
+        if isinstance(cursor, bool) or not isinstance(cursor, int) or cursor < 0:
+            raise ValueError("selection cursor must be a non-negative integer")
+        with self._connection() as connection:
+            current = self._get_selection(connection, normalized_collection_id)
+            if current["reroll_count"] != expected_reroll_count:
+                raise ValueError(
+                    "selection changed concurrently; refresh and reroll again"
+                )
+            image_ids = [
+                item["image_id"] for item in normalized_slots if item["image_id"]
+            ]
+            self._require_memberships(connection, normalized_collection_id, image_ids)
+            updated = connection.execute(
+                """
+                UPDATE selection_state
+                SET cursor = ?, reroll_count = reroll_count + 1
+                WHERE collection_id = ? AND reroll_count = ?
+                """,
+                (cursor, normalized_collection_id, expected_reroll_count),
+            )
+            if updated.rowcount != 1:
+                raise ValueError(
+                    "selection changed concurrently; refresh and reroll again"
+                )
+            for item in normalized_slots:
+                connection.execute(
+                    "UPDATE selection_slots SET image_id = ?, pinned = ? WHERE collection_id = ? AND slot = ?",
+                    (
+                        item["image_id"],
+                        int(item["pinned"]),
+                        normalized_collection_id,
+                        item["slot"],
+                    ),
+                )
+            return self._get_selection(connection, normalized_collection_id)
+
+    def unlink_image(self, collection_id: Any, image_id: Any) -> dict[str, Any]:
+        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
+        normalized_image_id = _normalize_id(image_id, label="image ID")
+        with self._connection() as connection:
+            image = self._fetch_image(connection, normalized_image_id)
+            deleted = connection.execute(
+                "DELETE FROM collection_images WHERE collection_id = ? AND image_id = ?",
+                (normalized_collection_id, normalized_image_id),
+            )
+            if deleted.rowcount != 1:
+                raise KeyError("image membership not found")
+            connection.execute(
+                "UPDATE selection_slots SET image_id = NULL, pinned = 0 WHERE collection_id = ? AND image_id = ?",
+                (normalized_collection_id, normalized_image_id),
+            )
+            return self._decode_image(image, [])
+
+    def membership_count(self, image_id: Any) -> int:
+        normalized_id = _normalize_id(image_id, label="image ID")
+        with self._connection() as connection:
+            self._fetch_image(connection, normalized_id)
+            return int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM collection_images WHERE image_id = ?",
+                    (normalized_id,),
+                ).fetchone()[0]
+            )
+
+    def delete_image_record(self, image_id: Any) -> dict[str, Any]:
+        normalized_id = _normalize_id(image_id, label="image ID")
+        with self._connection() as connection:
+            image = self._fetch_image(connection, normalized_id)
+            count = connection.execute(
+                "SELECT COUNT(*) FROM collection_images WHERE image_id = ?",
+                (normalized_id,),
+            ).fetchone()[0]
+            if count:
+                raise ValueError(f"image still belongs to {count} collection(s)")
+            connection.execute("DELETE FROM images WHERE id = ?", (normalized_id,))
+            return self._decode_image(image, [])
+
+    def fingerprint(self) -> str:
+        parts: list[str] = []
+        for path in (Path(self.path), Path(f"{self.path}-wal")):
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                parts.append("missing")
+            else:
+                parts.append(f"{stat.st_mtime_ns}:{stat.st_size}")
+        return "|".join(parts)
+
+    def _image_filter(
+        self,
+        collection_id: Any,
+        *,
+        include_all: Any,
+        include_any: Any,
+        exclude: Any,
+    ) -> tuple[list[str], list[Any]]:
         normalized_collection_id = _normalize_id(collection_id, label="collection ID")
         all_ids = self._normalize_id_list(include_all, label="include_all tag IDs")
         any_ids = self._normalize_id_list(include_any, label="include_any tag IDs")
@@ -665,248 +1204,11 @@ class ReferenceLibraryStore:
                 )"""
             )
             parameters.extend(exclude_ids)
-        with self._connection() as connection:
-            self._fetch_collection(connection, normalized_collection_id)
-            rows = connection.execute(
-                f"""
-                SELECT i.*, ci.notes, ci.position
-                FROM collection_images ci
-                JOIN images i ON i.id = ci.image_id
-                WHERE {' AND '.join(clauses)}
-                ORDER BY ci.position, i.id
-                """,
-                parameters,
-            ).fetchall()
-            tags = self._tags_for_images(
-                connection, normalized_collection_id, [row["id"] for row in rows]
-            )
-            return [self._decode_image(row, tags.get(row["id"], [])) for row in rows]
+        return clauses, parameters
 
-    def create_tag(self, name: Any, group_name: Any = "") -> dict[str, Any]:
-        normalized_name = _normalize_name(name, label="tag name")
-        normalized_group = str(group_name or "").strip()
-        if len(normalized_group) > 80 or any(character in normalized_group for character in "\r\n\t"):
-            raise ValueError("tag group must be a single line up to 80 characters")
-        tag_id = str(uuid4())
-        now = _utc_now()
-        try:
-            with self._connection() as connection:
-                connection.execute(
-                    """
-                    INSERT INTO tags(id, name, name_key, group_name, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (tag_id, normalized_name, normalized_name.casefold(), normalized_group, now, now),
-                )
-                return self._fetch_tag(connection, tag_id)
-        except sqlite3.IntegrityError as exc:
-            if "tags.name_key" in str(exc):
-                raise ValueError(f"tag '{normalized_name}' already exists") from exc
-            raise
-
-    def list_tags(self) -> list[dict[str, Any]]:
-        with self._connection() as connection:
-            rows = connection.execute(
-                "SELECT * FROM tags ORDER BY group_name COLLATE NOCASE, name_key, id"
-            ).fetchall()
-            return [self._decode_tag(row) for row in rows]
-
-    def update_tag(self, tag_id: Any, *, name: Any | None = None, group_name: Any | None = None) -> dict[str, Any]:
-        normalized_id = _normalize_id(tag_id, label="tag ID")
-        with self._connection() as connection:
-            current = self._fetch_tag(connection, normalized_id)
-            next_name = current["name"] if name is None else _normalize_name(name, label="tag name")
-            next_group = current["group_name"] if group_name is None else str(group_name).strip()
-            if len(next_group) > 80 or any(character in next_group for character in "\r\n\t"):
-                raise ValueError("tag group must be a single line up to 80 characters")
-            try:
-                connection.execute(
-                    "UPDATE tags SET name = ?, name_key = ?, group_name = ?, updated_at = ? WHERE id = ?",
-                    (next_name, next_name.casefold(), next_group, _utc_now(), normalized_id),
-                )
-            except sqlite3.IntegrityError as exc:
-                if "tags.name_key" in str(exc):
-                    raise ValueError(f"tag '{next_name}' already exists") from exc
-                raise
-            return self._fetch_tag(connection, normalized_id)
-
-    def delete_tag(self, tag_id: Any) -> dict[str, Any]:
-        normalized_id = _normalize_id(tag_id, label="tag ID")
-        with self._connection() as connection:
-            tag = self._fetch_tag(connection, normalized_id)
-            connection.execute("DELETE FROM tags WHERE id = ?", (normalized_id,))
-            return tag
-
-    def batch_update_tags(
-        self,
-        collection_id: Any,
-        image_ids: Any,
-        *,
-        add_tag_ids: Any = (),
-        remove_tag_ids: Any = (),
-    ) -> list[dict[str, Any]]:
-        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
-        normalized_images = self._normalize_id_list(image_ids, label="image IDs")
-        additions = self._normalize_id_list(add_tag_ids, label="add tag IDs")
-        removals = self._normalize_id_list(remove_tag_ids, label="remove tag IDs")
-        if not normalized_images:
-            raise ValueError("image IDs must not be empty")
-        with self._connection() as connection:
-            self._fetch_collection(connection, normalized_collection_id)
-            self._require_memberships(connection, normalized_collection_id, normalized_images)
-            self._require_tags(connection, additions + removals)
-            for image_id in normalized_images:
-                connection.executemany(
-                    """
-                    INSERT INTO collection_image_tags(collection_id, image_id, tag_id)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(collection_id, image_id, tag_id) DO NOTHING
-                    """,
-                    ((normalized_collection_id, image_id, tag_id) for tag_id in additions),
-                )
-                connection.executemany(
-                    "DELETE FROM collection_image_tags WHERE collection_id = ? AND image_id = ? AND tag_id = ?",
-                    ((normalized_collection_id, image_id, tag_id) for tag_id in removals),
-                )
-        return self.list_images(normalized_collection_id)
-
-    def set_selection(
-        self,
-        collection_id: Any,
-        *,
-        filters: Any | None = None,
-        slots: Any | None = None,
-        policy: Any | None = None,
-        seed: Any | None = None,
+    def _get_selection(
+        self, connection: sqlite3.Connection, collection_id: str
     ) -> dict[str, Any]:
-        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
-        with self._connection() as connection:
-            current = self._get_selection(connection, normalized_collection_id)
-            next_policy = current["policy"] if policy is None else self._normalize_policy(policy)
-            next_seed = current["seed"] if seed is None else self._normalize_seed(seed)
-            next_filters = current["filters"] if filters is None else self._normalize_filters(filters)
-            self._require_tags(
-                connection,
-                next_filters["include_all"] + next_filters["include_any"] + next_filters["exclude"],
-            )
-            connection.execute(
-                """
-                UPDATE selection_state
-                SET policy = ?, seed = ?, include_all_json = ?, include_any_json = ?, exclude_json = ?
-                WHERE collection_id = ?
-                """,
-                (
-                    next_policy,
-                    next_seed,
-                    json.dumps(next_filters["include_all"]),
-                    json.dumps(next_filters["include_any"]),
-                    json.dumps(next_filters["exclude"]),
-                    normalized_collection_id,
-                ),
-            )
-            if slots is not None:
-                normalized_slots = self._normalize_slots(slots)
-                merged_by_slot = {item["slot"]: dict(item) for item in current["slots"]}
-                merged_by_slot.update({item["slot"]: item for item in normalized_slots})
-                merged_slots = self._normalize_slots(
-                    list(merged_by_slot.values()), require_all=True
-                )
-                image_ids = [item["image_id"] for item in merged_slots if item["image_id"]]
-                self._require_memberships(connection, normalized_collection_id, image_ids)
-                for item in normalized_slots:
-                    connection.execute(
-                        "UPDATE selection_slots SET image_id = ?, pinned = ? WHERE collection_id = ? AND slot = ?",
-                        (
-                            item["image_id"],
-                            int(item["pinned"]),
-                            normalized_collection_id,
-                            item["slot"],
-                        ),
-                    )
-            return self._get_selection(connection, normalized_collection_id)
-
-    def commit_reroll(
-        self,
-        collection_id: Any,
-        *,
-        expected_reroll_count: int,
-        slots: Any,
-        cursor: int,
-    ) -> dict[str, Any]:
-        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
-        normalized_slots = self._normalize_slots(slots, require_all=True)
-        if isinstance(cursor, bool) or not isinstance(cursor, int) or cursor < 0:
-            raise ValueError("selection cursor must be a non-negative integer")
-        with self._connection() as connection:
-            current = self._get_selection(connection, normalized_collection_id)
-            if current["reroll_count"] != expected_reroll_count:
-                raise ValueError("selection changed concurrently; refresh and reroll again")
-            image_ids = [item["image_id"] for item in normalized_slots if item["image_id"]]
-            self._require_memberships(connection, normalized_collection_id, image_ids)
-            updated = connection.execute(
-                """
-                UPDATE selection_state
-                SET cursor = ?, reroll_count = reroll_count + 1
-                WHERE collection_id = ? AND reroll_count = ?
-                """,
-                (cursor, normalized_collection_id, expected_reroll_count),
-            )
-            if updated.rowcount != 1:
-                raise ValueError("selection changed concurrently; refresh and reroll again")
-            for item in normalized_slots:
-                connection.execute(
-                    "UPDATE selection_slots SET image_id = ?, pinned = ? WHERE collection_id = ? AND slot = ?",
-                    (item["image_id"], int(item["pinned"]), normalized_collection_id, item["slot"]),
-                )
-            return self._get_selection(connection, normalized_collection_id)
-
-    def unlink_image(self, collection_id: Any, image_id: Any) -> dict[str, Any]:
-        normalized_collection_id = _normalize_id(collection_id, label="collection ID")
-        normalized_image_id = _normalize_id(image_id, label="image ID")
-        with self._connection() as connection:
-            image = self._fetch_image(connection, normalized_image_id)
-            deleted = connection.execute(
-                "DELETE FROM collection_images WHERE collection_id = ? AND image_id = ?",
-                (normalized_collection_id, normalized_image_id),
-            )
-            if deleted.rowcount != 1:
-                raise KeyError("image membership not found")
-            connection.execute(
-                "UPDATE selection_slots SET image_id = NULL, pinned = 0 WHERE collection_id = ? AND image_id = ?",
-                (normalized_collection_id, normalized_image_id),
-            )
-            return self._decode_image(image, [])
-
-    def membership_count(self, image_id: Any) -> int:
-        normalized_id = _normalize_id(image_id, label="image ID")
-        with self._connection() as connection:
-            self._fetch_image(connection, normalized_id)
-            return int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM collection_images WHERE image_id = ?", (normalized_id,)
-                ).fetchone()[0]
-            )
-
-    def delete_image_record(self, image_id: Any) -> dict[str, Any]:
-        normalized_id = _normalize_id(image_id, label="image ID")
-        with self._connection() as connection:
-            image = self._fetch_image(connection, normalized_id)
-            count = connection.execute(
-                "SELECT COUNT(*) FROM collection_images WHERE image_id = ?", (normalized_id,)
-            ).fetchone()[0]
-            if count:
-                raise ValueError(f"image still belongs to {count} collection(s)")
-            connection.execute("DELETE FROM images WHERE id = ?", (normalized_id,))
-            return self._decode_image(image, [])
-
-    def fingerprint(self) -> str:
-        try:
-            stat = Path(self.path).stat()
-        except FileNotFoundError:
-            return "missing"
-        return f"{stat.st_mtime_ns}:{stat.st_size}"
-
-    def _get_selection(self, connection: sqlite3.Connection, collection_id: str) -> dict[str, Any]:
         self._fetch_collection(connection, collection_id)
         state = connection.execute(
             "SELECT * FROM selection_state WHERE collection_id = ?", (collection_id,)
@@ -951,7 +1253,11 @@ class ReferenceLibraryStore:
 
     @classmethod
     def _normalize_filters(cls, filters: Any) -> dict[str, list[str]]:
-        if not isinstance(filters, dict) or set(filters) - {"include_all", "include_any", "exclude"}:
+        if not isinstance(filters, dict) or set(filters) - {
+            "include_all",
+            "include_any",
+            "exclude",
+        }:
             raise ValueError("selection filters contain unknown fields")
         return {
             key: cls._normalize_id_list(filters.get(key, []), label=f"{key} tag IDs")
@@ -966,25 +1272,47 @@ class ReferenceLibraryStore:
 
     @staticmethod
     def _normalize_seed(seed: Any) -> int:
-        if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0 or seed > 9_007_199_254_740_991:
-            raise ValueError("selection seed must be a non-negative JavaScript-safe integer")
+        if (
+            isinstance(seed, bool)
+            or not isinstance(seed, int)
+            or seed < 0
+            or seed > 9_007_199_254_740_991
+        ):
+            raise ValueError(
+                "selection seed must be a non-negative JavaScript-safe integer"
+            )
         return seed
 
     @classmethod
-    def _normalize_slots(cls, slots: Any, *, require_all: bool = False) -> list[dict[str, Any]]:
+    def _normalize_slots(
+        cls, slots: Any, *, require_all: bool = False
+    ) -> list[dict[str, Any]]:
         if not isinstance(slots, list):
             raise ValueError("selection slots must be an array")
         normalized: list[dict[str, Any]] = []
         seen_slots: set[int] = set()
         seen_images: set[str] = set()
         for value in slots:
-            if not isinstance(value, dict) or set(value) - {"slot", "image_id", "pinned"}:
+            if not isinstance(value, dict) or set(value) - {
+                "slot",
+                "image_id",
+                "pinned",
+            }:
                 raise ValueError("selection slot contains unknown fields")
             slot = value.get("slot")
-            if isinstance(slot, bool) or not isinstance(slot, int) or not 1 <= slot <= 4 or slot in seen_slots:
-                raise ValueError("selection slot must be a unique integer from 1 through 4")
+            if (
+                isinstance(slot, bool)
+                or not isinstance(slot, int)
+                or not 1 <= slot <= 4
+                or slot in seen_slots
+            ):
+                raise ValueError(
+                    "selection slot must be a unique integer from 1 through 4"
+                )
             image_id = value.get("image_id")
-            normalized_image_id = None if image_id is None else _normalize_id(image_id, label="image ID")
+            normalized_image_id = (
+                None if image_id is None else _normalize_id(image_id, label="image ID")
+            )
             pinned = value.get("pinned", False)
             if not isinstance(pinned, bool):
                 raise ValueError("selection slot pinned must be boolean")
@@ -995,13 +1323,17 @@ class ReferenceLibraryStore:
             seen_slots.add(slot)
             if normalized_image_id is not None:
                 seen_images.add(normalized_image_id)
-            normalized.append({"slot": slot, "image_id": normalized_image_id, "pinned": pinned})
+            normalized.append(
+                {"slot": slot, "image_id": normalized_image_id, "pinned": pinned}
+            )
         if require_all and seen_slots != {1, 2, 3, 4}:
             raise ValueError("reroll must provide all four selection slots")
         return sorted(normalized, key=lambda item: item["slot"])
 
     @staticmethod
-    def _require_memberships(connection: sqlite3.Connection, collection_id: str, image_ids: list[str]) -> None:
+    def _require_memberships(
+        connection: sqlite3.Connection, collection_id: str, image_ids: list[str]
+    ) -> None:
         if not image_ids:
             return
         placeholders = ",".join("?" for _ in image_ids)
@@ -1030,21 +1362,29 @@ class ReferenceLibraryStore:
 
     @staticmethod
     def _fetch_image(connection: sqlite3.Connection, image_id: str) -> sqlite3.Row:
-        row = connection.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
+        row = connection.execute(
+            "SELECT * FROM images WHERE id = ?", (image_id,)
+        ).fetchone()
         if row is None:
             raise KeyError(f"image not found: {image_id}")
         return row
 
     @staticmethod
     def _fetch_tag(connection: sqlite3.Connection, tag_id: str) -> dict[str, Any]:
-        row = connection.execute("SELECT * FROM tags WHERE id = ?", (tag_id,)).fetchone()
+        row = connection.execute(
+            "SELECT * FROM tags WHERE id = ?", (tag_id,)
+        ).fetchone()
         if row is None:
             raise KeyError(f"tag not found: {tag_id}")
         return ReferenceLibraryStore._decode_tag(row)
 
     @staticmethod
-    def _fetch_profile(connection: sqlite3.Connection, profile_id: str) -> dict[str, Any]:
-        row = connection.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+    def _fetch_profile(
+        connection: sqlite3.Connection, profile_id: str
+    ) -> dict[str, Any]:
+        row = connection.execute(
+            "SELECT * FROM profiles WHERE id = ?", (profile_id,)
+        ).fetchone()
         if row is None:
             raise KeyError(f"profile not found: {profile_id}")
         return ReferenceLibraryStore._decode_profile(
@@ -1052,7 +1392,9 @@ class ReferenceLibraryStore:
         )
 
     @staticmethod
-    def _profile_loras(connection: sqlite3.Connection, profile_id: str) -> list[dict[str, Any]]:
+    def _profile_loras(
+        connection: sqlite3.Connection, profile_id: str
+    ) -> list[dict[str, Any]]:
         rows = connection.execute(
             "SELECT * FROM profile_loras WHERE profile_id = ? ORDER BY position, id",
             (profile_id,),
@@ -1073,7 +1415,9 @@ class ReferenceLibraryStore:
     def _replace_profile_loras(
         connection: sqlite3.Connection, profile_id: str, loras: list[dict[str, Any]]
     ) -> None:
-        connection.execute("DELETE FROM profile_loras WHERE profile_id = ?", (profile_id,))
+        connection.execute(
+            "DELETE FROM profile_loras WHERE profile_id = ?", (profile_id,)
+        )
         connection.executemany(
             """
             INSERT INTO profile_loras(
@@ -1099,7 +1443,9 @@ class ReferenceLibraryStore:
         if not isinstance(value, str) or not value.strip():
             raise ValueError("model family must be a non-empty string")
         normalized = value.strip()
-        if len(normalized) > 80 or any(character in normalized for character in "\r\n\t"):
+        if len(normalized) > 80 or any(
+            character in normalized for character in "\r\n\t"
+        ):
             raise ValueError("model family must be a single line up to 80 characters")
         return normalized
 
@@ -1116,7 +1462,9 @@ class ReferenceLibraryStore:
                 raise ValueError("LoRA entry must be an object")
             unknown = set(item) - allowed
             if unknown:
-                raise ValueError(f"LoRA entry contains unknown fields: {', '.join(sorted(unknown))}")
+                raise ValueError(
+                    f"LoRA entry contains unknown fields: {', '.join(sorted(unknown))}"
+                )
             if set(item) != allowed:
                 raise ValueError("LoRA entry requires name, strengths, and enabled")
             name = item["name"]
@@ -1124,14 +1472,25 @@ class ReferenceLibraryStore:
                 raise ValueError("LoRA name must be a non-empty relative path")
             normalized_name = name.strip().replace("\\", "/")
             windows = PureWindowsPath(normalized_name)
-            if normalized_name.startswith("/") or windows.is_absolute() or windows.drive or ".." in normalized_name.split("/"):
+            if (
+                normalized_name.startswith("/")
+                or windows.is_absolute()
+                or windows.drive
+                or ".." in normalized_name.split("/")
+            ):
                 raise ValueError("LoRA name must be a safe relative catalog path")
-            if len(normalized_name) > 500 or any(character in normalized_name for character in "\r\n\0"):
+            if len(normalized_name) > 500 or any(
+                character in normalized_name for character in "\r\n\0"
+            ):
                 raise ValueError("LoRA name must be a safe relative catalog path")
             strengths: dict[str, float] = {}
             for key in ("strength_model", "strength_clip"):
                 raw = item[key]
-                if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not isfinite(raw):
+                if (
+                    isinstance(raw, bool)
+                    or not isinstance(raw, (int, float))
+                    or not isfinite(raw)
+                ):
                     raise ValueError("LoRA strengths must be finite numbers")
                 if not -100 <= raw <= 100:
                     raise ValueError("LoRA strengths must be between -100 and 100")
@@ -1164,13 +1523,17 @@ class ReferenceLibraryStore:
             """,
             [collection_id, *image_ids],
         ).fetchall()
-        result: dict[str, list[dict[str, Any]]] = {image_id: [] for image_id in image_ids}
+        result: dict[str, list[dict[str, Any]]] = {
+            image_id: [] for image_id in image_ids
+        }
         for row in rows:
             result[row["image_id"]].append(ReferenceLibraryStore._decode_tag(row))
         return result
 
     @staticmethod
-    def _fetch_collection(connection: sqlite3.Connection, collection_id: str) -> dict[str, Any]:
+    def _fetch_collection(
+        connection: sqlite3.Connection, collection_id: str
+    ) -> dict[str, Any]:
         row = connection.execute(
             "SELECT * FROM collections WHERE id = ?", (collection_id,)
         ).fetchone()
@@ -1214,7 +1577,9 @@ class ReferenceLibraryStore:
         }
 
     @staticmethod
-    def _decode_profile(row: sqlite3.Row, loras: list[dict[str, Any]]) -> dict[str, Any]:
+    def _decode_profile(
+        row: sqlite3.Row, loras: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         return {
             "id": row["id"],
             "collection_id": row["collection_id"],

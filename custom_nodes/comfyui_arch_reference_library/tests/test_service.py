@@ -31,7 +31,9 @@ def import_named(service, collection_id, name, color):
     return service.import_image(collection_id, name, "image/png", png_bytes(color))
 
 
-def test_import_copies_without_changing_source_and_deduplicates_content(service, tmp_path):
+def test_import_copies_without_changing_source_and_deduplicates_content(
+    service, tmp_path
+):
     first_collection = service.store.create_collection("subject", "Alice")
     second_collection = service.store.create_collection("environment", "Studio")
     source = tmp_path / "source.png"
@@ -71,7 +73,9 @@ def test_failed_decode_and_oversized_upload_leave_no_rows_or_files(service, subj
     assert [path for path in service.images_root.rglob("*") if path.is_file()] == []
 
 
-def test_thumbnail_is_local_regenerable_and_confined_to_thumbnail_root(service, subject):
+def test_thumbnail_is_local_regenerable_and_confined_to_thumbnail_root(
+    service, subject
+):
     imported = import_named(service, subject["id"], "face.png", (10, 20, 30))
     thumbnail = service.thumbnail_path(imported["image"]["id"])
 
@@ -86,7 +90,9 @@ def test_thumbnail_is_local_regenerable_and_confined_to_thumbnail_root(service, 
     assert thumbnail.is_file()
 
 
-def test_batch_tags_are_membership_specific_and_filter_supports_all_any_exclude(service):
+def test_batch_tags_are_membership_specific_and_filter_supports_all_any_exclude(
+    service,
+):
     subject = service.store.create_collection("subject", "Alice")
     environment = service.store.create_collection("environment", "Studio")
     first = import_named(service, subject["id"], "first.png", (255, 0, 0))["image"]
@@ -132,15 +138,15 @@ def test_batch_tags_are_membership_specific_and_filter_supports_all_any_exclude(
     service.store.batch_update_tags(
         subject["id"], [first["id"]], remove_tag_ids=[looking["id"]]
     )
-    assert service.store.list_images(
-        subject["id"], include_all=[looking["id"]]
-    ) == []
+    assert service.store.list_images(subject["id"], include_all=[looking["id"]]) == []
 
 
 def test_tag_vocabulary_is_editable_and_deletion_removes_associations(service, subject):
     image = import_named(service, subject["id"], "face.png", (1, 2, 3))["image"]
     tag = service.store.create_tag("face only", "framing")
-    service.store.batch_update_tags(subject["id"], [image["id"]], add_tag_ids=[tag["id"]])
+    service.store.batch_update_tags(
+        subject["id"], [image["id"]], add_tag_ids=[tag["id"]]
+    )
 
     updated = service.store.update_tag(tag["id"], name="close-up", group_name="shot")
     assert updated["name"] == "close-up"
@@ -149,11 +155,40 @@ def test_tag_vocabulary_is_editable_and_deletion_removes_associations(service, s
 
     service.store.delete_tag(tag["id"])
     assert service.store.list_images(subject["id"])[0]["tags"] == []
+    assert service.store.get_selection(subject["id"])["filters"] == {
+        "include_all": [],
+        "include_any": [],
+        "exclude": [],
+    }
 
 
-def test_reroll_keeps_pins_and_fills_automatic_slots_from_filtered_pool(service, subject):
+def test_deleting_tag_scrubs_it_from_saved_selection_filters(service, subject):
+    tag = service.store.create_tag("portrait", "framing")
+    service.store.set_selection(
+        subject["id"],
+        filters={
+            "include_all": [tag["id"]],
+            "include_any": [tag["id"]],
+            "exclude": [tag["id"]],
+        },
+    )
+
+    service.store.delete_tag(tag["id"])
+
+    assert service.store.get_selection(subject["id"])["filters"] == {
+        "include_all": [],
+        "include_any": [],
+        "exclude": [],
+    }
+
+
+def test_reroll_keeps_pins_and_fills_automatic_slots_from_filtered_pool(
+    service, subject
+):
     images = [
-        import_named(service, subject["id"], f"{index}.png", (index, index, index))["image"]
+        import_named(service, subject["id"], f"{index}.png", (index, index, index))[
+            "image"
+        ]
         for index in range(1, 7)
     ]
     portrait = service.store.create_tag("portrait", "framing")
@@ -176,7 +211,9 @@ def test_reroll_keeps_pins_and_fills_automatic_slots_from_filtered_pool(service,
     assert result["reroll_count"] == 1
 
 
-def test_sequential_reroll_advances_and_empty_or_small_pools_are_clear_errors(service, subject):
+def test_sequential_reroll_advances_and_empty_or_small_pools_are_clear_errors(
+    service, subject
+):
     with pytest.raises(ValueError, match="four distinct"):
         service.reroll(subject["id"])
 
@@ -192,10 +229,56 @@ def test_sequential_reroll_advances_and_empty_or_small_pools_are_clear_errors(se
         slot["image_id"] for slot in second["slots"]
     ]
     assert second["cursor"] > first["cursor"]
-    assert {slot["image_id"] for slot in first["slots"]} <= {image["id"] for image in images}
+    assert {slot["image_id"] for slot in first["slots"]} <= {
+        image["id"] for image in images
+    }
 
 
-def test_unlink_does_not_delete_managed_image_and_delete_requires_zero_memberships(service):
+def test_reroll_queries_only_candidate_ids_not_full_image_records(
+    service, subject, monkeypatch
+):
+    for index in range(4):
+        import_named(service, subject["id"], f"{index}.png", (index, 2, 3))
+
+    monkeypatch.setattr(
+        service.store,
+        "list_images",
+        lambda *args, **kwargs: pytest.fail(
+            "reroll should not load full image records"
+        ),
+    )
+
+    assert len(service.reroll(subject["id"])["slots"]) == 4
+
+
+def test_batch_tag_update_returns_a_count_without_scanning_the_collection(
+    service, subject, monkeypatch
+):
+    images = [
+        import_named(service, subject["id"], f"{index}.png", (index, 2, 3))["image"]
+        for index in range(4)
+    ]
+    tag = service.store.create_tag("portrait", "framing")
+    monkeypatch.setattr(
+        service.store,
+        "list_images",
+        lambda *args, **kwargs: pytest.fail(
+            "batch updates should not scan the collection"
+        ),
+    )
+
+    updated = service.store.batch_update_tags(
+        subject["id"],
+        [image["id"] for image in images],
+        add_tag_ids=[tag["id"]],
+    )
+
+    assert updated == 4
+
+
+def test_unlink_does_not_delete_managed_image_and_delete_requires_zero_memberships(
+    service,
+):
     subject = service.store.create_collection("subject", "Alice")
     environment = service.store.create_collection("environment", "Studio")
     image = import_named(service, subject["id"], "shared.png", (4, 5, 6))["image"]
@@ -214,7 +297,9 @@ def test_unlink_does_not_delete_managed_image_and_delete_requires_zero_membershi
         service.store.get_image(image["id"])
 
 
-def test_partial_slot_update_cannot_duplicate_an_image_already_locked_elsewhere(service):
+def test_partial_slot_update_cannot_duplicate_an_image_already_locked_elsewhere(
+    service,
+):
     subject = service.store.create_collection("subject", "Alice")
     images = [
         import_named(service, subject["id"], f"{index}.png", (index, 1, 2))["image"]
@@ -234,9 +319,9 @@ def test_partial_slot_update_cannot_duplicate_an_image_already_locked_elsewhere(
             slots=[{"slot": 1, "image_id": images[1]["id"], "pinned": True}],
         )
 
-    assert [slot["image_id"] for slot in service.store.get_selection(subject["id"])["slots"]] == [
-        image["id"] for image in images
-    ]
+    assert [
+        slot["image_id"] for slot in service.store.get_selection(subject["id"])["slots"]
+    ] == [image["id"] for image in images]
 
 
 def test_unlinked_images_are_discoverable_as_orphans_until_permanently_deleted(service):

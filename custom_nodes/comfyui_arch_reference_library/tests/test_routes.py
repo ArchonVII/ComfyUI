@@ -28,7 +28,9 @@ def test_payload_validators_reject_unknown_fields_bad_ids_and_unsafe_delete():
     with pytest.raises(ValueError, match="canonical UUID"):
         routes.require_id("not-an-id")
     with pytest.raises(ValueError, match="unknown"):
-        routes.validate_collection_create({"kind": "subject", "name": "Alice", "extra": True})
+        routes.validate_collection_create(
+            {"kind": "subject", "name": "Alice", "extra": True}
+        )
     with pytest.raises(ValueError, match="confirmation"):
         routes.validate_permanent_delete({"confirmation": "yes"})
     with pytest.raises(ValueError, match="unknown"):
@@ -43,10 +45,14 @@ def test_payload_validators_reject_unknown_fields_bad_ids_and_unsafe_delete():
         )
 
 
-def test_bootstrap_mutation_upload_filter_reroll_profile_and_thumbnail_routes(tmp_path, monkeypatch):
+def test_bootstrap_mutation_upload_filter_reroll_profile_and_thumbnail_routes(
+    tmp_path, monkeypatch
+):
     service = ReferenceLibraryService(tmp_path / "reference_library")
     monkeypatch.setattr(routes, "get_service", lambda: service)
-    monkeypatch.setattr(routes, "local_lora_names", lambda: ["characters/alice.safetensors"])
+    monkeypatch.setattr(
+        routes, "local_lora_names", lambda: ["characters/alice.safetensors"]
+    )
 
     async def exercise():
         app = web.Application(client_max_size=2 * 1024 * 1024)
@@ -59,7 +65,8 @@ def test_bootstrap_mutation_upload_filter_reroll_profile_and_thumbnail_routes(tm
             assert (await empty.json())["collections"] == []
 
             created_response = await client.post(
-                "/collections", json={"kind": "subject", "name": "Alice", "description": "Lead"}
+                "/collections",
+                json={"kind": "subject", "name": "Alice", "description": "Lead"},
             )
             assert created_response.status == 200
             collection = (await created_response.json())["collection"]
@@ -97,19 +104,29 @@ def test_bootstrap_mutation_upload_filter_reroll_profile_and_thumbnail_routes(tm
                 },
             )
             assert batch.status == 200
+            assert (await batch.json()) == {"updated": 4}
 
             selection = await client.put(
                 f"/selections/{collection['id']}",
                 json={
-                    "filters": {"include_all": [tag["id"]], "include_any": [], "exclude": []},
+                    "filters": {
+                        "include_all": [tag["id"]],
+                        "include_any": [],
+                        "exclude": [],
+                    },
                     "policy": "seeded",
                     "seed": 7,
                 },
             )
             assert selection.status == 200
-            rerolled = await client.post(f"/selections/{collection['id']}/reroll", json={})
+            rerolled = await client.post(
+                f"/selections/{collection['id']}/reroll", json={}
+            )
             assert rerolled.status == 200
-            assert all(slot["image_id"] for slot in (await rerolled.json())["selection"]["slots"])
+            assert all(
+                slot["image_id"]
+                for slot in (await rerolled.json())["selection"]["slots"]
+            )
 
             profile_response = await client.post(
                 "/profiles",
@@ -159,7 +176,9 @@ def test_bootstrap_mutation_upload_filter_reroll_profile_and_thumbnail_routes(tm
     asyncio.run(exercise())
 
 
-def test_unlink_and_permanent_delete_routes_are_separate_and_guarded(tmp_path, monkeypatch):
+def test_unlink_and_permanent_delete_routes_are_separate_and_guarded(
+    tmp_path, monkeypatch
+):
     service = ReferenceLibraryService(tmp_path / "reference_library")
     collection = service.store.create_collection("environment", "Studio")
     imported = service.import_image(
@@ -184,7 +203,9 @@ def test_unlink_and_permanent_delete_routes_are_separate_and_guarded(tmp_path, m
             )
             assert unlinked.status == 200
             assert service.managed_path(imported).is_file()
-            orphan_payload = await (await client.get("/bootstrap?kind=environment")).json()
+            orphan_payload = await (
+                await client.get("/bootstrap?kind=environment")
+            ).json()
             assert orphan_payload["orphans"][0]["id"] == imported["id"]
 
             wrong = await client.delete(
@@ -201,3 +222,64 @@ def test_unlink_and_permanent_delete_routes_are_separate_and_guarded(tmp_path, m
             await client.close()
 
     asyncio.run(exercise())
+
+
+def test_bootstrap_pages_large_filtered_galleries(tmp_path, monkeypatch):
+    service = ReferenceLibraryService(tmp_path / "reference_library")
+    collection = service.store.create_collection("subject", "Large library")
+    for index in range(205):
+        service.store.register_image(
+            collection["id"],
+            sha256=f"{index:064x}",
+            relative_path=f"images/{index:02x}/{index:064x}.png",
+            original_filename=f"{index:03}.png",
+            media_type="image/png",
+            width=16,
+            height=16,
+        )
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+    monkeypatch.setattr(routes, "local_lora_names", lambda: [])
+
+    first = routes.bootstrap_payload(
+        kind="subject", collection_id=collection["id"], page=1, page_size=100
+    )
+    third = routes.bootstrap_payload(
+        kind="subject", collection_id=collection["id"], page=3, page_size=100
+    )
+
+    assert len(first["detail"]["images"]) == 100
+    assert first["detail"]["pagination"] == {
+        "page": 1,
+        "page_size": 100,
+        "total": 205,
+        "total_pages": 3,
+    }
+    assert len(third["detail"]["images"]) == 5
+
+
+def test_bootstrap_pages_unassigned_managed_images(tmp_path, monkeypatch):
+    service = ReferenceLibraryService(tmp_path / "reference_library")
+    collection = service.store.create_collection("subject", "Temporary")
+    for index in range(105):
+        service.store.register_image(
+            collection["id"],
+            sha256=f"{index:064x}",
+            relative_path=f"images/{index:02x}/{index:064x}.png",
+            original_filename=f"{index:03}.png",
+            media_type="image/png",
+            width=16,
+            height=16,
+        )
+    service.store.delete_collection(collection["id"])
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+    monkeypatch.setattr(routes, "local_lora_names", lambda: [])
+
+    payload = routes.bootstrap_payload(orphan_page=3, orphan_page_size=50)
+
+    assert len(payload["orphans"]) == 5
+    assert payload["orphan_pagination"] == {
+        "page": 3,
+        "page_size": 50,
+        "total": 105,
+        "total_pages": 3,
+    }

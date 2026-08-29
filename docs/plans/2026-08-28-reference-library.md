@@ -1,14 +1,12 @@
 # Local Subject and Environment Reference Library Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
-
 **Goal:** Build a fully local ComfyUI reference library that manages reusable subject and environment images, tags, prompt/LoRA profiles, locked selections, and workflow-facing selector nodes.
 
 **Architecture:** Add a dedicated `comfyui_arch_reference_library` custom-node package. A transactional SQLite catalog under ignored ComfyUI user data owns metadata and content-addressed managed image copies; authenticated-to-the-local-Comfy-session HTTP routes power a custom sidebar, while model-agnostic selector nodes and a companion LoRA applicator expose the library to workflows.
 
 **Tech Stack:** Python 3.12, stdlib `sqlite3`/`hashlib`/`pathlib`, Pillow, PyTorch, ComfyUI custom-node APIs, aiohttp routes, browser-native JavaScript and CSS, pytest, Node-based frontend contract tests.
 
-**Plan Status:** Active until implementation closeout; update the Plan Closeout section before PR ready/merge.
+**Plan Status:** Implementation complete and verified; awaiting owner-authorized landing to the live `master` install.
 
 ---
 
@@ -304,7 +302,9 @@ Document local-only storage, backup/restore of `user/reference_library`, safe im
 
 ```powershell
 python -m pytest custom_nodes/comfyui_arch_reference_library/tests -q
-python -m ruff check custom_nodes/comfyui_arch_reference_library
+ruff check custom_nodes/comfyui_arch_reference_library
+ruff format --check custom_nodes/comfyui_arch_reference_library
+node --check custom_nodes/comfyui_arch_reference_library/web/reference_library.js
 ```
 
 Expected: zero failures and zero lint errors.
@@ -312,7 +312,9 @@ Expected: zero failures and zero lint errors.
 **Step 3: Run compatibility verification**
 
 ```powershell
-python -m pytest custom_nodes/comfyui_random_reference_source/tests custom_nodes/comfyui_arch_prompt_tools/tests/test_nodes.py custom_nodes/comfyui_arch_prompt_tools/tests/test_store.py -q
+python -m pytest custom_nodes/comfyui_random_reference_source/tests -q
+python -m pytest custom_nodes/comfyui_arch_prompt_tools/tests/test_nodes.py -q
+python -m pytest custom_nodes/comfyui_arch_prompt_tools/tests/test_store.py -q
 ```
 
 Expected: no regressions in the related existing packages.
@@ -347,19 +349,23 @@ Do not promote or merge without the owner's delivery authorization. Never target
 
 ## Acceptance criteria
 
-- [ ] Subject and environment collections can be created, edited, activated, and removed locally.
-- [ ] Valid still images are copied, content-deduplicated, and associated with multiple collections without changing originals.
-- [ ] Grouped tags support individual and batch add/remove plus include-all/any/exclude filtering at thousands-of-images scale.
-- [ ] Four reference slots remain locked until explicit reroll; pins survive random, seeded, and sequential rerolls.
-- [ ] Default and model-family profiles expose positive/negative prompt additions and ordered local LoRA manifests.
-- [ ] Subject and Environment selector nodes expose four references, a combined list, prompt additions, and metadata.
-- [ ] The LoRA applicator loads enabled local LoRAs in order and returns modified `MODEL`/`CLIP` plus evidence metadata.
-- [ ] A ComfyUI sidebar provides the complete v1 management workflow without a second service.
-- [ ] Existing saved workflows are untouched and existing related custom-node tests do not regress.
-- [ ] All personal images, thumbnails, and catalog data remain ignored and local.
+- [x] Subject and environment collections can be created, edited, activated, and removed locally.
+- [x] Valid still images are copied, content-deduplicated, and associated with multiple collections without changing originals.
+- [x] Grouped tags support individual and batch add/remove plus include-all/any/exclude filtering at thousands-of-images scale.
+- [x] Four reference slots remain locked until explicit reroll; pins survive random, seeded, and sequential rerolls.
+- [x] Default and model-family profiles expose positive/negative prompt additions and ordered local LoRA manifests.
+- [x] Subject and Environment selector nodes expose four references, a combined list, prompt additions, and metadata.
+- [x] The LoRA applicator loads enabled local LoRAs in order and returns modified `MODEL`/`CLIP` plus evidence metadata.
+- [x] A ComfyUI sidebar provides the complete v1 management workflow without a second service.
+- [x] Existing saved workflows are untouched and existing related custom-node tests do not regress.
+- [x] All personal images, thumbnails, and catalog data remain ignored and local.
 
 ## Plan Closeout
 
-- Status: Active.
-- Verification evidence: Pending implementation.
+- Status: Implementation complete and verified on the feature branch; not yet landed to the live `master` install.
+- Package verification: 53 tests passed; Ruff lint and format checks passed; JavaScript syntax and git diff checks passed.
+- Compatibility verification: random-reference package 29 passed; prompt-tools node tests 72 passed; prompt-tools store tests 42 passed.
+- Isolated live verification: ComfyUI loaded all three nodes on `127.0.0.1:8191`; the same-origin sidebar asset returned HTTP 200; bootstrap resolved under the isolated ignored user directory and returned collection/orphan pagination; a generated four-image fixture previously completed import, batch tagging, filtering, reroll, thumbnail, profile, selector-node queue execution, and cleanup successfully.
+- Privacy/scope audit: `git ls-files user/reference_library` is empty; branch changes contain only `.gitignore`, package code/tests/assets/README, and this plan. Existing workflow JSON files are untouched.
+- Visual browser pass: unavailable because no connected in-app browser session was present; DOM rendering contracts, text-only rendering, served assets, and JavaScript parsing were verified instead.
 - Deferred scope: automatic vision tagging and optional SmartGallery import integration.

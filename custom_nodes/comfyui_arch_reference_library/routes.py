@@ -41,15 +41,23 @@ def require_id(value: Any) -> str:
 
 
 def _strict(
-    value: Any, *, allowed: set[str], required: set[str] = frozenset(), label: str = "payload"
+    value: Any,
+    *,
+    allowed: set[str],
+    required: set[str] = frozenset(),
+    label: str = "payload",
 ) -> dict[str, Any]:
     payload = require_object(value)
     unknown = set(payload) - allowed
     if unknown:
-        raise ValueError(f"{label} contains unknown fields: {', '.join(sorted(unknown))}")
+        raise ValueError(
+            f"{label} contains unknown fields: {', '.join(sorted(unknown))}"
+        )
     missing = required - set(payload)
     if missing:
-        raise ValueError(f"{label} is missing required fields: {', '.join(sorted(missing))}")
+        raise ValueError(
+            f"{label} is missing required fields: {', '.join(sorted(missing))}"
+        )
     return payload
 
 
@@ -63,7 +71,9 @@ def validate_collection_create(value: Any) -> dict[str, Any]:
 
 
 def validate_collection_update(value: Any) -> dict[str, Any]:
-    payload = _strict(value, allowed={"name", "description"}, label="collection payload")
+    payload = _strict(
+        value, allowed={"name", "description"}, label="collection payload"
+    )
     if not payload:
         raise ValueError("collection payload must change at least one field")
     return payload
@@ -165,19 +175,59 @@ def validate_permanent_delete(value: Any) -> dict[str, Any]:
     return payload
 
 
-def bootstrap_payload(*, kind: str | None = None, collection_id: str | None = None) -> dict[str, Any]:
+def _page_value(value: Any, *, label: str, maximum: int | None = None) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{label} must be a positive integer")
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a positive integer") from exc
+    if normalized <= 0 or (maximum is not None and normalized > maximum):
+        suffix = f" no greater than {maximum}" if maximum is not None else ""
+        raise ValueError(f"{label} must be a positive integer{suffix}")
+    return normalized
+
+
+def bootstrap_payload(
+    *,
+    kind: str | None = None,
+    collection_id: str | None = None,
+    page: Any = 1,
+    page_size: Any = 100,
+    orphan_page: Any = 1,
+    orphan_page_size: Any = 50,
+) -> dict[str, Any]:
     service = get_service()
     store = service.store
     if kind is not None and kind not in {"subject", "environment"}:
         raise ValueError("kind must be subject or environment")
+    normalized_page = _page_value(page, label="page")
+    normalized_page_size = _page_value(page_size, label="page_size", maximum=200)
+    normalized_orphan_page = _page_value(orphan_page, label="orphan_page")
+    normalized_orphan_page_size = _page_value(
+        orphan_page_size, label="orphan_page_size", maximum=200
+    )
     active = {
         "subject": store.get_active("subject"),
         "environment": store.get_active("environment"),
     }
-    selected = store.get_collection(require_id(collection_id)) if collection_id else active.get(kind or "subject")
+    selected = (
+        store.get_collection(require_id(collection_id))
+        if collection_id
+        else active.get(kind or "subject")
+    )
     detail = None
     if selected is not None:
         selection = store.get_selection(selected["id"])
+        filters = selection["filters"]
+        total = store.count_images(
+            selected["id"],
+            include_all=filters["include_all"],
+            include_any=filters["include_any"],
+            exclude=filters["exclude"],
+        )
+        total_pages = max(1, (total + normalized_page_size - 1) // normalized_page_size)
+        normalized_page = min(normalized_page, total_pages)
         detail = {
             "collection": selected,
             "profiles": store.list_profiles(selected["id"]),
@@ -185,11 +235,25 @@ def bootstrap_payload(*, kind: str | None = None, collection_id: str | None = No
             "selection": selection,
             "images": store.list_images(
                 selected["id"],
-                include_all=selection["filters"]["include_all"],
-                include_any=selection["filters"]["include_any"],
-                exclude=selection["filters"]["exclude"],
+                include_all=filters["include_all"],
+                include_any=filters["include_any"],
+                exclude=filters["exclude"],
+                limit=normalized_page_size,
+                offset=(normalized_page - 1) * normalized_page_size,
             ),
+            "pagination": {
+                "page": normalized_page,
+                "page_size": normalized_page_size,
+                "total": total,
+                "total_pages": total_pages,
+            },
         }
+    orphan_total = store.count_orphan_images()
+    orphan_total_pages = max(
+        1,
+        (orphan_total + normalized_orphan_page_size - 1) // normalized_orphan_page_size,
+    )
+    normalized_orphan_page = min(normalized_orphan_page, orphan_total_pages)
     return {
         "version": 1,
         "data_path": str(service.root),
@@ -197,7 +261,16 @@ def bootstrap_payload(*, kind: str | None = None, collection_id: str | None = No
         "tags": store.list_tags(),
         "active": active,
         "loras": local_lora_names(),
-        "orphans": store.list_orphan_images(),
+        "orphans": store.list_orphan_images(
+            limit=normalized_orphan_page_size,
+            offset=(normalized_orphan_page - 1) * normalized_orphan_page_size,
+        ),
+        "orphan_pagination": {
+            "page": normalized_orphan_page,
+            "page_size": normalized_orphan_page_size,
+            "total": orphan_total,
+            "total_pages": orphan_total_pages,
+        },
         "detail": detail,
     }
 
@@ -228,7 +301,12 @@ def _validated(
 async def get_bootstrap(request: web.Request) -> web.Response:
     return web.json_response(
         bootstrap_payload(
-            kind=request.query.get("kind"), collection_id=request.query.get("collection_id")
+            kind=request.query.get("kind"),
+            collection_id=request.query.get("collection_id"),
+            page=request.query.get("page", "1"),
+            page_size=request.query.get("page_size", "100"),
+            orphan_page=request.query.get("orphan_page", "1"),
+            orphan_page_size=request.query.get("orphan_page_size", "50"),
         )
     )
 
@@ -324,13 +402,13 @@ async def delete_tag(request: web.Request) -> web.Response:
 
 async def patch_membership_tags(request: web.Request) -> web.Response:
     payload = validate_membership_tags(await _body(request))
-    images = get_service().store.batch_update_tags(
+    updated = get_service().store.batch_update_tags(
         payload["collection_id"],
         payload["image_ids"],
         add_tag_ids=payload["add_tag_ids"],
         remove_tag_ids=payload["remove_tag_ids"],
     )
-    return web.json_response({"images": images})
+    return web.json_response({"updated": updated})
 
 
 async def post_profile(request: web.Request) -> web.Response:
@@ -407,8 +485,12 @@ async def delete_managed_image(request: web.Request) -> web.Response:
 def add_routes(router: web.UrlDispatcher, prefix: str = "") -> None:
     router.add_get(f"{prefix}/bootstrap", _validated(get_bootstrap))
     router.add_post(f"{prefix}/collections", _validated(post_collection))
-    router.add_patch(f"{prefix}/collections/{{collection_id}}", _validated(patch_collection))
-    router.add_delete(f"{prefix}/collections/{{collection_id}}", _validated(delete_collection))
+    router.add_patch(
+        f"{prefix}/collections/{{collection_id}}", _validated(patch_collection)
+    )
+    router.add_delete(
+        f"{prefix}/collections/{{collection_id}}", _validated(delete_collection)
+    )
     router.add_put(f"{prefix}/active/{{kind}}", _validated(put_active))
     router.add_post(f"{prefix}/import/{{collection_id}}", _validated(post_import))
     router.add_delete(
@@ -444,7 +526,9 @@ def register_routes() -> None:
     routes.get(f"{ROOT}/bootstrap")(_validated(get_bootstrap))
     routes.post(f"{ROOT}/collections")(_validated(post_collection))
     routes.patch(f"{ROOT}/collections/{{collection_id}}")(_validated(patch_collection))
-    routes.delete(f"{ROOT}/collections/{{collection_id}}")(_validated(delete_collection))
+    routes.delete(f"{ROOT}/collections/{{collection_id}}")(
+        _validated(delete_collection)
+    )
     routes.put(f"{ROOT}/active/{{kind}}")(_validated(put_active))
     routes.post(f"{ROOT}/import/{{collection_id}}")(_validated(post_import))
     routes.delete(f"{ROOT}/collections/{{collection_id}}/images/{{image_id}}")(

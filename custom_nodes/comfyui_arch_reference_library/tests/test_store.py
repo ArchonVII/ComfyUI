@@ -65,7 +65,10 @@ def test_collections_can_be_updated_listed_activated_and_removed(store):
     updated = store.update_collection(first["id"], name="Renamed", description="Lead")
     assert updated["name"] == "Renamed"
     assert updated["description"] == "Lead"
-    assert [item["name"] for item in store.list_collections("subject")] == ["Renamed", "Second"]
+    assert [item["name"] for item in store.list_collections("subject")] == [
+        "Renamed",
+        "Second",
+    ]
 
     assert store.set_active("subject", second["id"])["id"] == second["id"]
     assert store.get_active("subject")["id"] == second["id"]
@@ -161,7 +164,10 @@ def test_default_profile_is_active_initially_and_cannot_be_deleted(store):
     alternate = store.create_profile(collection["id"], name="Wan", model_family="wan")
 
     assert store.get_active_profile(collection["id"])["id"] == default["id"]
-    assert store.set_active_profile(collection["id"], alternate["id"])["id"] == alternate["id"]
+    assert (
+        store.set_active_profile(collection["id"], alternate["id"])["id"]
+        == alternate["id"]
+    )
     assert store.get_active_profile(collection["id"])["id"] == alternate["id"]
 
     store.delete_profile(alternate["id"])
@@ -178,19 +184,116 @@ def test_deleting_collection_clears_dynamic_active_profile_setting(store):
     store.delete_collection(collection["id"])
 
     with sqlite3.connect(store.path) as connection:
-        assert connection.execute(
-            "SELECT value_json FROM settings WHERE key = ?",
-            (f"active_profile_{collection['id']}",),
-        ).fetchone() is None
+        assert (
+            connection.execute(
+                "SELECT value_json FROM settings WHERE key = ?",
+                (f"active_profile_{collection['id']}",),
+            ).fetchone()
+            is None
+        )
+
+
+def test_image_listing_is_paginated_and_counted_without_loading_every_row(store):
+    collection = store.create_collection("subject", "Large library")
+    for index in range(205):
+        store.register_image(
+            collection["id"],
+            sha256=f"{index:064x}",
+            relative_path=f"images/{index:02x}/{index:064x}.png",
+            original_filename=f"{index:03}.png",
+            media_type="image/png",
+            width=16,
+            height=16,
+        )
+
+    assert store.count_images(collection["id"]) == 205
+    assert len(store.list_images(collection["id"], limit=100, offset=0)) == 100
+    assert len(store.list_images(collection["id"], limit=100, offset=200)) == 5
+    assert (
+        store.list_images(collection["id"], limit=100, offset=200)[0][
+            "original_filename"
+        ]
+        == "200.png"
+    )
+
+
+def test_fingerprint_changes_when_active_wal_file_changes(store):
+    before = store.fingerprint()
+    wal_path = Path(f"{store.path}-wal")
+    wal_path.write_bytes(b"active transaction")
+
+    after = store.fingerprint()
+
+    assert after != before
+
+
+def test_orphan_listing_is_paginated_and_counted(store):
+    collection = store.create_collection("subject", "Temporary")
+    for index in range(205):
+        store.register_image(
+            collection["id"],
+            sha256=f"{index:064x}",
+            relative_path=f"images/{index:02x}/{index:064x}.png",
+            original_filename=f"{index:03}.png",
+            media_type="image/png",
+            width=16,
+            height=16,
+        )
+    store.delete_collection(collection["id"])
+
+    assert store.count_orphan_images() == 205
+    assert len(store.list_orphan_images(limit=100, offset=0)) == 100
+    assert len(store.list_orphan_images(limit=100, offset=200)) == 5
 
 
 @pytest.mark.parametrize(
     "loras,match",
     [
-        ([{"name": "../escape.safetensors", "strength_model": 1.0, "strength_clip": 1.0, "enabled": True}], "relative"),
-        ([{"name": "x.safetensors", "strength_model": float("inf"), "strength_clip": 1.0, "enabled": True}], "finite"),
-        ([{"name": "x.safetensors", "strength_model": 1.0, "strength_clip": 1.0, "enabled": 1}], "boolean"),
-        ([{"name": "x.safetensors", "strength_model": 1.0, "strength_clip": 1.0, "enabled": True, "extra": True}], "unknown"),
+        (
+            [
+                {
+                    "name": "../escape.safetensors",
+                    "strength_model": 1.0,
+                    "strength_clip": 1.0,
+                    "enabled": True,
+                }
+            ],
+            "relative",
+        ),
+        (
+            [
+                {
+                    "name": "x.safetensors",
+                    "strength_model": float("inf"),
+                    "strength_clip": 1.0,
+                    "enabled": True,
+                }
+            ],
+            "finite",
+        ),
+        (
+            [
+                {
+                    "name": "x.safetensors",
+                    "strength_model": 1.0,
+                    "strength_clip": 1.0,
+                    "enabled": 1,
+                }
+            ],
+            "boolean",
+        ),
+        (
+            [
+                {
+                    "name": "x.safetensors",
+                    "strength_model": 1.0,
+                    "strength_clip": 1.0,
+                    "enabled": True,
+                    "extra": True,
+                }
+            ],
+            "unknown",
+        ),
     ],
 )
 def test_profile_lora_entries_are_strictly_validated(store, loras, match):

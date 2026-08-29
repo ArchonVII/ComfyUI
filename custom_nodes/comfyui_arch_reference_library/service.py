@@ -98,7 +98,9 @@ class ReferenceLibraryService:
     def thumbnail_path(self, image_id: str) -> Path:
         image = self.store.get_image(image_id)
         path = self.thumbnails_root / image["id"][:2] / f"{image['id']}.jpg"
-        return self._confined(self.thumbnails_root, path.relative_to(self.thumbnails_root))
+        return self._confined(
+            self.thumbnails_root, path.relative_to(self.thumbnails_root)
+        )
 
     def ensure_thumbnail(self, image_id: str) -> Path:
         image = self.store.get_image(image_id)
@@ -110,7 +112,9 @@ class ReferenceLibraryService:
         try:
             with Image.open(source) as opened:
                 frame = ImageOps.exif_transpose(opened).convert("RGBA")
-                frame.thumbnail((THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), Image.Resampling.LANCZOS)
+                frame.thumbnail(
+                    (THUMBNAIL_MAX_SIZE, THUMBNAIL_MAX_SIZE), Image.Resampling.LANCZOS
+                )
                 background = Image.new("RGB", frame.size, "white")
                 background.paste(frame, mask=frame.getchannel("A"))
                 buffer = BytesIO()
@@ -123,7 +127,7 @@ class ReferenceLibraryService:
     def reroll(self, collection_id: str) -> dict[str, Any]:
         selection = self.store.get_selection(collection_id)
         filters = selection["filters"]
-        pool = self.store.list_images(
+        pool = self.store.list_image_ids(
             collection_id,
             include_all=filters["include_all"],
             include_any=filters["include_any"],
@@ -135,9 +139,11 @@ class ReferenceLibraryService:
             if slot["pinned"] and slot["image_id"] is not None
         }
         automatic = [slot for slot in selection["slots"] if not slot["pinned"]]
-        candidates = [image["id"] for image in pool if image["id"] not in pinned]
+        candidates = [image_id for image_id in pool if image_id not in pinned]
         if len(pinned) + len(candidates) < 4 or len(candidates) < len(automatic):
-            raise ValueError("the filtered pool must contain four distinct reference images")
+            raise ValueError(
+                "the filtered pool must contain four distinct reference images"
+            )
 
         policy = selection["policy"]
         next_cursor = selection["cursor"]
@@ -146,14 +152,23 @@ class ReferenceLibraryService:
             chosen = generator.sample(candidates, len(automatic))
         elif policy == "sequential":
             start = selection["cursor"] % len(candidates)
-            chosen = [candidates[(start + offset) % len(candidates)] for offset in range(len(automatic))]
+            chosen = [
+                candidates[(start + offset) % len(candidates)]
+                for offset in range(len(automatic))
+            ]
             next_cursor = selection["cursor"] + len(automatic)
         else:
             chosen = secrets.SystemRandom().sample(candidates, len(automatic))
 
         chosen_iterator = iter(chosen)
         slots = [
-            dict(slot) if slot["pinned"] else {"slot": slot["slot"], "image_id": next(chosen_iterator), "pinned": False}
+            dict(slot)
+            if slot["pinned"]
+            else {
+                "slot": slot["slot"],
+                "image_id": next(chosen_iterator),
+                "pinned": False,
+            }
             for slot in selection["slots"]
         ]
         return self.store.commit_reroll(
@@ -174,7 +189,9 @@ class ReferenceLibraryService:
         source = self.managed_path(image)
         thumbnail = self.thumbnail_path(image_id)
         staged_source = source.with_name(f".{source.name}.deleting-{uuid4().hex}")
-        staged_thumbnail = thumbnail.with_name(f".{thumbnail.name}.deleting-{uuid4().hex}")
+        staged_thumbnail = thumbnail.with_name(
+            f".{thumbnail.name}.deleting-{uuid4().hex}"
+        )
         source_moved = False
         thumbnail_moved = False
         try:
@@ -212,7 +229,9 @@ class ReferenceLibraryService:
                 if image_format not in _FORMAT_EXTENSIONS:
                     raise ValueError("unsupported still image format")
                 if bool(getattr(opened, "is_animated", False)):
-                    raise ValueError("animated images are not supported; import a still frame")
+                    raise ValueError(
+                        "animated images are not supported; import a still frame"
+                    )
                 width, height = opened.size
                 opened.verify()
         except ValueError:
@@ -225,7 +244,9 @@ class ReferenceLibraryService:
 
     @staticmethod
     def _media_type(image_format: str, supplied: Any) -> str:
-        expected = Image.MIME.get(image_format) or mimetypes.types_map.get(_FORMAT_EXTENSIONS[image_format])
+        expected = Image.MIME.get(image_format) or mimetypes.types_map.get(
+            _FORMAT_EXTENSIONS[image_format]
+        )
         return str(expected or supplied or "application/octet-stream")
 
     @staticmethod
@@ -233,7 +254,11 @@ class ReferenceLibraryService:
         temporary_name: str | None = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="wb", dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp", delete=False
+                mode="wb",
+                dir=destination.parent,
+                prefix=f".{destination.name}.",
+                suffix=".tmp",
+                delete=False,
             ) as handle:
                 temporary_name = handle.name
                 handle.write(content)
