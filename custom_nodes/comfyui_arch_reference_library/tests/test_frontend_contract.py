@@ -1,10 +1,28 @@
 import json
 from pathlib import Path
+import re
 import subprocess
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "web" / "reference_library.js"
 CSS_PATH = Path(__file__).resolve().parents[1] / "web" / "reference_library.css"
+
+
+def test_sidebar_host_owns_bounded_vertical_scrolling():
+    source = SCRIPT_PATH.read_text(encoding="utf-8")
+    css = CSS_PATH.read_text(encoding="utf-8")
+
+    assert 'container.classList.add("arch-ref-library-host")' in source
+    host_rule = re.search(r"\.arch-ref-library-host\s*\{(?P<body>[^}]*)\}", css, re.S)
+    assert host_rule is not None
+    declarations = host_rule.group("body")
+    for declaration in (
+        "height: 100%",
+        "min-height: 0",
+        "overflow-x: hidden",
+        "overflow-y: auto",
+    ):
+        assert declaration in declarations
 
 
 def test_reference_library_frontend_is_valid_javascript_and_has_no_owner_data_inner_html():
