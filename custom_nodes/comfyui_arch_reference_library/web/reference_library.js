@@ -550,6 +550,7 @@ function renderOrphans(parent, state, status, refresh) {
 }
 
 function renderPanel(container) {
+  container.classList.add("arch-ref-library-host");
   installCss();
   const state = { kind: "subject", collectionId: "", page: 1, pageSize: 100, orphanPage: 1, orphanPageSize: 50, data: null, selectedImages: new Set() };
   const status = element("p", "Loading…", "arch-ref-status");
