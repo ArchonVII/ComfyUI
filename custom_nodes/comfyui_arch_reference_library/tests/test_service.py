@@ -212,3 +212,39 @@ def test_unlink_does_not_delete_managed_image_and_delete_requires_zero_membershi
     assert not managed.exists()
     with pytest.raises(KeyError, match="not found"):
         service.store.get_image(image["id"])
+
+
+def test_partial_slot_update_cannot_duplicate_an_image_already_locked_elsewhere(service):
+    subject = service.store.create_collection("subject", "Alice")
+    images = [
+        import_named(service, subject["id"], f"{index}.png", (index, 1, 2))["image"]
+        for index in range(4)
+    ]
+    service.store.set_selection(
+        subject["id"],
+        slots=[
+            {"slot": index + 1, "image_id": image["id"], "pinned": False}
+            for index, image in enumerate(images)
+        ],
+    )
+
+    with pytest.raises(ValueError, match="distinct"):
+        service.store.set_selection(
+            subject["id"],
+            slots=[{"slot": 1, "image_id": images[1]["id"], "pinned": True}],
+        )
+
+    assert [slot["image_id"] for slot in service.store.get_selection(subject["id"])["slots"]] == [
+        image["id"] for image in images
+    ]
+
+
+def test_unlinked_images_are_discoverable_as_orphans_until_permanently_deleted(service):
+    subject = service.store.create_collection("subject", "Alice")
+    image = import_named(service, subject["id"], "orphan.png", (7, 8, 9))["image"]
+
+    service.unlink_image(subject["id"], image["id"])
+
+    assert [item["id"] for item in service.store.list_orphan_images()] == [image["id"]]
+    service.delete_managed_image(image["id"])
+    assert service.store.list_orphan_images() == []

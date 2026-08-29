@@ -298,6 +298,10 @@ class ReferenceLibraryStore:
                 "DELETE FROM settings WHERE key = ? AND value_json = ?",
                 (f"active_{collection['kind']}", json.dumps(normalized_id)),
             )
+            connection.execute(
+                "DELETE FROM settings WHERE key = ?",
+                (f"active_profile_{normalized_id}",),
+            )
             return collection
 
     def set_active(self, kind: Any, collection_id: Any | None) -> dict[str, Any] | None:
@@ -598,6 +602,20 @@ class ReferenceLibraryStore:
         with self._connection() as connection:
             return self._decode_image(self._fetch_image(connection, normalized_id), [])
 
+    def list_orphan_images(self) -> list[dict[str, Any]]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT i.*
+                FROM images i
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM collection_images ci WHERE ci.image_id = i.id
+                )
+                ORDER BY i.created_at, i.id
+                """
+            ).fetchall()
+            return [self._decode_image(row, []) for row in rows]
+
     def list_images(
         self,
         collection_id: Any,
@@ -788,7 +806,12 @@ class ReferenceLibraryStore:
             )
             if slots is not None:
                 normalized_slots = self._normalize_slots(slots)
-                image_ids = [item["image_id"] for item in normalized_slots if item["image_id"]]
+                merged_by_slot = {item["slot"]: dict(item) for item in current["slots"]}
+                merged_by_slot.update({item["slot"]: item for item in normalized_slots})
+                merged_slots = self._normalize_slots(
+                    list(merged_by_slot.values()), require_all=True
+                )
+                image_ids = [item["image_id"] for item in merged_slots if item["image_id"]]
                 self._require_memberships(connection, normalized_collection_id, image_ids)
                 for item in normalized_slots:
                     connection.execute(

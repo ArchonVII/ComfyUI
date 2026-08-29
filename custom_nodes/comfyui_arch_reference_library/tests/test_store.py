@@ -170,6 +170,20 @@ def test_default_profile_is_active_initially_and_cannot_be_deleted(store):
         store.delete_profile(default["id"])
 
 
+def test_deleting_collection_clears_dynamic_active_profile_setting(store):
+    collection = store.create_collection("subject", "Alice")
+    profile = store.create_profile(collection["id"], name="Flux", model_family="flux")
+    store.set_active_profile(collection["id"], profile["id"])
+
+    store.delete_collection(collection["id"])
+
+    with sqlite3.connect(store.path) as connection:
+        assert connection.execute(
+            "SELECT value_json FROM settings WHERE key = ?",
+            (f"active_profile_{collection['id']}",),
+        ).fetchone() is None
+
+
 @pytest.mark.parametrize(
     "loras,match",
     [
