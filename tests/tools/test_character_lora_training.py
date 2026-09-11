@@ -81,11 +81,17 @@ def _model_files(root: Path, model: str) -> dict[str, Path]:
             "vae": "flux2-ae.safetensors",
             "text_encoder": "qwen3-8b-bf16-00001-of-00004.safetensors",
         }
-    else:
+    elif model == "qwen-edit-2511":
         names = {
             "dit": "qwen-image-edit-2511-bf16.safetensors",
             "vae": "qwen-image-vae.safetensors",
             "text_encoder": "qwen-2.5-vl-7b-bf16.safetensors",
+        }
+    else:
+        names = {
+            "dit": "krea2-raw-bf16.safetensors",
+            "vae": "qwen-image-vae.safetensors",
+            "text_encoder": "qwen3-vl-4b-bf16.safetensors",
         }
     result = {}
     for key, name in names.items():
@@ -342,13 +348,15 @@ def test_qwen_controls_reject_duplicate_numeric_slots_and_mixed_conventions(
 def test_model_specific_resource_warnings_cover_this_workstation() -> None:
     flux = resource_warnings("flux2-klein9b", vram_gib=16, ram_gib=31)
     qwen = resource_warnings("qwen-edit-2511", vram_gib=16, ram_gib=31)
+    krea = resource_warnings("krea2", vram_gib=16, ram_gib=31)
 
     assert any("16 GiB VRAM" in warning and "experimental" in warning for warning in flux)
     assert any("31 GiB RAM" in warning and "swap" in warning for warning in flux)
     assert any("64 GiB" in warning and "31 GiB" in warning for warning in qwen)
+    assert any("Krea 2" in warning and "31 GiB RAM" in warning for warning in krea)
 
 
-@pytest.mark.parametrize("model", ["flux2-klein9b", "qwen-edit-2511"])
+@pytest.mark.parametrize("model", ["flux2-klein9b", "qwen-edit-2511", "krea2"])
 def test_renderer_refuses_gguf_as_a_training_base(tmp_path: Path, model: str) -> None:
     dataset = _valid_dataset(tmp_path / "dataset")
     models = _model_files(tmp_path / "models", model)
@@ -580,6 +588,95 @@ def test_qwen_render_uses_real_edit_2511_keys_and_commands(tmp_path: Path) -> No
     assert manifest["images"][0]["controls"][0]["image"] == "portrait-00.png"
     assert "sha256" in manifest["images"][0]["controls"][0]
 
+
+def test_krea2_render_uses_raw_identity_profile_without_controls(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "krea2")
+
+    result = render_run(
+        model="krea2",
+        dataset_dir=dataset,
+        run_dir=tmp_path / "run",
+        run_name="hero-krea2-proof",
+        trigger_token="jmaHero",
+        model_paths=models,
+        template_root=TEMPLATE_ROOT,
+        available_bytes=100 * 1024**3,
+    )
+
+    train_toml = tomllib.loads(result.train_config.read_text(encoding="utf-8"))
+    assert train_toml["network_module"] == "networks.lora_krea2"
+    assert train_toml["timestep_sampling"] == "krea2_shift"
+    assert train_toml["network_dim"] == 32
+    assert train_toml["network_alpha"] == 32
+    assert train_toml["blocks_to_swap"] == 26
+    assert train_toml["fp8_base"] is True
+    assert train_toml["fp8_scaled"] is True
+    dataset_toml = tomllib.loads(result.dataset_config.read_text(encoding="utf-8"))
+    assert "control_directory" not in dataset_toml["datasets"][0]
+
+
+@pytest.mark.parametrize(("stage", "epochs"), [("proof", 2), ("quality", 16)])
+def test_krea2_stage_controls_duration_and_uses_dedicated_training_root(
+    tmp_path: Path, stage: str, epochs: int
+) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "krea2")
+    training_root = tmp_path / "private-krea2"
+    run_name = f"hero-krea2-{stage}"
+
+    result = render_run(
+        model="krea2",
+        stage=stage,
+        training_root=training_root,
+        dataset_dir=dataset,
+        run_dir=training_root / "runs" / run_name / "krea2",
+        run_name=run_name,
+        trigger_token="jmaHero",
+        model_paths=models,
+        template_root=TEMPLATE_ROOT,
+        available_bytes=100 * 1024**3,
+    )
+
+    train_toml = tomllib.loads(result.train_config.read_text(encoding="utf-8"))
+    dataset_toml = tomllib.loads(result.dataset_config.read_text(encoding="utf-8"))
+    assert train_toml["max_train_epochs"] == epochs
+    assert train_toml["output_dir"] == (
+        training_root / "outputs" / run_name / "krea2"
+    ).as_posix()
+    assert dataset_toml["datasets"][0]["cache_directory"] == (
+        training_root / "cache" / run_name / "krea2"
+    ).as_posix()
+
+
+def test_non_krea_models_reject_training_stages(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "flux2-klein9b")
+
+    with pytest.raises(ValueError, match="stage.*Krea 2"):
+        render_run(
+            model="flux2-klein9b",
+            stage="proof",
+            dataset_dir=dataset,
+            run_dir=tmp_path / "run",
+            run_name="hero-proof",
+            trigger_token="jmaHero",
+            model_paths=models,
+            template_root=TEMPLATE_ROOT,
+            available_bytes=100 * 1024**3,
+        )
+
+
+@pytest.mark.parametrize("role", ["dit", "text_encoder"])
+def test_krea2_trainable_assets_require_bf16_tensors(tmp_path: Path, role: str) -> None:
+    models = _model_files(tmp_path / "models", "krea2")
+    f32_only = tmp_path / "models" / f"krea2-{role}-raw.safetensors"
+    _write_safetensors(f32_only, dtype="F32")
+    models[role] = f32_only
+
+    with pytest.raises(ModelCheckpointError, match=rf"{role}.*BF16"):
+        _validate_model_paths("krea2", models)
+
 def test_qwen_render_requires_a_valid_control_directory(tmp_path: Path) -> None:
     dataset = _valid_dataset(tmp_path / "dataset")
     models = _model_files(tmp_path / "models", "qwen-edit-2511")
@@ -617,6 +714,14 @@ def test_qwen_render_requires_a_valid_control_directory(tmp_path: Path) -> None:
             "edit-2511",
             "--fp8_vl",
         ),
+        (
+            "krea2",
+            "krea2_cache_latents.py",
+            "krea2_cache_text_encoder_outputs.py",
+            "krea2_train_network.py",
+            None,
+            None,
+        ),
     ],
 )
 def test_musubi_commands_have_exact_model_specific_arguments(
@@ -625,8 +730,8 @@ def test_musubi_commands_have_exact_model_specific_arguments(
     latent_script: str,
     text_script: str,
     train_script: str,
-    version: str,
-    text_flag: str,
+    version: str | None,
+    text_flag: str | None,
 ) -> None:
     models = _model_files(tmp_path / "models", model)
     dataset_config = tmp_path / "dataset.toml"
@@ -649,13 +754,13 @@ def test_musubi_commands_have_exact_model_specific_arguments(
         str(dataset_config),
         "--vae",
         str(models["vae"]),
-        "--model_version",
-        version,
     )
+    if version is not None:
+        expected_latent += ("--model_version", version)
     if model == "flux2-klein9b":
         expected_latent += ("--vae_dtype", "bfloat16")
     assert latent == expected_latent
-    assert text == (
+    expected_text = (
         str(python),
         str(source / text_script),
         "--dataset_config",
@@ -664,10 +769,12 @@ def test_musubi_commands_have_exact_model_specific_arguments(
         str(models["text_encoder"]),
         "--batch_size",
         "1",
-        "--model_version",
-        version,
-        text_flag,
     )
+    if version is not None:
+        expected_text += ("--model_version", version)
+    if text_flag is not None:
+        expected_text += (text_flag,)
+    assert text == expected_text
     assert train == (
         str(python),
         "-m",
@@ -840,6 +947,50 @@ def test_cli_dry_run_validates_without_writing_run(tmp_path: Path) -> None:
         "semantic identity/provenance unverified"
     ) in completed.stdout
     assert "flux_2_cache_latents.py" in completed.stdout
+    assert not run_dir.exists()
+
+
+def test_krea2_cli_dry_run_uses_requested_stage_and_isolated_roots(tmp_path: Path) -> None:
+    dataset = _valid_dataset(tmp_path / "dataset")
+    models = _model_files(tmp_path / "models", "krea2")
+    training_root = tmp_path / "private-krea2"
+    trainer_root = tmp_path / "krea2-musubi"
+    run_dir = training_root / "runs" / "hero-krea2-proof" / "krea2"
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "lora_training" / "render_musubi_config.py"),
+        "--model",
+        "krea2",
+        "--stage",
+        "proof",
+        "--training-root",
+        str(training_root),
+        "--trainer-root",
+        str(trainer_root),
+        "--dataset-dir",
+        str(dataset),
+        "--run-dir",
+        str(run_dir),
+        "--run-name",
+        "hero-krea2-proof",
+        "--trigger-token",
+        "jmaHero",
+        "--dit",
+        str(models["dit"]),
+        "--vae",
+        str(models["vae"]),
+        "--text-encoder",
+        str(models["text_encoder"]),
+        "--available-disk-gib",
+        "100",
+        "--dry-run",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 0, completed.stderr
+    assert str(trainer_root / "src" / "musubi_tuner" / "krea2_cache_latents.py") in completed.stdout
+    assert "krea2_train_network.py" in completed.stdout
     assert not run_dir.exists()
 
 
@@ -1055,6 +1206,85 @@ def test_renderer_runs_with_the_exact_python_isolation_mode_used_by_wrapper(
     assert "VALID" in completed.stdout
 
 
+def test_krea2_launcher_dry_run_uses_proof_stage_and_private_roots(tmp_path: Path) -> None:
+    training_root = tmp_path / "private-krea2"
+    dataset = _valid_dataset(training_root / "datasets" / "hero" / "targets")
+    models = _model_files(tmp_path / "models", "krea2")
+    trainer_root = tmp_path / "trainer" / "musubi-tuner"
+    pwsh = shutil.which("pwsh")
+    assert pwsh is not None, "PowerShell 7 is required"
+    command = [
+        pwsh,
+        "-NoProfile",
+        "-File",
+        str(REPO_ROOT / "tools" / "lora_training" / "start-character-training.ps1"),
+        "-Model",
+        "krea2",
+        "-Stage",
+        "proof",
+        "-TrainerRoot",
+        str(trainer_root),
+        "-TrainingRoot",
+        str(training_root),
+        "-Character",
+        "hero",
+        "-RunName",
+        "hero-v1",
+        "-TriggerToken",
+        "jmaHero",
+        "-Dit",
+        str(models["dit"]),
+        "-Vae",
+        str(models["vae"]),
+        "-TextEncoder",
+        str(models["text_encoder"]),
+        "-MinimumFreeGiB",
+        "1",
+        "-DryRun",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 0, completed.stderr
+    assert "krea2_cache_latents.py" in completed.stdout
+    assert "krea2_cache_text_encoder_outputs.py" in completed.stdout
+    assert "krea2_train_network.py" in completed.stdout
+    assert "hero-v1-proof" in completed.stdout
+    assert not (training_root / "runs" / "hero-v1-proof").exists()
+
+
+def test_krea2_installer_dry_run_targets_dedicated_e_drive_lane() -> None:
+    pwsh = shutil.which("pwsh")
+    assert pwsh is not None, "PowerShell 7 is required"
+    command = [
+        pwsh,
+        "-NoProfile",
+        "-File",
+        str(REPO_ROOT / "tools" / "lora_training" / "install-musubi.ps1"),
+        "-Krea2",
+        "-DryRun",
+        "-MinimumTrainerFreeGiB",
+        "1",
+        "-MinimumTrainingFreeGiB",
+        "1",
+    ]
+
+    completed = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True)
+
+    assert completed.returncode == 0, completed.stderr
+    assert r"E:\image-training\krea2\trainer\musubi-tuner" in completed.stdout
+    assert r"E:\image-training\krea2" in completed.stdout
+
+
+def test_installer_scopes_exfat_git_trust_without_global_configuration() -> None:
+    installer = (REPO_ROOT / "tools" / "lora_training" / "install-musubi.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "git config --global" not in installer
+    assert installer.count("('safe.directory=' + $TrainerRoot)") >= 4
+
+
 def test_fixed_roots_revision_templates_and_wrappers_are_explicit() -> None:
     assert MUSUBI_REVISION == "8934cfbbb4b9bcfa8071ce209129f0c5eb5df2e6"
     assert MUSUBI_ROOT == Path(r"C:\tools\image\trainers\musubi-tuner")
@@ -1064,6 +1294,7 @@ def test_fixed_roots_revision_templates_and_wrappers_are_explicit() -> None:
     for template in (
         TEMPLATE_ROOT / "character-flux2-klein9b.toml",
         TEMPLATE_ROOT / "character-qwen-edit-2511.toml",
+        TEMPLATE_ROOT / "character-krea2.toml",
     ):
         assert template.is_file()
 

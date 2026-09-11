@@ -1,6 +1,6 @@
 # Krea 2 Identity LoRA Trainer
 
-**Status:** Approved design; implementation in progress  
+**Status:** Tooling implemented and locally verified; proof run pending model assets
 **Owner:** Codex  
 **Source:** Owner request on 2026-09-11 for a local-only identity trainer
 
