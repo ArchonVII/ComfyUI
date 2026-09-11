@@ -1,6 +1,6 @@
 # Random Reference Presets and Prompt Prefixes
 
-**Status:** Active
+**Status:** Complete
 
 ## Goal and source
 
@@ -34,3 +34,11 @@ Saved workflow JSON and personal images are owner data and remain untouched. Pre
 - Port 8192 reports `RandomReferenceImageSource` and `ReferenceLanePack`; a disposable fixture confirms `favorite text, incoming prompt` without reading or changing owner images.
 - Git scope checks show no saved workflow, personal image, or runtime preset data tracked.
 
+## Closeout
+
+- RED was observed for the absent preset API and absent BCARD launcher whitelist before implementation.
+- The package suite passes 42 tests; Ruff lint/format and JavaScript syntax checks pass.
+- The BCARD launcher suite passes 37 tests with the fixed one-package whitelist.
+- The verified package was synchronized into the ignored ComfyUI 0.34.2 installation and loaded on port 8192 with all other custom nodes and API/cloud nodes still disabled.
+- A generated two-image selection favorite saved its ordered paths and prompt prefix, returned both images through the live preview route, and was deleted. The generated fixture files were also removed.
+- The active user store is schema version 1 with the five migrated folder favorites and no smoke-test favorite. No saved workflow or personal image was changed.
