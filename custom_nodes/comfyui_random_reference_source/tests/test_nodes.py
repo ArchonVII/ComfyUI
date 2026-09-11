@@ -121,6 +121,33 @@ def test_build_image_pool_from_folder_or_selected_files(tmp_path, monkeypatch):
     assert [path.name for path in selected_pool] == ["b.jpg", "c.webp"]
 
 
+def test_build_image_pool_uses_images_saved_in_selection_preset(tmp_path, monkeypatch):
+    input_dir = tmp_path / "input"
+    source_dir = input_dir / "subjects"
+    _png(source_dir / "a.png")
+    _png(source_dir / "b.jpg")
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(input_dir))
+
+    pool = build_image_pool(
+        source_mode="folder",
+        folder="ignored",
+        favorite="Chosen",
+        selected_images="ignored.png",
+        include_subfolders=False,
+        favorites={
+            "Chosen": {
+                "kind": "selection",
+                "folder": "subjects",
+                "images": ["b.jpg", "a.png"],
+                "include_subfolders": False,
+                "prompt_text": "same person",
+            }
+        },
+    )
+
+    assert [path.name for path in pool] == ["b.jpg", "a.png"]
+
+
 def test_build_image_pool_auto_uses_selection_when_files_are_selected(
     tmp_path, monkeypatch
 ):
@@ -183,7 +210,9 @@ def test_reference_preview_payload_returns_thumbnail_data_urls(tmp_path, monkeyp
 
     assert payload["mode"] == "selection"
     assert [item["name"] for item in payload["images"]] == ["a.png", "b.jpg"]
-    assert payload["images"][0]["thumbnail_data_url"].startswith("data:image/png;base64,")
+    assert payload["images"][0]["thumbnail_data_url"].startswith(
+        "data:image/png;base64,"
+    )
 
 
 def test_build_image_pool_rejects_empty_selection(tmp_path, monkeypatch):
@@ -213,9 +242,9 @@ def test_choose_image_seeded_is_stable(tmp_path):
 
 
 def test_selection_policy_exposes_sequential_mode():
-    policies = RandomReferenceImageSource.INPUT_TYPES()["required"][
-        "selection_policy"
-    ][0]
+    policies = RandomReferenceImageSource.INPUT_TYPES()["required"]["selection_policy"][
+        0
+    ]
 
     assert "sequential" in policies
 
@@ -258,7 +287,7 @@ def test_random_reference_image_source_loads_image_mask_and_metadata(
         lambda _path=None: {},
     )
 
-    image, mask, selected_file, lane, metadata_json = (
+    image, mask, selected_file, lane, metadata_json, prompt = (
         RandomReferenceImageSource().load_random_reference(
             lane="primary_subject",
             source_mode="folder",
@@ -268,6 +297,7 @@ def test_random_reference_image_source_loads_image_mask_and_metadata(
             selection_policy="seeded",
             seed=1,
             include_subfolders=False,
+            prompt="soft window light",
         )
     )
 
@@ -279,6 +309,41 @@ def test_random_reference_image_source_loads_image_mask_and_metadata(
     assert lane == "primary_subject"
     assert metadata["lane"] == "primary_subject"
     assert metadata["pool_size"] == 1
+    assert prompt == "soft window light"
+
+
+def test_random_reference_source_prefixes_saved_favorite_text(tmp_path, monkeypatch):
+    input_dir = tmp_path / "input"
+    source_dir = input_dir / "subjects"
+    _png(source_dir / "a.png")
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(input_dir))
+    monkeypatch.setattr(
+        "custom_nodes.comfyui_random_reference_source.nodes.load_presets",
+        lambda: {
+            "Hero": {
+                "kind": "folder",
+                "folder": "subjects",
+                "images": [],
+                "include_subfolders": False,
+                "prompt_text": "same character",
+            }
+        },
+    )
+
+    result = RandomReferenceImageSource().load_random_reference(
+        lane="primary_subject",
+        source_mode="folder",
+        favorite="Hero",
+        folder="ignored",
+        selected_images="",
+        selection_policy="seeded",
+        seed=1,
+        include_subfolders=False,
+        prompt="soft window light",
+    )
+
+    assert result[-1] == "same character, soft window light"
+    assert json.loads(result[-2])["favorite_prompt_text"] == "same character"
 
 
 def test_reference_lane_pack_passes_named_lanes_and_metadata():

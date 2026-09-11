@@ -129,6 +129,96 @@ async function callDialog(endpoint, initialDir) {
   return data;
 }
 
+async function callPresetApi(path = "", options = {}) {
+  const response = await api.fetchApi(`/arch-random-reference/presets${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || `Favorite request failed (${response.status})`);
+  }
+  return data;
+}
+
+function refreshFavoriteOptions(node, presets) {
+  node._archReferencePresets = presets || {};
+  const widget = findWidget(node, "favorite");
+  if (!widget) return;
+  const values = [
+    "None",
+    ...Object.keys(node._archReferencePresets).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
+    ),
+  ];
+  widget.options ||= {};
+  widget.options.values = values;
+  if (!values.includes(widget.value)) setWidgetValue(node, widget, "None");
+}
+
+function applyFavorite(node) {
+  const name = findWidget(node, "favorite")?.value || "None";
+  const preset = node._archReferencePresets?.[name];
+  if (!preset) {
+    setWidgetValue(node, findWidget(node, "favorite_prompt"), "");
+    return;
+  }
+  setWidgetValue(node, findWidget(node, "source_mode"), preset.kind || "folder");
+  setWidgetValue(node, findWidget(node, "folder"), preset.folder || ".");
+  setWidgetValue(
+    node,
+    findWidget(node, "selected_images"),
+    (preset.images || []).join("\n"),
+  );
+  setWidgetValue(
+    node,
+    findWidget(node, "include_subfolders"),
+    Boolean(preset.include_subfolders),
+  );
+  setWidgetValue(
+    node,
+    findWidget(node, "favorite_prompt"),
+    preset.prompt_text || "",
+  );
+  schedulePreview(node);
+}
+
+async function refreshPresets(node, applyCurrent = true) {
+  const data = await callPresetApi();
+  refreshFavoriteOptions(node, data.presets);
+  if (applyCurrent) applyFavorite(node);
+}
+
+function favoritePayload(node, name) {
+  return {
+    ...referencePayload(node),
+    name,
+    prompt_text: findWidget(node, "favorite_prompt")?.value || "",
+  };
+}
+
+async function saveFavorite(node, name) {
+  const data = await callPresetApi("", {
+    method: "POST",
+    body: JSON.stringify(favoritePayload(node, name)),
+  });
+  refreshFavoriteOptions(node, data.presets);
+  setWidgetValue(node, findWidget(node, "favorite"), data.name);
+  applyFavorite(node);
+  notify(`Saved favorite “${data.name}”.`);
+}
+
+async function deleteFavorite(node, name) {
+  const data = await callPresetApi("", {
+    method: "DELETE",
+    body: JSON.stringify({ name }),
+  });
+  refreshFavoriteOptions(node, data.presets);
+  setWidgetValue(node, findWidget(node, "favorite"), "None");
+  applyFavorite(node);
+  notify(`Deleted favorite “${name}”.`);
+}
+
 function referencePayload(node) {
   return {
     lane: findWidget(node, "lane")?.value || "",
@@ -237,6 +327,7 @@ function installPreviewWidget(node) {
     "selection_policy",
     "seed",
     "include_subfolders",
+    "favorite_prompt",
   ];
   for (const name of watchedWidgets) {
     const widget = findWidget(node, name);
@@ -246,6 +337,7 @@ function installPreviewWidget(node) {
     widget.callback = function () {
       const result = callback?.apply(this, arguments);
       if (name === "selection_policy") syncSequentialSeedControl(node);
+      if (name === "favorite") applyFavorite(node);
       schedulePreview(node);
       return result;
     };
@@ -315,6 +407,43 @@ app.registerExtension({
         }
       });
 
+      addTransientButton("★ Save new favorite…", async () => {
+        const name = window.prompt("Name this favorite:", "")?.trim();
+        if (!name) return;
+        try {
+          await saveFavorite(node, name);
+        } catch (err) {
+          notify(String(err.message || err), "error");
+        }
+      });
+
+      addTransientButton("★ Update favorite", async () => {
+        const name = findWidget(node, "favorite")?.value || "None";
+        if (name === "None") {
+          notify("Select a favorite to update.", "warning");
+          return;
+        }
+        try {
+          await saveFavorite(node, name);
+        } catch (err) {
+          notify(String(err.message || err), "error");
+        }
+      });
+
+      addTransientButton("☆ Delete favorite", async () => {
+        const name = findWidget(node, "favorite")?.value || "None";
+        if (name === "None") {
+          notify("Select a favorite to delete.", "warning");
+          return;
+        }
+        if (!window.confirm(`Delete favorite “${name}”?`)) return;
+        try {
+          await deleteFavorite(node, name);
+        } catch (err) {
+          notify(String(err.message || err), "error");
+        }
+      });
+
       // The two new widgets make the node taller; grow it to fit.
       const size = node.computeSize();
       node.setSize([
@@ -322,6 +451,11 @@ app.registerExtension({
         Math.max(node.size[1], size[1]),
       ]);
       installPreviewWidget(node);
+      setTimeout(() => {
+        refreshPresets(node).catch((err) =>
+          notify(String(err.message || err), "error"),
+        );
+      }, 0);
 
       return result;
     };
