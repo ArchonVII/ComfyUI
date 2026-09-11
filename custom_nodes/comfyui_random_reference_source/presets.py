@@ -5,20 +5,13 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-import folder_paths
-
-
 PRESET_STORE_VERSION = 1
 PACKAGE_DIR = Path(__file__).resolve().parent
 LEGACY_FAVORITES_PATH = PACKAGE_DIR / "config" / "favorites.json"
 
 
 def preset_store_path() -> Path:
-    return (
-        Path(folder_paths.get_user_directory()).resolve()
-        / "random_reference_source"
-        / "presets.json"
-    )
+    return PACKAGE_DIR / "config" / "presets.json"
 
 
 def normalize_preset(value: object) -> dict[str, object]:

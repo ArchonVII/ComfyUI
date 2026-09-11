@@ -10,13 +10,13 @@ Configure the node's folder or selected images, enter optional text in **favorit
 - **Update favorite** to replace the selected favorite with the node's current source and text.
 - **Delete favorite** to remove only the saved preset. Images are never removed.
 
-Favorites store paths only. The package never copies, moves, edits, or uploads source images. Data is written beneath the active ComfyUI user directory at:
+Favorites store paths only. The package never copies, moves, edits, or uploads source images. Data is written inside this custom node at:
 
 ```text
-random_reference_source/presets.json
+custom_nodes/comfyui_random_reference_source/config/presets.json
 ```
 
-The first save carries the package's older folder-only favorites into this versioned user file. Each ComfyUI user directory has its own favorites.
+The first save carries the package's older folder-only favorites into this versioned local file. Each ComfyUI installation has its own favorites, independent of any configured user directory.
 
 ## Prompt text
 

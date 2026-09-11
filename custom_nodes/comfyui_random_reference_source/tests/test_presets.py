@@ -3,12 +3,18 @@ import json
 import pytest
 
 from custom_nodes.comfyui_random_reference_source.presets import (
+    PACKAGE_DIR,
     compose_favorite_prompt,
     delete_preset,
     load_presets,
+    preset_store_path,
     save_preset,
 )
 from custom_nodes.comfyui_random_reference_source.routes import preset_from_payload
+
+
+def test_default_preset_store_lives_in_custom_node_config_folder():
+    assert preset_store_path() == PACKAGE_DIR / "config" / "presets.json"
 
 
 def test_legacy_folder_favorites_are_normalized_when_user_store_is_absent(tmp_path):
