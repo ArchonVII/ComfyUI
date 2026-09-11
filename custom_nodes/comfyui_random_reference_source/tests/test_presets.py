@@ -2,12 +2,13 @@ import json
 
 import pytest
 
-from custom_nodes.comfyui_random_reference_source.nodes import (
+from custom_nodes.comfyui_random_reference_source.presets import (
     compose_favorite_prompt,
     delete_preset,
     load_presets,
     save_preset,
 )
+from custom_nodes.comfyui_random_reference_source.routes import preset_from_payload
 
 
 def test_legacy_folder_favorites_are_normalized_when_user_store_is_absent(tmp_path):
@@ -87,8 +88,16 @@ def test_delete_preset_keeps_other_presets(tmp_path):
 @pytest.mark.parametrize(
     ("favorite_text", "prompt", "expected"),
     [
-        ("cinematic portrait", "soft window light", "cinematic portrait, soft window light"),
-        ("cinematic portrait, ", " soft window light", "cinematic portrait, soft window light"),
+        (
+            "cinematic portrait",
+            "soft window light",
+            "cinematic portrait, soft window light",
+        ),
+        (
+            "cinematic portrait, ",
+            " soft window light",
+            "cinematic portrait, soft window light",
+        ),
         ("cinematic portrait", "", "cinematic portrait"),
         ("", "soft window light", "soft window light"),
         ("", "", ""),
@@ -108,3 +117,21 @@ def test_selection_preset_requires_at_least_one_image(tmp_path):
             store_path=tmp_path / "presets.json",
             legacy_path=tmp_path / "absent.json",
         )
+
+
+def test_route_payload_builds_selection_preset_from_multiline_widget_value():
+    assert preset_from_payload(
+        {
+            "source_mode": "selection",
+            "folder": "faces",
+            "selected_images": "one.png\nnested/two.png",
+            "include_subfolders": False,
+            "prompt_text": "same character",
+        }
+    ) == {
+        "kind": "selection",
+        "folder": "faces",
+        "images": ["one.png", "nested/two.png"],
+        "include_subfolders": False,
+        "prompt_text": "same character",
+    }

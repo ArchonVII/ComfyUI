@@ -5,9 +5,7 @@ from pathlib import Path
 import pytest
 
 
-SCRIPT_PATH = (
-    Path(__file__).resolve().parents[1] / "web" / "random_reference_source.js"
-)
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "web" / "random_reference_source.js"
 
 
 def _run_extension_assertions(assertions: str) -> None:
@@ -57,6 +55,7 @@ function backendWidgets(overrides = {{}}) {{
     seed: 42,
     control_after_generate: "fixed",
     include_subfolders: true,
+    favorite_prompt: "same character",
   }};
   const values = {{ ...defaults, ...overrides }};
   return [
@@ -87,6 +86,7 @@ function backendWidgets(overrides = {{}}) {{
       value: values.include_subfolders,
       options: {{}},
     }},
+    {{ name: "favorite_prompt", type: "string", value: values.favorite_prompt, options: {{}} }},
   ].map((widget) => ({{ ...widget, callback() {{}} }}));
 }}
 
@@ -188,10 +188,11 @@ def test_round_trip_preserves_dense_named_widget_state(seed):
     seed: {seed},
     control_after_generate: "increment",
     include_subfolders: true,
+    favorite_prompt: "same character",
   }};
   const original = createNode(expected);
   const saved = serialiseWidgetValues(original);
-  assertEqual(saved.length, 9, "persisted widget count");
+  assertEqual(saved.length, 10, "persisted widget count");
   if (saved.some((value) => value === null)) {{
     throw new Error(`Workflow contains sparse widget holes: ${{JSON.stringify(saved)}}`);
   }}
@@ -407,3 +408,11 @@ def test_advanced_sequential_cursor_round_trips_after_frontend_increment():
   assertWidget(restored, "control_after_generate", "increment");
 """
     )
+
+
+def test_favorite_manager_controls_are_transient_and_named_by_action():
+    source = SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert 'addTransientButton("★ Save new favorite…"' in source
+    assert 'addTransientButton("★ Update favorite"' in source
+    assert 'addTransientButton("☆ Delete favorite"' in source

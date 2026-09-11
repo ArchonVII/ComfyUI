@@ -17,6 +17,12 @@ from PIL import Image, ImageOps, ImageSequence
 import folder_paths
 import node_helpers
 
+from .presets import (
+    compose_favorite_prompt,
+    load_presets,
+    normalize_preset,
+)
+
 
 VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
 ARCH_CATEGORY = "arch-image/random reference"
@@ -99,10 +105,43 @@ def load_favorites(config_path: str | os.PathLike[str] | None = None) -> dict[st
 
 def favorite_options() -> list[str]:
     try:
-        names = sorted(load_favorites().keys(), key=str.casefold)
+        names = sorted(load_presets().keys(), key=str.casefold)
     except ValueError:
         names = []
     return [NONE_FAVORITE] + names
+
+
+def _favorite_preset(
+    favorite: str, favorites: Mapping[str, object]
+) -> dict[str, object] | None:
+    favorite_name = str(favorite or NONE_FAVORITE)
+    if not favorite_name or favorite_name == NONE_FAVORITE:
+        return None
+    if favorite_name not in favorites:
+        raise ValueError(f"Favorite not found: {favorite_name}")
+    return normalize_preset(favorites[favorite_name])
+
+
+def _resolved_source_values(
+    source_mode: str,
+    folder: str,
+    favorite: str,
+    selected_images: str,
+    include_subfolders: bool,
+    favorites: Mapping[str, object],
+) -> tuple[str, str, str, bool]:
+    preset = _favorite_preset(favorite, favorites)
+    if preset is not None:
+        return (
+            str(preset["kind"]),
+            str(preset["folder"]),
+            "\n".join(str(path) for path in preset["images"]),
+            bool(preset["include_subfolders"]),
+        )
+    normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
+    if normalized_mode in {"selected", "selected_files"}:
+        normalized_mode = "selection"
+    return normalized_mode, folder, selected_images, include_subfolders
 
 
 def parse_selected_images(selected_images: str) -> list[str]:
@@ -121,14 +160,14 @@ def parse_selected_images(selected_images: str) -> list[str]:
 def resolve_source_folder(
     folder: str,
     favorite: str,
-    favorites: Mapping[str, str] | None = None,
+    favorites: Mapping[str, object] | None = None,
 ) -> Path:
     favorites = favorites or {}
     favorite_name = str(favorite or NONE_FAVORITE)
     if favorite_name and favorite_name != NONE_FAVORITE:
         if favorite_name not in favorites:
             raise ValueError(f"Favorite not found: {favorite_name}")
-        folder_text = favorites[favorite_name]
+        folder_text = str(normalize_preset(favorites[favorite_name])["folder"])
     else:
         folder_text = folder or "."
 
@@ -172,11 +211,19 @@ def build_image_pool(
     favorite: str,
     selected_images: str,
     include_subfolders: bool,
-    favorites: Mapping[str, str] | None = None,
+    favorites: Mapping[str, object] | None = None,
 ) -> list[Path]:
-    normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
-    if normalized_mode in {"selected", "selected_files"}:
-        normalized_mode = "selection"
+    favorites = favorites or {}
+    normalized_mode, folder, selected_images, include_subfolders = (
+        _resolved_source_values(
+            source_mode,
+            folder,
+            favorite,
+            selected_images,
+            include_subfolders,
+            favorites,
+        )
+    )
     if normalized_mode == "auto":
         normalized_mode = (
             "selection" if parse_selected_images(selected_images) else "folder"
@@ -216,7 +263,7 @@ def build_reference_preview_payload(
     selection_policy: str,
     seed: int,
     include_subfolders: bool,
-    favorites: Mapping[str, str] | None = None,
+    favorites: Mapping[str, object] | None = None,
     max_images: int = 8,
 ) -> dict[str, object]:
     favorites = favorites or {}
@@ -228,12 +275,19 @@ def build_reference_preview_payload(
         include_subfolders=include_subfolders,
         favorites=favorites,
     )
-    normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
-    if normalized_mode in {"selected", "selected_files"}:
-        normalized_mode = "selection"
+    normalized_mode, resolved_folder, resolved_images, _resolved_subfolders = (
+        _resolved_source_values(
+            source_mode,
+            folder,
+            favorite,
+            selected_images,
+            include_subfolders,
+            favorites,
+        )
+    )
     if normalized_mode == "auto":
         normalized_mode = (
-            "selection" if parse_selected_images(selected_images) else "folder"
+            "selection" if parse_selected_images(resolved_images) else "folder"
         )
 
     if normalized_mode == "selection":
@@ -243,7 +297,7 @@ def build_reference_preview_payload(
     else:
         preview_paths = image_pool[:max_images]
 
-    source_folder = resolve_source_folder(folder, favorite, favorites)
+    source_folder = resolve_source_folder(resolved_folder, favorite, favorites)
     return {
         "mode": normalized_mode,
         "source_folder": str(source_folder),
@@ -349,11 +403,35 @@ class RandomReferenceImageSource:
                         "tooltip": "Include nested images when source_mode is folder.",
                     },
                 ),
-            }
+            },
+            "optional": {
+                "favorite_prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "tooltip": "Prompt text stored with the selected favorite. Save or update the favorite to persist edits.",
+                    },
+                ),
+                "prompt": (
+                    "STRING",
+                    {
+                        "forceInput": True,
+                        "tooltip": "Incoming prompt. The selected favorite's text is prepended to this value.",
+                    },
+                ),
+            },
         }
 
-    RETURN_TYPES = ("IMAGE", "MASK", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("image", "mask", "selected_file", "lane", "metadata_json")
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = (
+        "image",
+        "mask",
+        "selected_file",
+        "lane",
+        "metadata_json",
+        "prompt_with_favorite",
+    )
     FUNCTION = "load_random_reference"
     CATEGORY = ARCH_CATEGORY
     DESCRIPTION = "Load one random or sequential reference image from a folder, selected filename pool, or favorite source folder."
@@ -369,6 +447,8 @@ class RandomReferenceImageSource:
         selection_policy,
         seed,
         include_subfolders,
+        favorite_prompt="",
+        prompt="",
     ):
         try:
             build_image_pool(
@@ -377,7 +457,7 @@ class RandomReferenceImageSource:
                 favorite=favorite,
                 selected_images=selected_images,
                 include_subfolders=include_subfolders,
-                favorites=load_favorites(),
+                favorites=load_presets(),
             )
             choose_image([Path("placeholder.png")], seed, selection_policy)
         except ValueError as exc:
@@ -395,6 +475,8 @@ class RandomReferenceImageSource:
         selection_policy,
         seed,
         include_subfolders,
+        favorite_prompt="",
+        prompt="",
     ):
         return time.time()
 
@@ -408,8 +490,10 @@ class RandomReferenceImageSource:
         selection_policy,
         seed,
         include_subfolders,
+        favorite_prompt="",
+        prompt="",
     ):
-        favorites = load_favorites()
+        favorites = load_presets()
         image_pool = build_image_pool(
             source_mode=source_mode,
             folder=folder,
@@ -421,6 +505,9 @@ class RandomReferenceImageSource:
         selected_path = choose_image(image_pool, seed, selection_policy)
         image, mask = load_image_and_mask(selected_path)
         source_folder = resolve_source_folder(folder, favorite, favorites)
+        preset = _favorite_preset(favorite, favorites)
+        favorite_text = str(preset["prompt_text"]) if preset is not None else ""
+        combined_prompt = compose_favorite_prompt(favorite_text, prompt)
         metadata = {
             "lane": lane,
             "selected_file": str(selected_path),
@@ -430,6 +517,7 @@ class RandomReferenceImageSource:
             "favorite": favorite,
             "pool_size": len(image_pool),
             "selection_policy": selection_policy,
+            "favorite_prompt_text": favorite_text,
         }
         return (
             image,
@@ -437,6 +525,7 @@ class RandomReferenceImageSource:
             str(selected_path),
             lane,
             json.dumps(metadata, ensure_ascii=False),
+            combined_prompt,
         )
 
 

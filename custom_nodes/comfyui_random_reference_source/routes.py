@@ -14,8 +14,10 @@ from .nodes import (
     VALID_IMAGE_EXTENSIONS,
     _expand_path_text,
     build_reference_preview_payload,
-    load_favorites,
+    load_presets,
+    parse_selected_images,
 )
+from .presets import delete_preset, save_preset
 
 _ROUTES_REGISTERED = False
 
@@ -136,11 +138,57 @@ async def post_preview(request: web.Request) -> web.Response:
             selection_policy=data.get("selection_policy", "random_each_queue"),
             seed=int(data.get("seed") or 0),
             include_subfolders=bool(data.get("include_subfolders", False)),
-            favorites=load_favorites(),
+            favorites=load_presets(),
         )
     except Exception as exc:  # noqa: BLE001 - report preview issues to the node UI
         return web.json_response({"error": str(exc)}, status=400)
     return web.json_response(payload)
+
+
+def preset_from_payload(data: dict[str, Any]) -> dict[str, object]:
+    source_mode = str(data.get("source_mode", "folder")).strip().lower()
+    selected = parse_selected_images(str(data.get("selected_images", "")))
+    if source_mode == "auto":
+        source_mode = "selection" if selected else "folder"
+    if source_mode not in {"folder", "selection"}:
+        raise ValueError("Favorite source_mode must be folder or selection")
+    return {
+        "kind": source_mode,
+        "folder": str(data.get("folder", ".")).strip() or ".",
+        "images": selected if source_mode == "selection" else [],
+        "include_subfolders": bool(data.get("include_subfolders", False)),
+        "prompt_text": str(data.get("prompt_text", "")).strip(),
+    }
+
+
+async def get_presets(request: web.Request) -> web.Response:
+    try:
+        presets = load_presets()
+    except ValueError as exc:
+        return web.json_response({"error": str(exc)}, status=400)
+    return web.json_response({"presets": presets})
+
+
+async def post_preset(request: web.Request) -> web.Response:
+    data = await _read_json(request)
+    try:
+        name = str(data.get("name", "")).strip()
+        preset = save_preset(name, preset_from_payload(data))
+        presets = load_presets()
+    except ValueError as exc:
+        return web.json_response({"error": str(exc)}, status=400)
+    return web.json_response({"name": name, "preset": preset, "presets": presets})
+
+
+async def delete_preset_route(request: web.Request) -> web.Response:
+    data = await _read_json(request)
+    try:
+        name = str(data.get("name", "")).strip()
+        delete_preset(name)
+        presets = load_presets()
+    except ValueError as exc:
+        return web.json_response({"error": str(exc)}, status=404)
+    return web.json_response({"presets": presets})
 
 
 async def _read_json(request: web.Request) -> dict[str, Any]:
@@ -179,4 +227,7 @@ def register_routes() -> None:
     routes.post("/arch-random-reference/browse-folder")(post_browse_folder)
     routes.post("/arch-random-reference/pick-images")(post_pick_images)
     routes.post("/arch-random-reference/preview")(post_preview)
+    routes.get("/arch-random-reference/presets")(get_presets)
+    routes.post("/arch-random-reference/presets")(post_preset)
+    routes.delete("/arch-random-reference/presets")(delete_preset_route)
     _ROUTES_REGISTERED = True
