@@ -7,44 +7,34 @@
   <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
 </head>
 <body>
-<header class="topbar"><a class="brand" href="/">PS<span>Preset Studio</span></a><span class="local">LOCAL WORKSPACE</span><button id="connection" class="connection">Checking ComfyUI…</button></header>
+<header class="topbar"><a class="brand" href="/">Preset Studio</a><button id="connection" class="connection">Checking ComfyUI…</button></header>
 <main>
-  <aside class="library panel">
-    <div class="section-head"><h1>Preset library</h1><button id="new-preset" class="accent small">+ New</button></div>
-    <input id="search" type="search" placeholder="Find a character or concept…" aria-label="Search presets">
+  <aside class="library">
+    <div class="section-head"><h1>Presets</h1><div><button id="import-library" class="quiet small">Import</button><button id="new-preset" class="small">+ New</button></div></div>
+    <input id="search" type="search" placeholder="Search presets" aria-label="Search presets">
     <div id="filters" class="filters" aria-label="Preset category"></div>
     <div id="preset-list" class="preset-list"></div>
-    <button id="import-library" class="wide">Import existing library</button>
-    <p class="hint">Presets combine text, reference images, and LoRAs. Select them in the order you want to compose.</p>
   </aside>
-  <section class="composer panel">
-    <div class="section-head"><div><span class="eyebrow">COMPOSE</span><h1>Your combination</h1></div><button id="clear" class="quiet">Clear</button></div>
-    <div id="selection" class="selection"></div>
-    <div class="section-head compact"><h2>Reference selection</h2><span id="ref-count" class="hint"></span></div>
-    <div id="references" class="references"></div>
-    <label for="extra">Add to this prompt</label><textarea id="extra" rows="3" placeholder="A place, an action, or a detail for this variation…"></textarea>
-    <details><summary>Negative prompt additions</summary><textarea id="negative" rows="2" aria-label="Negative prompt additions" placeholder="What to avoid…"></textarea></details>
-    <div class="preview-head"><h2>Assembled prompt</h2><button id="copy-prompt" class="quiet small">Copy</button></div>
-    <div id="prompt-preview" class="prompt-preview" aria-live="polite">Select a preset or add your own text.</div>
-    <div id="negative-preview" class="hint"></div>
-    <div class="preview-head"><h2>LoRA stack</h2><span id="lora-count" class="hint"></span></div>
-    <div id="lora-preview" class="lora-preview"></div>
+  <section class="execution" aria-label="Generation controls">
+    <div class="generation-bar">
+      <div class="workflow-control"><label for="workflow">Workflow</label><select id="workflow"><option value="">Choose a workflow…</option></select></div>
+      <div class="seed-control"><label for="seed">Seed</label><div class="inline"><input id="seed" type="number" min="0" max="9007199254740983" value="1"><button id="random-seed" title="Choose a new random seed">Shuffle</button></div></div>
+      <div class="count-control"><label for="count">Runs</label><select id="count" title="Same combination, one new seed per run"><option value="1">1</option><option value="2">2 seeds</option><option value="4">4 seeds</option><option value="8">8 seeds</option></select></div>
+      <button id="queue" class="accent generate">Queue test</button>
+    </div>
+    <div class="setup-line"><details class="workflow-setup"><summary>Workflow setup</summary><div class="button-row"><button id="add-workflow">Import API workflow</button><button id="map-workflow">Map fields</button><button id="download">Export assembled JSON</button></div><p id="workflow-summary" class="hint"></p><details class="connection-details"><summary>Connection</summary><div class="inline"><label class="sr-only" for="comfy-url">ComfyUI address</label><input id="comfy-url" placeholder="http://127.0.0.1:8188"><button id="save-connection">Connect</button></div></details></details><p id="queue-status" class="hint" role="status"></p></div>
+  </section>
+  <section class="composer" aria-label="Prompt composition">
+    <div class="composition-row"><h2>Selected</h2><div id="selection" class="selection"></div><button id="clear" class="quiet small">Clear</button></div>
+    <div class="composition-row reference-row"><div><h2>References</h2><span id="ref-count" class="hint"></span></div><div id="references" class="references"></div></div>
+    <div class="prompt-columns">
+      <div class="prompt-input"><label for="extra">Additional prompt</label><textarea id="extra" rows="4" placeholder="Action, setting, or details for this run…"></textarea><details><summary>Negative additions</summary><textarea id="negative" rows="2" aria-label="Negative prompt additions" placeholder="What to avoid…"></textarea></details></div>
+      <div class="prompt-output"><div class="preview-head"><h2>Final prompt</h2><button id="copy-prompt" class="quiet small">Copy</button></div><div id="prompt-preview" class="prompt-preview" aria-live="polite">Select presets or type a prompt.</div><div id="negative-preview" class="hint"></div></div>
+    </div>
+    <div class="composition-row lora-section"><h2>LoRAs <span id="lora-count" class="hint"></span></h2><div id="lora-preview" class="lora-preview"></div></div>
     <div id="preview-error" class="error" role="alert" hidden></div>
   </section>
-  <aside class="execution panel">
-    <span class="eyebrow">GENERATE</span><h1>Workflow & variations</h1>
-    <label for="workflow">Workflow</label><select id="workflow"><option value="">Choose a workflow…</option></select>
-    <div class="button-row"><button id="add-workflow">Import API workflow</button><button id="map-workflow">Map fields</button></div>
-    <p id="workflow-summary" class="hint">Use a saved image or video API workflow. Map its controls once, then reuse it with any combination.</p>
-    <div class="split"><div><label for="seed">Starting seed</label><input id="seed" type="number" min="0" max="9007199254740983" value="1"></div><button id="random-seed" class="align-end" title="Choose a new random seed">Shuffle</button></div>
-    <label for="count">Seed variations</label><select id="count"><option value="1">1 · Quick test</option><option value="2">2 variations</option><option value="4">4 variations</option><option value="8">8 variations</option></select>
-    <p class="hint">Same prompt, references, and LoRAs. One new seed per run.</p>
-    <button id="queue" class="accent wide generate">Queue quick test</button>
-    <button id="download" class="wide quiet">Download assembled API workflow</button>
-    <p id="queue-status" class="hint" role="status"></p>
-    <details class="connection-details"><summary>Local connection</summary><label for="comfy-url">ComfyUI address</label><input id="comfy-url" placeholder="http://127.0.0.1:8188"><button id="save-connection" class="wide">Connect</button></details>
-  </aside>
-  <section class="results panel"><div class="section-head"><div><span class="eyebrow">REVIEW</span><h1>Recent runs</h1></div><button id="refresh">Refresh results</button></div><div id="runs" class="run-grid"></div></section>
+  <section class="results"><div class="section-head"><h1>Results</h1><button id="refresh" class="quiet small">Refresh</button></div><div id="runs" class="run-grid"></div></section>
 </main>
 <div id="toast" role="status" hidden></div>
 <dialog id="preset-dialog"><form id="preset-form">

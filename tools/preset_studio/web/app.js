@@ -21,19 +21,19 @@ function renderLibrary() {
   $('filters').innerHTML = [['all','All'],['character','Characters'],['concept','Concepts'],['environment','Places']].map(([key,label]) => `<button class="${category===key?'active':''}" data-filter="${key}" aria-pressed="${category===key}">${label}</button>`).join('');
   const search = $('search').value.toLowerCase();
   const presets = state.presets.filter(p => (category === 'all' || p.kind === category) && `${p.name} ${p.positive}`.toLowerCase().includes(search));
-  $('preset-list').innerHTML = presets.map(p => `<div class="preset-card ${selected.includes(p.id)?'selected':''}"><button class="preset-pick" data-pick="${esc(p.id)}" aria-pressed="${selected.includes(p.id)}">${p.references.length ? `<img class="preset-icon" src="/api/reference/${encodeURIComponent(p.references[0])}" alt="" loading="lazy">` : `<span class="preset-icon">${p.kind==='character'?'◎':p.kind==='environment'?'⌂':'✦'}</span>`}<span><strong>${esc(p.name)}</strong><small>${esc(p.kind)}${p.references.length?' · '+p.references.length+' refs':''}${p.loras.length?' · '+p.loras.length+' LoRA':''}</small></span></button><button class="preset-edit" data-edit="${esc(p.id)}" aria-label="Edit ${esc(p.name)}">Edit</button></div>`).join('') || '<div class="empty">No presets here yet. Create one or import a character collection.</div>';
+  $('preset-list').innerHTML = presets.map(p => `<div class="preset-card ${selected.includes(p.id)?'selected':''}"><button class="preset-pick" data-pick="${esc(p.id)}" aria-pressed="${selected.includes(p.id)}">${p.references.length ? `<img class="preset-icon" src="/api/reference/${encodeURIComponent(p.references[0])}" alt="" loading="lazy">` : `<span class="preset-icon">${p.kind==='character'?'◎':p.kind==='environment'?'⌂':'✦'}</span>`}<span><strong>${esc(p.name)}</strong><small>${esc(p.kind)}${p.references.length?' · '+p.references.length+' refs':''}${p.loras.length?' · '+p.loras.length+' LoRA':''}</small></span></button><button class="preset-edit" data-edit="${esc(p.id)}" aria-label="Edit ${esc(p.name)}">Edit</button></div>`).join('') || '<div class="empty">No presets. Use New or Import.</div>';
 }
 function renderSelection() {
   selected = selected.filter(id => state.presets.some(p => p.id === id));
   const picked = selected.map(id => state.presets.find(p => p.id === id));
-  $('selection').innerHTML = picked.map((p,i) => `<button class="chip" data-remove="${esc(p.id)}" title="Remove from combination"><span>${i+1}</span>${esc(p.name)} ×</button>`).join('') || '<p class="hint">Choose a character, add a concept, then make it your own.</p>';
+  $('selection').innerHTML = picked.map((p,i) => `<button class="chip" data-remove="${esc(p.id)}" title="Remove from combination"><span>${i+1}</span>${esc(p.name)} ×</button>`).join('') || '<p class="hint">Click presets to combine them.</p>';
   const available = [...new Set(picked.flatMap(p => p.references))];
   references = references.filter(id => available.includes(id));
-  $('references').innerHTML = available.map(id => `<button class="ref ${references.includes(id)?'selected':''}" data-ref="${esc(id)}" aria-pressed="${references.includes(id)}" title="${esc(state.references[id]?.name || 'Reference')}"><img src="/api/reference/${encodeURIComponent(id)}" alt="${esc(state.references[id]?.name || 'Reference')}" loading="lazy">${references.includes(id)?`<span>${references.indexOf(id)+1}</span>`:''}</button>`).join('') || '<p class="hint">Add images to a character preset. Click references to choose their slot order.</p>';
+  $('references').innerHTML = available.map(id => `<button class="ref ${references.includes(id)?'selected':''}" data-ref="${esc(id)}" aria-pressed="${references.includes(id)}" title="${esc(state.references[id]?.name || 'Reference')}"><img src="/api/reference/${encodeURIComponent(id)}" alt="${esc(state.references[id]?.name || 'Reference')}" loading="lazy">${references.includes(id)?`<span>${references.indexOf(id)+1}</span>`:''}</button>`).join('') || '<p class="hint">Select a preset with images. Click thumbnails to set reference order.</p>';
   $('ref-count').textContent = `${references.length} selected`;
 }
 function renderWorkflows() {
-  $('queue').textContent=Number($('count').value)===1?'Queue quick test':`Queue ${$('count').value} variations`;
+  $('queue').textContent=Number($('count').value)===1?'Queue test':`Queue ${$('count').value} variations`;
   const value = $('workflow').value;
   $('workflow').innerHTML = '<option value="">Choose a workflow…</option>' + state.workflows.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
   if (state.workflows.some(w => w.id === value)) $('workflow').value = value;
@@ -51,10 +51,10 @@ async function updatePreview() {
     const composed = await api('preview', {...payload, workflow_id:''});
     if (version !== previewVersion) return;
     const c = composed.composition;
-    $('prompt-preview').textContent = c.positive || 'Select a preset or add your own text.';
+    $('prompt-preview').textContent = c.positive || 'Select presets or type a prompt.';
     $('negative-preview').textContent = c.negative ? 'Negative: ' + c.negative : '';
     $('lora-count').textContent = `${c.loras.length} active`;
-    $('lora-preview').innerHTML = c.loras.map(l => `<div class="lora-row">${esc(l.name)}<span>Model ${l.model} / CLIP ${l.clip}</span></div>`).join('') || '<p class="hint">No preset LoRAs. Add one in a preset’s editor to attach it to that concept.</p>';
+    $('lora-preview').innerHTML = c.loras.map(l => `<div class="lora-row">${esc(l.name)}<span>Model ${l.model} / CLIP ${l.clip}</span></div>`).join('') || '<p class="hint">None selected</p>';
     const result = payload.workflow_id ? await api('preview', payload) : composed;
     if (version !== previewVersion) return;
     preview = result;
@@ -72,7 +72,7 @@ function renderRuns() {
   $('runs').innerHTML = state.runs.map(run => `<article class="run-card"><div class="run-meta"><span>Seed ${run.seed}</span><span class="status ${esc(run.status)}">${esc(run.status)}</span></div>${(run.outputs || []).map((asset,i) => {
     const url = `/api/output?run=${encodeURIComponent(run.id)}&index=${i}`;
     return /\.(mp4|webm|mov)$/i.test(asset.filename) ? `<video src="${url}" controls preload="metadata"></video>` : `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Generated output, seed ${run.seed}" loading="lazy"></a>`;
-  }).join('')}<h2>${esc(run.name)}</h2><p class="run-prompt">${esc(run.composition.positive)}</p>${run.error?`<details><summary>Run error</summary><p class="error">${esc(run.error)}</p></details>`:''}<div class="button-row"><button data-restore="${esc(run.id)}">Restore as copy</button><button data-run-download="${esc(run.id)}">Save run JSON</button></div></article>`).join('') || '<div class="empty">Your tests and variations will appear here.<br>Keep the references fixed, change a concept or seed, and compare the results side by side.</div>';
+  }).join('')}<h2>${esc(run.name)}</h2><p class="run-prompt">${esc(run.composition.positive)}</p>${run.error?`<details><summary>Run error</summary><p class="error">${esc(run.error)}</p></details>`:''}<div class="button-row"><button data-restore="${esc(run.id)}">Restore as copy</button><button data-run-download="${esc(run.id)}">Save run JSON</button></div></article>`).join('') || '<div class="empty">No runs yet.</div>';
 }
 async function checkConnection() {
   const status = await api('status');
@@ -164,7 +164,7 @@ on('clear','click', async()=>{ selected=[]; references=[]; $('extra').value=''; 
 let debounce;
 for(const id of ['extra','negative','seed']) on(id,'input',()=>{ $('queue').disabled=true; clearTimeout(debounce); debounce=setTimeout(updatePreview,220); });
 on('workflow','change',async()=>{renderWorkflows(); await updatePreview();});
-on('count','change',()=>{ $('queue').textContent=Number($('count').value)===1?'Queue quick test':`Queue ${$('count').value} variations`; remember(); });
+on('count','change',()=>{ $('queue').textContent=Number($('count').value)===1?'Queue test':`Queue ${$('count').value} variations`; remember(); });
 on('random-seed','click',async()=>{ $('seed').value=crypto.getRandomValues(new Uint32Array(1))[0]; await updatePreview(); });
 on('copy-prompt','click',async()=>{ await navigator.clipboard.writeText($('prompt-preview').textContent); message('Prompt copied'); });
 on('new-preset','click',()=>openPreset());
@@ -255,7 +255,7 @@ on('runs','click',async e=>{
   if(restore){const saved=await api('restore',{id:restore.dataset.restore});await load();selected=saved.preset_ids;references=saved.reference_ids;$('extra').value=saved.extra;$('negative').value=saved.negative;$('workflow').value=saved.workflow_id;$('seed').value=saved.seed;$('count').value='1';await changed();message('Restored the saved configuration as independent copies');return;}
   const button=e.target.closest('[data-run-download]');if(button)download(await api('run',{id:button.dataset.runDownload}),'preset-studio-run.json');
 });
-on('connection','click',()=>{document.querySelector('.connection-details').open=true;$('comfy-url').focus();});
+on('connection','click',()=>{document.querySelector('.workflow-setup').open=true;document.querySelector('.connection-details').open=true;$('comfy-url').focus();});
 on('save-connection','click',async()=>{await api('settings',{comfy_url:$('comfy-url').value});await checkConnection();message('Local connection saved');});
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
 
