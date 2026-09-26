@@ -1,7 +1,9 @@
+import {referenceRequest, choicesFromReferences} from './reference-selection.mjs';
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state = {presets: [], workflows: [], references: {}, runs: []};
 let selected = [], references = [], category = 'all', editingPreset = null, editingWorkflow = null;
+let referenceChoices = {}, referenceBatch = null;
 let preview = null, models = {loras: [], nodes: {}}, previewVersion = 0, timer, busy = false;
 
 async function api(path, data) {
@@ -13,7 +15,9 @@ async function api(path, data) {
 function message(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(timer); timer = setTimeout(() => $('toast').hidden = true, 6500); }
 function showError(id, error) { $(id).textContent = error?.message || error || ''; $(id).hidden = !error; }
 function on(id, event, callback) { $(id).addEventListener(event, async e => { try { await callback(e); } catch (error) { message(error.message); } }); }
-function request() { return {preset_ids:selected, reference_ids:references, extra:$('extra').value, negative:$('negative').value, workflow_id:$('workflow').value, seed:Number($('seed').value), count:Number($('count').value)}; }
+function pickedPresets() { return selected.map(id => state.presets.find(p => p.id === id)).filter(Boolean); }
+function referenceSelection() { return referenceRequest(pickedPresets(), referenceChoices, referenceBatch); }
+function request() { return {preset_ids:selected, ...referenceSelection(), extra:$('extra').value, negative:$('negative').value, workflow_id:$('workflow').value, seed:Number($('seed').value), count:referenceBatch?1:Number($('count').value)}; }
 function remember() { try { localStorage.setItem('preset-studio-draft', JSON.stringify(request())); } catch { /* Server presets remain usable when browser storage is disabled. */ } }
 async function load() { state = await api('state'); renderLibrary(); renderSelection(); renderWorkflows(); renderRuns(); $('comfy-url').value = state.comfy_url; }
 
@@ -27,13 +31,22 @@ function renderSelection() {
   selected = selected.filter(id => state.presets.some(p => p.id === id));
   const picked = selected.map(id => state.presets.find(p => p.id === id));
   $('selection').innerHTML = picked.map((p,i) => `<button class="chip" data-remove="${esc(p.id)}" title="Remove from combination"><span>${i+1}</span>${esc(p.name)} ×</button>`).join('') || '<p class="hint">Click presets to combine them.</p>';
-  const available = [...new Set(picked.flatMap(p => p.references))];
-  references = references.filter(id => available.includes(id));
-  $('references').innerHTML = available.map(id => `<button class="ref ${references.includes(id)?'selected':''}" data-ref="${esc(id)}" aria-pressed="${references.includes(id)}" title="${esc(state.references[id]?.name || 'Reference')}"><img src="/api/reference/${encodeURIComponent(id)}" alt="${esc(state.references[id]?.name || 'Reference')}" loading="lazy">${references.includes(id)?`<span>${references.indexOf(id)+1}</span>`:''}</button>`).join('') || '<p class="hint">Select a preset with images. Click thumbnails to set reference order.</p>';
-  $('ref-count').textContent = `${references.length} selected`;
+  for (const p of picked) if (!(p.id in referenceChoices)) referenceChoices[p.id] = p.references.slice(0,1);
+  const selection = referenceSelection();
+  references = selection.reference_ids;
+  referenceBatch = selection.reference_batch || null;
+  $('count').disabled = Boolean(referenceBatch);
+  if (referenceBatch) $('count').value = '1';
+  $('references').innerHTML = picked.filter(p=>p.kind==='character'||p.references.length).map(p=>{
+    const batch = referenceBatch?.preset_id===p.id;
+    const chosen = batch ? referenceBatch.image_ids : (referenceChoices[p.id] || []).filter(id=>p.references.includes(id)).slice(0,p.kind==='character'?1:undefined);
+    return `<div class="reference-group"><div class="reference-tools"><strong>${esc(p.name)}</strong>${p.kind==='character'?`<select data-reference-mode="${esc(p.id)}" aria-label="Image mode for ${esc(p.name)}"><option value="single" ${!batch?'selected':''}>Single image</option><option value="each" ${batch?'selected':''}>Run each selected</option></select>`:''}${batch?`<button class="quiet small" data-ref-all="${esc(p.id)}">All</button><button class="quiet small" data-ref-none="${esc(p.id)}">None</button><span class="hint">${chosen.length} images → ${chosen.length} runs · same seed</span>`:''}<button class="quiet small" data-ref-edit="${esc(p.id)}">${p.references.length?'Edit images':'+ Add images'}</button></div><div class="reference-strip">${p.references.map(id=>`<button class="ref ${chosen.includes(id)?'selected':''}" data-ref="${esc(id)}" data-ref-preset="${esc(p.id)}" aria-pressed="${chosen.includes(id)}" title="${esc(state.references[id]?.name || 'Reference')}"><img src="/api/reference/${encodeURIComponent(id)}" alt="${esc(state.references[id]?.name || 'Reference')}" loading="lazy">${chosen.includes(id)?`<span>${batch?'✓':references.indexOf(id)+1}</span>`:''}<small>${esc(state.references[id]?.name||'Image')}</small></button>`).join('')||'<span class="hint">No images attached.</span>'}</div></div>`;
+  }).join('') || '<p class="hint">Select a character to choose its reference image.</p>';
+  $('ref-count').textContent = `${references.length} slots`;
 }
 function renderWorkflows() {
-  $('queue').textContent=Number($('count').value)===1?'Queue test':`Queue ${$('count').value} variations`;
+  $('queue').textContent=referenceBatch?`Queue ${referenceBatch.image_ids.length} images`:Number($('count').value)===1?'Queue test':`Queue ${$('count').value} variations`;
+  $('download').textContent=referenceBatch?'Export first run JSON':'Export assembled JSON';
   const value = $('workflow').value;
   $('workflow').innerHTML = '<option value="">Choose a workflow…</option>' + state.workflows.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
   if (state.workflows.some(w => w.id === value)) $('workflow').value = value;
@@ -72,7 +85,7 @@ function renderRuns() {
   $('runs').innerHTML = state.runs.map(run => `<article class="run-card"><div class="run-meta"><span>Seed ${run.seed}</span><span class="status ${esc(run.status)}">${esc(run.status)}</span></div>${(run.outputs || []).map((asset,i) => {
     const url = `/api/output?run=${encodeURIComponent(run.id)}&index=${i}`;
     return /\.(mp4|webm|mov)$/i.test(asset.filename) ? `<video src="${url}" controls preload="metadata"></video>` : `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Generated output, seed ${run.seed}" loading="lazy"></a>`;
-  }).join('')}<h2>${esc(run.name)}</h2><p class="run-prompt">${esc(run.composition.positive)}</p>${run.error?`<details><summary>Run error</summary><p class="error">${esc(run.error)}</p></details>`:''}<div class="button-row"><button data-restore="${esc(run.id)}">Restore as copy</button><button data-run-download="${esc(run.id)}">Save run JSON</button></div></article>`).join('') || '<div class="empty">No runs yet.</div>';
+  }).join('')}<h2>${esc(run.name)}</h2>${run.reference_id?`<div class="run-reference"><img src="/api/reference/${encodeURIComponent(run.reference_id)}" alt="Character reference" loading="lazy"><span>${esc(run.reference_label||"Character reference")}</span></div>`:""}<p class="run-prompt">${esc(run.composition.positive)}</p>${run.error?`<details><summary>Run error</summary><p class="error">${esc(run.error)}</p></details>`:''}<div class="button-row"><button data-restore="${esc(run.id)}">Restore as copy</button><button data-run-download="${esc(run.id)}">Save run JSON</button></div></article>`).join('') || '<div class="empty">No runs yet.</div>';
 }
 async function checkConnection() {
   const status = await api('status');
@@ -112,7 +125,8 @@ async function savePreset(asCopy=false) {
   try {
     const saved = await api('preset', data);
     await load();
-    if (!editingPreset.id) { selected.push(saved.id); if(saved.references.length) references.push(saved.references[0]); }
+    if (!editingPreset.id) selected.push(saved.id);
+    if (!(referenceChoices[saved.id]||[]).some(id=>saved.references.includes(id))) referenceChoices[saved.id]=saved.references.slice(0,1);
     $('preset-dialog').close(); await changed(); message('Preset saved');
   } catch(error) { showError('preset-error', error); }
 }
@@ -155,16 +169,34 @@ on('preset-list','click', async e => {
   const pick=e.target.closest('[data-pick]'); if(!pick) return;
   const id=pick.dataset.pick;
   if(selected.includes(id)) selected=selected.filter(x=>x!==id);
-  else { selected.push(id); const p=state.presets.find(p=>p.id===id); if(p.references.length && !references.includes(p.references[0])) references.push(p.references[0]); }
+  else selected.push(id);
   await changed();
 });
 on('selection','click', async e => { const b=e.target.closest('[data-remove]'); if(b) { selected=selected.filter(id=>id!==b.dataset.remove); await changed(); } });
-on('references','click', async e => { const b=e.target.closest('[data-ref]'); if(b) { const id=b.dataset.ref; references=references.includes(id)?references.filter(x=>x!==id):[...references,id]; await changed(); } });
-on('clear','click', async()=>{ selected=[]; references=[]; $('extra').value=''; $('negative').value=''; await changed(); });
+on('references','click', async e => {
+  const edit=e.target.closest('[data-ref-edit]');if(edit)return openPreset(edit.dataset.refEdit);
+  const all=e.target.closest('[data-ref-all]'), none=e.target.closest('[data-ref-none]');
+  if(all||none){const id=(all||none).dataset[all?'refAll':'refNone'];const p=state.presets.find(p=>p.id===id);referenceBatch={preset_id:id,image_ids:all?[...p.references]:[]};await changed();return;}
+  const b=e.target.closest('[data-ref]');if(!b)return;
+  const id=b.dataset.ref,pid=b.dataset.refPreset,preset=state.presets.find(p=>p.id===pid);
+  if(referenceBatch?.preset_id===pid){const images=referenceBatch.image_ids;referenceBatch.image_ids=images.includes(id)?images.filter(x=>x!==id):[...images,id];}
+  else if(preset.kind==='character')referenceChoices[pid]=[id];
+  else {const choices=referenceChoices[pid]||[];referenceChoices[pid]=choices.includes(id)?choices.filter(x=>x!==id):[...choices,id];}
+  await changed();
+});
+on('references','change',async e=>{
+  const pid=e.target.dataset.referenceMode;if(!pid)return;
+  if(e.target.value==='each'){
+    if(referenceBatch){referenceChoices[referenceBatch.preset_id]=referenceBatch.image_ids.slice(0,1);message('One character group per batch; other references stay fixed.');}
+    referenceBatch={preset_id:pid,image_ids:(referenceChoices[pid]||[]).slice(0,1)};
+  }else{referenceChoices[pid]=referenceBatch?.image_ids.slice(0,1)||referenceChoices[pid]||[];referenceBatch=null;}
+  await changed();
+});
+on('clear','click', async()=>{ selected=[]; references=[]; referenceChoices={};referenceBatch=null; $('extra').value=''; $('negative').value=''; await changed(); });
 let debounce;
 for(const id of ['extra','negative','seed']) on(id,'input',()=>{ $('queue').disabled=true; clearTimeout(debounce); debounce=setTimeout(updatePreview,220); });
 on('workflow','change',async()=>{renderWorkflows(); await updatePreview();});
-on('count','change',()=>{ $('queue').textContent=Number($('count').value)===1?'Queue test':`Queue ${$('count').value} variations`; remember(); });
+on('count','change',async()=>{renderWorkflows();await updatePreview();});
 on('random-seed','click',async()=>{ $('seed').value=crypto.getRandomValues(new Uint32Array(1))[0]; await updatePreview(); });
 on('copy-prompt','click',async()=>{ await navigator.clipboard.writeText($('prompt-preview').textContent); message('Prompt copied'); });
 on('new-preset','click',()=>openPreset());
@@ -241,9 +273,10 @@ on('library-items','click',async e=>{
 on('queue','click',async()=>{
   if(busy)return;busy=true;$('queue').disabled=true;$('queue-status').textContent='Validating and submitting to local ComfyUI…';
   try {
-    const result=await api('submit',request());
+    const payload=request(),expected=payload.reference_batch?.image_ids.length||payload.count;
+    const result=await api('submit',payload);
     const queued=result.runs.filter(r=>r.status==='queued').length;
-    $('queue-status').textContent=`${queued} run${queued===1?'':'s'} queued.${queued<Number($('count').value)?' Submission stopped; see the run error below.':''}`;
+    $('queue-status').textContent=`${queued} of ${expected} runs queued.${queued<expected?' Submission stopped; see the run error below.':''}`;
     await load();renderRuns();
   }finally{busy=false;await updatePreview();}
 });
@@ -252,7 +285,7 @@ function download(value,name){const url=URL.createObjectURL(new Blob([JSON.strin
 on('download','click',()=>{if(preview?.graph)download(preview.graph,'preset-studio-api.json');});
 on('runs','click',async e=>{
   const restore=e.target.closest('[data-restore]');
-  if(restore){const saved=await api('restore',{id:restore.dataset.restore});await load();selected=saved.preset_ids;references=saved.reference_ids;$('extra').value=saved.extra;$('negative').value=saved.negative;$('workflow').value=saved.workflow_id;$('seed').value=saved.seed;$('count').value='1';await changed();message('Restored the saved configuration as independent copies');return;}
+  if(restore){const saved=await api('restore',{id:restore.dataset.restore});await load();selected=saved.preset_ids;references=saved.reference_ids;referenceChoices=choicesFromReferences(pickedPresets(),references);referenceBatch=null;$('extra').value=saved.extra;$('negative').value=saved.negative;$('workflow').value=saved.workflow_id;$('seed').value=saved.seed;$('count').value='1';await changed();message('Restored the saved configuration as independent copies');return;}
   const button=e.target.closest('[data-run-download]');if(button)download(await api('run',{id:button.dataset.runDownload}),'preset-studio-run.json');
 });
 on('connection','click',()=>{document.querySelector('.workflow-setup').open=true;document.querySelector('.connection-details').open=true;$('comfy-url').focus();});
@@ -261,7 +294,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',
 
 async function start(){
   await load();
-  try {const draft=JSON.parse(localStorage.getItem('preset-studio-draft')||'null');if(draft){selected=draft.preset_ids||[];references=draft.reference_ids||[];$('extra').value=draft.extra||'';$('negative').value=draft.negative||'';$('workflow').value=draft.workflow_id||'';$('seed').value=draft.seed??1;$('count').value=draft.count||1;}else if(state.workflows.length===1){$('workflow').value=state.workflows[0].id;}}catch{/* A broken browser draft never replaces server data. */}
+  try {const draft=JSON.parse(localStorage.getItem('preset-studio-draft')||'null');if(draft){selected=draft.preset_ids||[];references=draft.reference_ids||[];referenceChoices=choicesFromReferences(pickedPresets(),references);referenceBatch=draft.reference_batch||null;$('extra').value=draft.extra||'';$('negative').value=draft.negative||'';$('workflow').value=draft.workflow_id||'';$('seed').value=draft.seed??1;$('count').value=draft.count||1;}else if(state.workflows.length===1){$('workflow').value=state.workflows[0].id;}}catch{/* A broken browser draft never replaces server data. */}
   await changed();await checkConnection();
   if(document.modelContext?.registerTool){
     const lifecycle=new AbortController();
@@ -274,7 +307,7 @@ async function start(){
       async execute(input){
         if(!input || !Array.isArray(input.names) || input.names.some(n=>typeof n!=='string') || (input.extra!==undefined && typeof input.extra!=='string'))throw new Error('Provide preset names and optional extra text.');
         const matches=input.names.map(name=>{const found=state.presets.filter(p=>p.name===name);if(found.length!==1)throw new Error(`Preset name is missing or ambiguous: ${name}`);return found[0];});
-        selected=[...new Set(matches.map(p=>p.id))];references=[...new Set(matches.flatMap(p=>p.references.slice(0,1)))];$('extra').value=input.extra||'';
+        selected=[...new Set(matches.map(p=>p.id))];referenceChoices=Object.fromEntries(matches.map(p=>[p.id,p.references.slice(0,1)]));referenceBatch=null;$('extra').value=input.extra||'';
         await changed();return {staged:true,presets:matches.map(p=>p.name),positive:$('prompt-preview').textContent,validationError:$('preview-error').hidden?null:$('preview-error').textContent};
       }
     },{signal:lifecycle.signal});}catch{/* Optional agent integration must not block the workspace. */}

@@ -231,13 +231,56 @@ class Studio:
             self.reference_path(reference)
         return result
 
-    def preview(self, data):
+    def plan_runs(self, data):
         composition = self.composition(data)
+        seed = int(data.get('seed', 1))
+        count = int(data.get('count', 1))
+        batch = data.get('reference_batch')
+        if batch is not None:
+            if count != 1:
+                raise ValueError('Run each image once: seed variations must be set to 1')
+            if not isinstance(batch, dict):
+                raise ValueError('Invalid character reference batch')
+            preset = next((p for p in self.state['presets'] if p['id'] == batch.get('preset_id') and p['id'] in data.get('preset_ids', [])), None)
+            if not preset or preset['kind'] != 'character':
+                raise ValueError('Choose a selected character for the reference batch')
+            images, slot = batch.get('image_ids'), batch.get('slot')
+            if (not isinstance(images, list) or not 1 <= len(images) <= 200
+                    or any(not isinstance(key, str) or key not in preset['references'] for key in images)
+                    or len(set(images)) != len(images)):
+                raise ValueError('Select 1–200 distinct images belonging to this character')
+            if (type(slot) is not int or not 0 <= slot < len(composition['references'])
+                    or composition['references'][slot] != images[0]):
+                raise ValueError('The batch reference slot must contain the first selected character image')
+            plans = []
+            for key in images:
+                self.reference_path(key)
+                variant = copy.deepcopy(composition)
+                variant['references'][slot] = key
+                plans.append({'composition': variant, 'seed': seed, 'reference_id': key,
+                              'reference_label': self.state['references'][key]['name']})
+            return plans
+        if not 1 <= count <= 8:
+            raise ValueError('Choose 1–8 seed variations')
+        if seed + count - 1 > 2**53 - 1:
+            raise ValueError('Variation seeds exceed the safe integer range')
+        return [{'composition': copy.deepcopy(composition), 'seed': seed + i} for i in range(count)]
+
+    def preview(self, data):
+        plans = self.plan_runs(data)
+        composition = plans[0]['composition']
         workflow = next((w for w in self.state['workflows'] if w['id'] == data.get('workflow_id')), None)
-        result = {'composition': composition, 'graph': None}
+        result = {'composition': composition, 'graph': None, 'run_count': len(plans),
+                  'reference_plan': [{'reference_id': p.get('reference_id'), 'reference_label': p.get('reference_label'), 'seed': p['seed']} for p in plans]}
         if workflow:
-            symbolic = {**composition, 'references': [f'preset-studio/{key}{self.reference_path(key).suffix.lower()}' for key in composition['references']]}
-            result['graph'] = compile_graph(workflow['graph'], workflow['adapter'], symbolic, int(data.get('seed', 1)))
+            if len(plans) > 1 and not data.get('reference_batch') and not workflow['adapter'].get('seed'):
+                raise ValueError('Map a seed field before requesting seed variations')
+            for plan in plans:
+                c = plan['composition']
+                symbolic = {**c, 'references': [f'preset-studio/{key}{self.reference_path(key).suffix.lower()}' for key in c['references']]}
+                graph = compile_graph(workflow['graph'], workflow['adapter'], symbolic, plan['seed'])
+                if result['graph'] is None:
+                    result['graph'] = graph
         return result
 
     def upload_to_comfy(self, key):
@@ -259,26 +302,26 @@ class Studio:
         if not preview['graph']:
             raise ValueError('Choose and map a workflow first')
         workflow = next(w for w in self.state['workflows'] if w['id'] == data['workflow_id'])
-        count = int(data.get('count', 1))
-        if not 1 <= count <= 8:
-            raise ValueError('Choose 1–8 variations')
-        if count > 1 and not workflow['adapter'].get('seed'):
-            raise ValueError('Map a seed field before requesting seed variations')
-        seed = int(data.get('seed', 1))
-        if seed + count - 1 > 2**53 - 1:
-            raise ValueError('Variation seeds exceed the safe integer range')
-        composition = copy.deepcopy(preview['composition'])
+        plans = self.plan_runs(data)
         # Upload is only to the selected local ComfyUI, never a remote service.
-        composition['references'] = [self.upload_to_comfy(key) for key in composition['references']]
+        uploaded = {key: self.upload_to_comfy(key) for key in dict.fromkeys(key for p in plans for key in p['composition']['references'])}
         info = self.comfy('/object_info')
-        graphs = [compile_graph(workflow['graph'], workflow['adapter'], composition, seed + i) for i in range(count)]
-        for graph in graphs:
+        for plan in plans:
+            composition = copy.deepcopy(plan['composition'])
+            composition['references'] = [uploaded[key] for key in composition['references']]
+            graph = compile_graph(workflow['graph'], workflow['adapter'], composition, plan['seed'])
             validate_live(graph, info)
+            plan['graph'] = graph
         created = []
-        for i, graph in enumerate(graphs):
+        for plan in plans:
+            graph = plan['graph']
+            run_request = {**data, 'seed': plan['seed'], 'count': 1, 'reference_ids': plan['composition']['references']}
+            run_request.pop('reference_batch', None)
             run = {'id': uuid.uuid4().hex, 'created': time.time(), 'name': workflow['name'], 'status': 'submitting',
-                   'seed': seed + i, 'composition': preview['composition'], 'request': {**data, 'seed': seed + i, 'count': 1},
+                   'seed': plan['seed'], 'composition': plan['composition'], 'request': run_request,
                    'graph': graph, 'comfy_url': self.state['comfy_url'], 'outputs': []}
+            if plan.get('reference_id'):
+                run.update(reference_id=plan['reference_id'], reference_label=plan['reference_label'])
             run['preset_snapshots'] = copy.deepcopy([next(p for p in self.state['presets'] if p['id'] == key) for key in data.get('preset_ids', [])])
             run['workflow_snapshot'] = copy.deepcopy(workflow)
             self.state['runs'].insert(0, run)
@@ -422,10 +465,10 @@ def make_server(studio, port):
                     query = urlencode({key: asset.get(key, '') for key in ('filename', 'subfolder', 'type')})
                     body, mime = studio.comfy('/view?' + query, raw=True)
                     return self.send(body, mime)
-                names = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css'}
+                names = {'/': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css', '/reference-selection.mjs': 'reference-selection.mjs'}
                 if route.path in names:
                     path = WEB / names[route.path]
-                    return self.send(path.read_bytes(), {'html': 'text/html; charset=utf-8', 'js': 'text/javascript', 'css': 'text/css'}[path.suffix[1:]])
+                    return self.send(path.read_bytes(), {'html': 'text/html; charset=utf-8', 'js': 'text/javascript', 'mjs': 'text/javascript', 'css': 'text/css'}[path.suffix[1:]])
                 self.send({'error': 'Not found'}, status=404)
             except (ValueError, OSError, KeyError, IndexError, sqlite3.Error) as error:
                 self.send({'error': str(error)}, status=400)

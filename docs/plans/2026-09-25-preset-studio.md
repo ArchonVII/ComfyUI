@@ -8,7 +8,7 @@ Build a local browser workspace outside the ComfyUI UI, served by a small standa
 
 Characters and concepts carry positive/negative text, local references, and ordered LoRA settings. Composition follows explicit selection order. A workflow adapter binds prompt fields, reference slots, seed fields, and an optional MODEL/CLIP insertion point. Imported API graphs are copied into private app state. Every run snapshots its composition and compiled graph; errors remain visible and uncertain submissions are never automatically retried.
 
-The initial variation control changes seeds while keeping the composition fixed. Users can change any selected preset and submit another batch, or restore a previous combination. Images and video outputs appear in the local run history. No automatic GPU generation during implementation validation.
+Variation controls support seed sweeps with fixed references, or one run per selected character image with the seed and all other inputs fixed. A character image group occupies one workflow slot. Users can change any selected preset and submit another batch, or restore a previous combination. Images and video outputs appear in the local run history. No automatic GPU generation during implementation validation.
 
 ## Steps
 
@@ -27,7 +27,8 @@ Select character plus concept, add custom text, inspect prompt/references/LoRAs,
 
 ## Verification and handoff
 
-- All four implementation steps are complete. Focused suite: 19 passing tests, including a real loopback HTTP pipeline against a test ComfyUI backend. Browser JavaScript syntax and HTML asset/element references checked.
+- All four implementation steps are complete. Focused suite: 23 passing Python tests plus four browser-selection module tests, including a real loopback HTTP pipeline against a test ComfyUI backend. Browser JavaScript syntax and HTML asset/element references checked.
+- Owner refinements: flattened compact workspace; per-character exact-image selection or one-run-each groups, with fixed environment/seed, explicit queue count, input-image attribution and single-result restore.
 - Local app runs independently at http://127.0.0.1:8791, with a clickable share-folder entrypoint at http://127.0.0.1:8790/preset-studio.html. Windows launcher was exercised, including restart with persisted data.
 - Connected to the existing ComfyUI process on 8192. Read-only validation confirms the saved Klein 9B subject/environment graph matches its 987-node catalog. A private, independently mapped workflow copy and the existing empty subject collection were imported into Studio.
 - The existing Flux 4B and GGUF Wan examples do not match this server's installed models/nodes. They remain untouched; the app reports such mismatches before queue submission.

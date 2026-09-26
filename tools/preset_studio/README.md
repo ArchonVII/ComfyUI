@@ -29,8 +29,13 @@ does not start, stop, restart, or clear the queue of that server.
 2. Create **Concept / style** presets with text and optional LoRA filenames and
    model/CLIP strengths. The included “Amateur iPhone photo 1” is text-only until
    you choose an installed LoRA in its editor; the app never guesses a model.
-3. Select presets in composition order. Click reference thumbnails to select
-   their slot order; selected images stay fixed across seed variations.
+3. Select presets in composition order. Each character has its own reference
+   strip: **Single image** picks one exact image; **Run each selected** lets you
+   select several (or All) and queues one run per image, with the same seed,
+   prompt, LoRAs and other references. The group occupies one workflow slot,
+   not one slot per image. Only one character group is varied per batch; other
+   characters stay fixed. Reference slots follow preset selection order. Add
+   images directly using **+ Add images** beside a character with no images.
 4. Import a saved API workflow from the runtime library or a JSON file. Studio
    copies it into its own private store. **Map fields** assigns positive/negative
    prompt fields, reference slots and seed fields. Unmapped fields retain their
@@ -38,12 +43,17 @@ does not start, stop, restart, or clear the queue of that server.
 5. For preset LoRAs, explicitly choose the MODEL source and optionally its CLIP
    source. The app inserts the ordered stack after these outputs, rewiring their
    consumers in a graph copy. Model-only workflows can leave CLIP unmapped.
-6. Review the assembled prompt and stack, then **Queue quick test** or 2–8 seed
-   variations. Change a concept and queue another batch to compare results.
+6. Review the assembled prompt and stack, then **Queue test** or 2–8 seed
+   variations. In **Run each selected**, the Queue button shows the number of
+   images and seed variations are disabled so each selected image runs exactly
+   once. Change a concept and queue another batch to compare results.
 7. Results refresh while the tab is visible. **Restore as copy** restores the
    original preset and workflow snapshots; **Save run JSON** includes the exact
-   submitted graph and configuration. A preview download uses reference names
+   submitted graph and configuration. Character-image batches show the source
+   image on each result; restoring one result restores just that image/run,
+   never the entire batch. A preview download uses reference names
    that become concrete after upload, so a run export is the reproducible artifact.
+   For image batches, the preview/export represents the first selected image.
 
 ## Local data and boundaries
 
@@ -81,6 +91,7 @@ been exercised in a supported WebMCP browser context.
 
 ```powershell
 python -m unittest discover -s tools/preset_studio/tests -v
+node --test tools/preset_studio/tests/reference-selection.test.mjs
 node --check tools/preset_studio/web/app.js
 ```
 

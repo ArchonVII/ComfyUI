@@ -73,6 +73,20 @@ summary { color: var(--muted); font-size: .8125rem; cursor: pointer; padding: 3p
 .chip span { color: #9bbbd1; margin-right: 5px; }
 .references { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
 .references p { margin: 0; }
+.reference-row { align-items: start; }
+#references { display: block; flex: 1; }
+.reference-group + .reference-group { border-top: 1px solid var(--line); padding-top: 5px; margin-top: 5px; }
+.reference-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; font-size: .875rem; }
+.reference-tools strong { font-weight: 500; margin-right: 3px; }
+.reference-tools select { width: auto; max-width: 190px; min-height: 26px; padding: 3px 5px; }
+.reference-strip { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 3px; }
+.reference-strip .ref { width: 76px; flex: 0 0 76px; }
+.reference-strip .ref img { width: 70px; height: 80px; }
+.reference-strip .ref small { display: block; width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; font-weight: 400; }
+.reference-strip .ref span { bottom: 20px; }
+.run-reference { display: flex; align-items: center; gap: 5px; margin: 4px 0; font-size: .8125rem; color: var(--muted); }
+.run-card .run-reference img { width: 28px; height: 34px; object-fit: cover; }
+.run-reference span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #ref-count { display: block; font-size: .75rem; }
 .ref { position: relative; border: 2px solid transparent; padding: 1px; background: #10161e; width: 47px; }
 .ref img { display: block; width: 41px; height: 47px; object-fit: cover; }
