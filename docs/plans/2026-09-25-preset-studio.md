@@ -1,6 +1,6 @@
 # Standalone Preset Studio
 
-Status: implementing. Owner: Codex. User authorized implementation on 2026-09-25.
+Status: first version implemented; local user review pending. Owner: Codex. User authorized implementation on 2026-09-25. Draft fork PR: https://github.com/ArchonVII/ComfyUI/pull/22. No merge authorized.
 
 ## Scope and decisions
 
@@ -24,3 +24,11 @@ Issue-less lane: fork has issues disabled. Branch `agent/codex/no-issue-preset-s
 ## Acceptance
 
 Select character plus concept, add custom text, inspect prompt/references/LoRAs, map an API workflow, preview patched graph, and explicitly queue reproducible seed variations. Persistence survives restart. Reject nonlocal backend URLs and cross-origin writes. Never rewrite existing workflow files or send images off machine.
+
+## Verification and handoff
+
+- All four implementation steps are complete. Focused suite: 19 passing tests, including a real loopback HTTP pipeline against a test ComfyUI backend. Browser JavaScript syntax and HTML asset/element references checked.
+- Local app runs independently at http://127.0.0.1:8791, with a clickable share-folder entrypoint at http://127.0.0.1:8790/preset-studio.html. Windows launcher was exercised, including restart with persisted data.
+- Connected to the existing ComfyUI process on 8192. Read-only validation confirms the saved Klein 9B subject/environment graph matches its 987-node catalog. A private, independently mapped workflow copy and the existing empty subject collection were imported into Studio.
+- The existing Flux 4B and GGUF Wan examples do not match this server's installed models/nodes. They remain untouched; the app reports such mismatches before queue submission.
+- No GPU generation or browser click-through was performed. Optional WebMCP staging is feature-detected; no supported WebMCP validation context was available. Remaining work is owner review of the first interface and a chosen real generation, then any requested refinements and separately authorized landing.

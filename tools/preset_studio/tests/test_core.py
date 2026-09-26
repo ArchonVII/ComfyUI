@@ -1,5 +1,4 @@
 import copy
-import importlib.util
 import sys
 import unittest
 from pathlib import Path
@@ -64,6 +63,24 @@ class CompositionTests(unittest.TestCase):
     def test_editor_workflow_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'API'):
             self.core.validate_graph({'nodes': [], 'links': []})
+
+    def test_mapping_cannot_put_seed_in_a_text_field(self):
+        with self.assertRaisesRegex(ValueError, 'type'):
+            self.core.compile_graph(self.graph(), {'seed': ['2.text']}, self.core.compose([]), 1)
+
+    def test_live_validation_rejects_cloud_nodes_and_wrong_link_types(self):
+        info = {'Cloud': {'api_node': True, 'input': {}, 'output': []}}
+        with self.assertRaisesRegex(ValueError, 'cloud'):
+            self.core.validate_live({'1': {'class_type': 'Cloud', 'inputs': {}}}, info)
+        graph = {'1': {'class_type': 'A', 'inputs': {}}, '2': {'class_type': 'B', 'inputs': {'x': ['1', 0]}}}
+        info = {'A': {'output': ['MODEL']}, 'B': {'input': {'required': {'x': ['IMAGE']}}, 'output': []}}
+        with self.assertRaisesRegex(ValueError, 'expects IMAGE'):
+            self.core.validate_live(graph, info)
+
+    def test_live_validation_accepts_union_input_types(self):
+        graph = {'1': {'class_type': 'A', 'inputs': {}}, '2': {'class_type': 'B', 'inputs': {'x': ['1', 0]}}}
+        info = {'A': {'output': ['IMAGE']}, 'B': {'input': {'required': {'x': ['IMAGE,MASK']}}, 'output': []}}
+        self.core.validate_live(graph, info)
 
 
 if __name__ == '__main__':
