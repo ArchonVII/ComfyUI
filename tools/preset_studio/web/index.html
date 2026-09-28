@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
 </head>
 <body>
-<header class="topbar"><a class="brand" href="/">Preset Studio</a><button id="connection" class="connection">Checking ComfyUI…</button></header>
-<main>
+<header class="topbar"><a class="brand" href="/">Preset Studio</a><nav id="app-nav" class="app-nav" aria-label="Preset Studio sections"></nav><button id="connection" class="connection">Checking ComfyUI…</button></header>
+<main class="compose-workspace" data-view="compose">
   <aside class="library">
     <div class="section-head"><h1>Presets</h1><div><button id="import-library" class="quiet small">Import</button><button id="new-preset" class="small">+ New</button></div></div>
     <input id="search" type="search" placeholder="Search presets" aria-label="Search presets">
@@ -22,7 +22,7 @@
       <div class="count-control"><label for="count">Runs</label><select id="count" title="Same combination, one new seed per run"><option value="1">1</option><option value="2">2 seeds</option><option value="4">4 seeds</option><option value="8">8 seeds</option></select></div>
       <button id="queue" class="accent generate">Queue test</button>
     </div>
-    <div class="setup-line"><details class="workflow-setup"><summary>Workflow setup</summary><div class="button-row"><button id="add-workflow">Import API workflow</button><button id="map-workflow">Map fields</button><button id="download">Export assembled JSON</button></div><p id="workflow-summary" class="hint"></p><details class="connection-details"><summary>Connection</summary><div class="inline"><label class="sr-only" for="comfy-url">ComfyUI address</label><input id="comfy-url" placeholder="http://127.0.0.1:8188"><button id="save-connection">Connect</button></div></details></details><p id="queue-status" class="hint" role="status"></p></div>
+    <div class="setup-line"><details class="workflow-setup"><summary>Workflow setup</summary><div class="button-row"><button id="add-workflow">Import API workflow</button><button id="map-workflow">Map fields</button><button id="download">Export assembled JSON</button></div><p id="workflow-summary" class="hint"></p></details><p id="queue-status" class="hint" role="status"></p></div>
   </section>
   <section class="composer" aria-label="Prompt composition">
     <div class="composition-row"><h2>Selected</h2><div id="selection" class="selection"></div><button id="clear" class="quiet small">Clear</button></div>
@@ -34,7 +34,30 @@
     <div class="composition-row lora-section"><h2>LoRAs <span id="lora-count" class="hint"></span></h2><div id="lora-preview" class="lora-preview"></div></div>
     <div id="preview-error" class="error" role="alert" hidden></div>
   </section>
+</main>
+<main class="destination-view builder-view" data-view="builder" hidden>
+  <aside class="builder-catalog-rail"><div class="section-head"><div><p class="eyebrow">Prompt catalog</p><h1>Blocks</h1></div></div><input id="builder-search" type="search" placeholder="Search tags, presets, wildcards"><div id="builder-catalog"></div></aside>
+  <section class="builder-canvas"><div class="destination-header"><div><p class="eyebrow">Experiment builder</p><h1 id="builder-title">Start an experiment</h1></div><div class="button-row"><button id="builder-branch">Branch option</button><button id="builder-new" class="accent">New experiment</button></div></div><div class="builder-lanes"><section><header><strong>Positive prompt</strong><span>Ordered visual blocks</span></header><div id="builder-positive" class="builder-lane" data-builder-lane="positive"></div></section><section><header><strong>Negative prompt</strong><span>Things to avoid</span></header><div id="builder-negative" class="builder-lane negative" data-builder-lane="negative"></div></section></div><section class="builder-graph-placeholder"><div><p class="eyebrow">Workflow graph</p><h2>Curated graph blocks</h2><p id="builder-graph-summary">Choose a saved workflow as a starting graph. Unknown nodes remain preserved.</p><div id="builder-graph-blocks" class="builder-graph-blocks"></div></div><div class="button-row"><select id="builder-workflow" aria-label="Builder starting workflow"></select><button id="builder-attach-workflow">Load workflow</button><button id="builder-basic-workflow">New basic graph</button><button id="builder-import-workflow">Import JSON</button></div></section><div id="builder-options" class="builder-options"></div></section>
+  <aside id="builder-properties" class="builder-properties"><p class="eyebrow">Inspector</p><h2>Option summary</h2><div id="builder-preview"></div><div class="builder-inspector-actions"><button id="builder-save-bundle">Save prompt bundle</button><button id="builder-save-workflow">Save workflow</button><button id="builder-delete-option" class="danger">Scrap option</button><button id="builder-generate" class="accent" disabled>Generate</button></div></aside>
+</main>
+<main class="destination-view characters-view" data-view="characters" hidden>
+  <aside class="character-rail">
+    <div class="section-head"><h1>Characters</h1><button id="new-character" class="small accent">+ New</button></div>
+    <input id="character-search" type="search" placeholder="Search characters" aria-label="Search characters">
+    <div id="character-list" class="character-list"></div>
+  </aside>
+  <section id="character-workspace" class="character-workspace"></section>
+</main>
+<main class="destination-view workflows-view" data-view="workflows" hidden>
+  <div class="destination-header"><div><p class="eyebrow">Workflow library</p><h1>Mapped API workflows</h1></div><button id="add-workflow-page" class="accent">Import workflow</button></div>
+  <div id="workflow-list" class="workflow-list"></div>
+</main>
+<main class="destination-view results-view" data-view="results" hidden>
   <section class="results"><div class="section-head"><h1>Results</h1><button id="refresh" class="quiet small">Refresh</button></div><div id="runs" class="run-grid"></div></section>
+</main>
+<main class="destination-view settings-view" data-view="settings" hidden>
+  <div class="destination-header"><div><p class="eyebrow">Local settings</p><h1>Connections and catalog behavior</h1></div></div>
+  <section class="settings-card"><h2>ComfyUI connection</h2><p class="hint">Preset Studio connects only to a loopback ComfyUI server.</p><div class="inline settings-row"><label class="sr-only" for="comfy-url">ComfyUI address</label><input id="comfy-url" placeholder="http://127.0.0.1:8188"><button id="save-connection">Connect</button></div></section>
 </main>
 <div id="toast" role="status" hidden></div>
 <dialog id="preset-dialog"><form id="preset-form">
@@ -60,4 +83,30 @@
   <div class="dialog-actions"><button type="submit" class="accent">Save workflow mapping</button></div>
 </form></dialog>
 <dialog id="library-dialog"><div class="section-head"><h1>Import from this ComfyUI install</h1><button data-close="library-dialog" class="quiet">Close</button></div><p class="hint">Creates Studio presets and workflow copies. Existing collections and saved workflows stay unchanged.</p><div id="library-items"></div></dialog>
+<dialog id="folder-dialog">
+  <div class="section-head"><div><p class="eyebrow">Local folder</p><h1 id="folder-title">Assign images to character</h1></div><button data-close="folder-dialog" class="quiet">Close</button></div>
+  <p id="folder-hint" class="hint">Browse locally, choose this folder, and decide whether to include its subfolders. Nothing is moved or copied.</p>
+  <div id="folder-recent" class="folder-recent"></div>
+  <div class="folder-address"><button id="folder-up" class="quiet" title="Parent folder">↑ Up</button><input id="folder-current" readonly aria-label="Current folder"><button id="folder-refresh" class="quiet">Refresh</button></div>
+  <div id="folder-list" class="folder-list"></div>
+  <label class="check-row"><input id="folder-recursive" type="checkbox"> Include subfolders</label>
+  <div id="folder-error" class="error" role="alert" hidden></div>
+  <div class="dialog-actions"><button id="assign-folder" class="accent">Assign images from this folder</button></div>
+</dialog>
+<dialog id="family-dialog">
+  <div class="section-head"><div><p class="eyebrow">Image family</p><h1 id="family-dialog-title">Create a flexible image group</h1></div><button data-close="family-dialog" class="quiet">Close</button></div>
+  <p class="hint">Choose any related images. The family is a tag-like group; its source image can be replaced later without changing membership.</p>
+  <label for="family-name">Family name</label><input id="family-name" maxlength="160" placeholder="Example: blue dress portrait set">
+  <div id="family-image-picker" class="family-image-picker"></div>
+  <div id="family-error" class="error" role="alert" hidden></div>
+  <div class="dialog-actions"><button id="create-family" class="accent">Create family</button></div>
+</dialog>
+<dialog id="lineage-dialog">
+  <div class="section-head"><div><p class="eyebrow">Generation lineage</p><h1>Images generated from this source</h1></div><button data-close="lineage-dialog" class="quiet">Close</button></div>
+  <div id="lineage-gallery" class="lineage-gallery"></div>
+</dialog>
+<dialog id="image-viewer-dialog" class="image-viewer-dialog">
+  <div class="section-head"><div><p class="eyebrow">Original image</p><h1 id="image-viewer-title">Image</h1></div><button data-close="image-viewer-dialog" class="quiet">Close</button></div>
+  <img id="image-viewer-img" alt="Full-resolution character image">
+</dialog>
 </body></html>

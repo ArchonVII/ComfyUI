@@ -13,6 +13,7 @@ class ReferenceBatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.studio = Studio(self.temp.name)
+        self.addCleanup(self.studio.close)
         self.refs = []
         for name in ('face-a', 'face-b', 'room'):
             path = Path(self.temp.name) / (name + '.png')
@@ -51,6 +52,11 @@ class ReferenceBatchTests(unittest.TestCase):
         self.assertEqual([r['seed'] for r in runs], [42, 42])
         self.assertEqual([r['composition']['references'][0] for r in runs], self.refs[:2])
         self.assertEqual(self.uploads.count(self.refs[2]), 1)
+        self.assertTrue(all(len(run['lineage_sources']) == 1 for run in runs))
+        self.assertEqual(
+            [source['reference_id'] for run in runs for source in run['lineage_sources']],
+            self.refs[:2],
+        )
 
     def test_restoring_one_batch_result_does_not_repeat_the_group(self):
         runs = self.studio.submit(self.data)['runs']

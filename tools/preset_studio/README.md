@@ -6,16 +6,21 @@ It uses Python's standard library and browser modules, with no install/build ste
 
 ## Start
 
-From this checkout, with Python 3.10 or newer:
-
-```powershell
-python tools/preset_studio/service.py --runtime C:/tools/image/ComfyUI --port 8791
-```
-
-Open http://127.0.0.1:8791/. For a hidden, persistent Windows process:
+Launch the desktop window from this checkout, with Python 3.10 or newer and
+Chrome or Edge installed:
 
 ```powershell
 ./tools/preset_studio/launch.ps1 -Runtime C:/tools/image/ComfyUI
+```
+
+The launcher starts the local server and a dedicated browser app window.
+Closing that window stops the Studio server. Nothing starts at Windows sign-in.
+The browser profile is private local data under `user/preset_studio/browser-profile`.
+Use the desktop shortcut to open Studio; a web URL cannot start a stopped server.
+For explicit terminal-based development only:
+
+```powershell
+python tools/preset_studio/service.py --runtime C:/tools/image/ComfyUI --port 8791
 ```
 
 The app runs independently of ComfyUI and remains useful for composing while
@@ -23,6 +28,46 @@ ComfyUI is stopped. Set its local ComfyUI address in **Local connection**. It
 does not start, stop, restart, or clear the queue of that server.
 
 ## Use
+
+### Characters
+
+The full **Characters** workspace manages local character images without an
+always-on watcher. Create a character, explicitly add a folder, or click
+**Find New Pics** to run a manual face-match scan. The review queue selects the
+recommended matches by default and supports bulk accept/reject. Byte-exact
+copies are shown separately and can be moved to a recoverable quarantine.
+
+Group related images into named families independently of the designated source
+image. The highest-resolution member is recommended as the source, but it can be
+replaced at any time. Generated outputs retain lineage to the exact source and
+can be opened as a source-specific gallery. Any assigned or designated-source
+image can be sent directly to Compose or Builder.
+
+### Builder
+
+The full **Builder** workspace is the fast path for prompt and workflow
+experimentation:
+
+1. Start an experiment, search built-in tags, presets, and linked wildcard
+   files, then add or drag blocks into positive and negative lanes. Blocks stay
+   ordered and have independent enabled state and weights. Favorites and saved
+   prompt bundles persist locally.
+2. Start from the connected basic image graph, load a mapped Studio workflow,
+   or import and map an API workflow. Common nodes appear as compact curated
+   blocks; unknown custom nodes are preserved as advanced blocks instead of
+   being discarded. Select a block to edit its scalar inputs.
+3. Choose an installed checkpoint, LoRA stack, strengths, and reference images
+   in the inspector. Character gallery **Use in Builder** creates a character
+   experiment when needed and stages the image in one click.
+4. Branch named options to keep alternatives together. Each explicit
+   **Generate** click (or Ctrl/Cmd+Enter) creates an immutable revision before
+   queue submission; editing never auto-queues. Completed outputs attach to the
+   exact revision that produced them.
+5. Save a prompt board as a reusable bundle, promote a tuned graph into the
+   mapped workflow library, or scrap an option without deleting its historical
+   generated revisions.
+
+### Compose
 
 1. Create a **Character** preset with identity text and reference images, or use
    **Import existing library** to copy a Reference Library collection/profile.
@@ -66,7 +111,7 @@ remembers the current selection; authoritative presets/workflows/runs are on dis
 Never commit private state or images. The service refuses nonlocal ComfyUI URLs,
 redirects, cross-origin writes, and cloud API nodes advertised by ComfyUI.
 
-The first version supports a single MODEL/CLIP insertion point per workflow.
+Compose and Builder support a single MODEL/CLIP insertion point per workflow.
 Multi-model pipelines needing different LoRA stacks on different branches need
 those branches prepared in the API workflow. A workflow must already implement
 the intended image/video conditioning; Studio does not infer identity conditioning
@@ -95,6 +140,8 @@ node --test tools/preset_studio/tests/reference-selection.test.mjs
 node --check tools/preset_studio/web/app.js
 ```
 
-Tests cover composition, conflicts, nonmutating graph adaptation, local state,
-cross-origin protection, stable references, real loopback HTTP submission against
-a test backend, seed variations, uncertain outcomes, output history and snapshots.
+Tests cover composition, conflicts, nonmutating graph adaptation, Builder
+documents and immutable revisions, character catalog and discovery behavior,
+local state, cross-origin protection, stable references, real loopback HTTP
+submission against a test backend, seed variations, uncertain outcomes, output
+history and snapshots.
