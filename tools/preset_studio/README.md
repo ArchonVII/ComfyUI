@@ -1,0 +1,147 @@
+# Preset Studio
+
+A standalone, local browser workspace for composing character/reference presets,
+prompt concepts and LoRAs, then submitting image or video API workflows to ComfyUI.
+It uses Python's standard library and browser modules, with no install/build step.
+
+## Start
+
+Launch the desktop window from this checkout, with Python 3.10 or newer and
+Chrome or Edge installed:
+
+```powershell
+./tools/preset_studio/launch.ps1 -Runtime C:/tools/image/ComfyUI
+```
+
+The launcher starts the local server and a dedicated browser app window.
+Closing that window stops the Studio server. Nothing starts at Windows sign-in.
+The browser profile is private local data under `user/preset_studio/browser-profile`.
+Use the desktop shortcut to open Studio; a web URL cannot start a stopped server.
+For explicit terminal-based development only:
+
+```powershell
+python tools/preset_studio/service.py --runtime C:/tools/image/ComfyUI --port 8791
+```
+
+The app runs independently of ComfyUI and remains useful for composing while
+ComfyUI is stopped. Set its local ComfyUI address in **Local connection**. It
+does not start, stop, restart, or clear the queue of that server.
+
+## Use
+
+### Characters
+
+The full **Characters** workspace manages local character images without an
+always-on watcher. Create a character, explicitly add a folder, or click
+**Find New Pics** to run a manual face-match scan. The review queue selects the
+recommended matches by default and supports bulk accept/reject. Byte-exact
+copies are shown separately and can be moved to a recoverable quarantine.
+
+Group related images into named families independently of the designated source
+image. The highest-resolution member is recommended as the source, but it can be
+replaced at any time. Generated outputs retain lineage to the exact source and
+can be opened as a source-specific gallery. Any assigned or designated-source
+image can be sent directly to Compose or Builder.
+
+### Builder
+
+The full **Builder** workspace is the fast path for prompt and workflow
+experimentation:
+
+1. Start an experiment, search built-in tags, presets, and linked wildcard
+   files, then add or drag blocks into positive and negative lanes. Blocks stay
+   ordered and have independent enabled state and weights. Favorites and saved
+   prompt bundles persist locally.
+2. Start from the connected basic image graph, load a mapped Studio workflow,
+   or import and map an API workflow. Common nodes appear as compact curated
+   blocks; unknown custom nodes are preserved as advanced blocks instead of
+   being discarded. Select a block to edit its scalar inputs.
+3. Choose an installed checkpoint, LoRA stack, strengths, and reference images
+   in the inspector. Character gallery **Use in Builder** creates a character
+   experiment when needed and stages the image in one click.
+4. Branch named options to keep alternatives together. Each explicit
+   **Generate** click (or Ctrl/Cmd+Enter) creates an immutable revision before
+   queue submission; editing never auto-queues. Completed outputs attach to the
+   exact revision that produced them.
+5. Save a prompt board as a reusable bundle, promote a tuned graph into the
+   mapped workflow library, or scrap an option without deleting its historical
+   generated revisions.
+
+### Compose
+
+1. Create a **Character** preset with identity text and reference images, or use
+   **Import existing library** to copy a Reference Library collection/profile.
+2. Create **Concept / style** presets with text and optional LoRA filenames and
+   model/CLIP strengths. The included “Amateur iPhone photo 1” is text-only until
+   you choose an installed LoRA in its editor; the app never guesses a model.
+3. Select presets in composition order. Each character has its own reference
+   strip: **Single image** picks one exact image; **Run each selected** lets you
+   select several (or All) and queues one run per image, with the same seed,
+   prompt, LoRAs and other references. The group occupies one workflow slot,
+   not one slot per image. Only one character group is varied per batch; other
+   characters stay fixed. Reference slots follow preset selection order. Add
+   images directly using **+ Add images** beside a character with no images.
+4. Import a saved API workflow from the runtime library or a JSON file. Studio
+   copies it into its own private store. **Map fields** assigns positive/negative
+   prompt fields, reference slots and seed fields. Unmapped fields retain their
+   workflow values. Review suggestions, particularly multiple text encoders.
+5. For preset LoRAs, explicitly choose the MODEL source and optionally its CLIP
+   source. The app inserts the ordered stack after these outputs, rewiring their
+   consumers in a graph copy. Model-only workflows can leave CLIP unmapped.
+6. Review the assembled prompt and stack, then **Queue test** or 2–8 seed
+   variations. In **Run each selected**, the Queue button shows the number of
+   images and seed variations are disabled so each selected image runs exactly
+   once. Change a concept and queue another batch to compare results.
+7. Results refresh while the tab is visible. **Restore as copy** restores the
+   original preset and workflow snapshots; **Save run JSON** includes the exact
+   submitted graph and configuration. Character-image batches show the source
+   image on each result; restoring one result restores just that image/run,
+   never the entire batch. A preview download uses reference names
+   that become concrete after upload, so a run export is the reproducible artifact.
+   For image batches, the preview/export represents the first selected image.
+
+## Local data and boundaries
+
+All mutable state, uploaded/copied references, run snapshots and logs live in
+`<runtime>/user/preset_studio/`, already ignored by this fork. Imported reference
+images are stable local copies; source files and saved workflows are untouched.
+Back up that directory with the service stopped. Also retain ComfyUI's inputs,
+outputs, models and custom nodes to reproduce completed runs. A browser draft
+remembers the current selection; authoritative presets/workflows/runs are on disk.
+Never commit private state or images. The service refuses nonlocal ComfyUI URLs,
+redirects, cross-origin writes, and cloud API nodes advertised by ComfyUI.
+
+Compose and Builder support a single MODEL/CLIP insertion point per workflow.
+Multi-model pipelines needing different LoRA stacks on different branches need
+those branches prepared in the API workflow. A workflow must already implement
+the intended image/video conditioning; Studio does not infer identity conditioning
+from arbitrary graphs. Prompt fields replace their mapped original text.
+Reference slots must match the selected image count. Matching types and installed
+dropdown values are checked before submission; ComfyUI still owns full execution
+validation and model-family compatibility.
+
+Submission stops on the first error. Uncertain network outcomes are saved without
+automatic retry. Check ComfyUI history before retrying such a run. The service is
+single-process/single-owner; don't run multiple Studio processes against one state
+directory. Images are limited to PNG/JPEG/WebP/BMP, 20 MB each. Runs are retained on
+disk, with the latest 100 displayed. Collection imports use the Default profile
+and up to 200 references. Source library changes do not silently alter imported
+presets. No browser click-through or GPU generation is part of automated tests.
+
+An optional, feature-detected WebMCP action stages an existing combination without
+queueing. Unsupported browsers simply omit it. This optional integration has not
+been exercised in a supported WebMCP browser context.
+
+## Focused checks
+
+```powershell
+python -m unittest discover -s tools/preset_studio/tests -v
+node --test tools/preset_studio/tests/reference-selection.test.mjs
+node --check tools/preset_studio/web/app.js
+```
+
+Tests cover composition, conflicts, nonmutating graph adaptation, Builder
+documents and immutable revisions, character catalog and discovery behavior,
+local state, cross-origin protection, stable references, real loopback HTTP
+submission against a test backend, seed variations, uncertain outcomes, output
+history and snapshots.
