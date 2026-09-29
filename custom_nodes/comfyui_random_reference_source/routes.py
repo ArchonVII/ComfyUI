@@ -130,7 +130,8 @@ async def post_pick_images(request: web.Request) -> web.Response:
 async def post_preview(request: web.Request) -> web.Response:
     data = await _read_json(request)
     try:
-        payload = build_reference_preview_payload(
+        payload = await asyncio.to_thread(
+            build_reference_preview_payload,
             source_mode=data.get("source_mode", "auto"),
             folder=data.get("folder", "."),
             favorite=data.get("favorite", "None"),
@@ -139,6 +140,11 @@ async def post_preview(request: web.Request) -> web.Response:
             seed=int(data.get("seed") or 0),
             include_subfolders=bool(data.get("include_subfolders", False)),
             favorites=load_presets(),
+            max_images=int(data.get("max_images", 8)),
+            offset=int(data.get("offset", 0)),
+            browse=bool(data.get("browse", False)),
+            search=str(data.get("search", "")),
+            thumbnail_size=int(data.get("thumbnail_size", 192)),
         )
     except Exception as exc:  # noqa: BLE001 - report preview issues to the node UI
         return web.json_response({"error": str(exc)}, status=400)
@@ -152,9 +158,14 @@ def preset_from_payload(data: dict[str, Any]) -> dict[str, object]:
         source_mode = "selection" if selected else "folder"
     if source_mode not in {"folder", "selection"}:
         raise ValueError("Favorite source_mode must be folder or selection")
+    folder = str(data.get("folder", "")).strip()
+    if source_mode == "folder" and not folder:
+        raise ValueError("Choose a reference folder before saving the favorite.")
+    if source_mode == "selection" and not selected:
+        raise ValueError("Choose reference images before saving the favorite.")
     return {
         "kind": source_mode,
-        "folder": str(data.get("folder", ".")).strip() or ".",
+        "folder": folder,
         "images": selected if source_mode == "selection" else [],
         "include_subfolders": bool(data.get("include_subfolders", False)),
         "prompt_text": str(data.get("prompt_text", "")).strip(),
@@ -173,7 +184,7 @@ async def post_preset(request: web.Request) -> web.Response:
     data = await _read_json(request)
     try:
         name = str(data.get("name", "")).strip()
-        preset = save_preset(name, preset_from_payload(data))
+        preset = save_preset(name, preset_from_payload(data), mode=str(data.get("save_mode", "upsert")))
         presets = load_presets()
     except ValueError as exc:
         return web.json_response({"error": str(exc)}, status=400)

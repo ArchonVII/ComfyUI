@@ -33,6 +33,62 @@ def title_node(workflow, title_fragment):
     )
 
 
+def test_workspace_uses_native_subgraphs_and_preserves_executable_graph():
+    builder = load_builder()
+    editor = builder.build_artifacts()["editor"]
+    definitions = editor.get("definitions", {}).get("subgraphs", [])
+    assert len(definitions) == 3
+    assert builder.api_from_editor(editor) == builder.api_from_editor(builder.build_flat_editor())
+    assert len(editor["nodes"]) <= 21
+    assert len(nodes(editor, "RandomReferenceImageSource")) == 5
+    assert len(nodes(editor, "SaveImage")) == 2
+    assert not nodes(editor, "ComfySwitchNode")
+
+
+def test_workspace_controls_are_exposed_and_do_not_overlap():
+    builder = load_builder()
+    editor = builder.build_artifacts()["editor"]
+    proxies = [tuple(proxy) for node in editor["nodes"]
+               for proxy in node.get("properties", {}).get("proxyWidgets", [])]
+    for proxy in [("65", "text"), ("11", "mode"), ("48", "steps"), ("49", "cfg"),
+                  ("58", "same_identity_threshold")]:
+        assert proxy in proxies
+    assert len(nodes(editor, "RandomNoise")) == 1
+    assert len(nodes(editor, "PreviewAny")) == 2
+    by_id = {node["id"]: node for node in editor["nodes"]}
+    for image, switch in [(2, 6), (3, 25), (4, 32), (5, 39)]:
+        assert abs(by_id[image]["pos"][0] - by_id[switch]["pos"][0]) < 10
+        assert 0 < by_id[switch]["pos"][1] - by_id[image]["pos"][1] <= 400
+    for index, left in enumerate(editor["nodes"]):
+        x, y = left["pos"]
+        w, h = left["size"]
+        for right in editor["nodes"][index + 1:]:
+            rx, ry = right["pos"]
+            rw, rh = right["size"]
+            assert x + w <= rx or rx + rw <= x or y + h + 30 <= ry or ry + rh + 30 <= y, (left["id"], right["id"])
+    assert max(n["pos"][0] + n["size"][0] for n in editor["nodes"]) <= 1900
+    assert max(n["pos"][1] + n["size"][1] for n in editor["nodes"]) <= 1400
+
+
+def test_subgraph_ports_and_node_links_are_reciprocal():
+    builder = load_builder()
+    editor = builder.build_artifacts()["editor"]
+    for graph in [editor, *editor.get("definitions", {}).get("subgraphs", [])]:
+        by_id = {node["id"]: node for node in graph["nodes"]}
+        for serialized in graph["links"]:
+            link = serialized if isinstance(serialized, list) else [serialized[k] for k in
+                    ("id", "origin_id", "origin_slot", "target_id", "target_slot", "type")]
+            lid, source, source_slot, target, target_slot, _ = link
+            if source == -10:
+                assert lid in graph["inputs"][source_slot]["linkIds"]
+            else:
+                assert lid in by_id[source]["outputs"][source_slot]["links"]
+            if target == -20:
+                assert lid in graph["outputs"][target_slot]["linkIds"]
+            else:
+                assert by_id[target]["inputs"][target_slot]["link"] == lid
+
+
 def test_builds_one_deterministic_editor_and_api_pair():
     builder = load_builder()
 
@@ -45,11 +101,23 @@ def test_builds_one_deterministic_editor_and_api_pair():
     assert first["api"] == builder.api_from_editor(first["editor"])
 
 
+def test_favorite_prompts_reach_encoder_and_follow_image_switches():
+    api = load_builder().build_artifacts()["api"]
+    assert api["20"]["inputs"]["text"] == ["65", 0]
+    assert api["65"]["class_type"] == "ReferencePromptCompose"
+    for source, lane in enumerate(("main", "identity", "aux1", "aux2", "aux3"), 1):
+        assert api["65"]["inputs"][lane] == [str(source), 5]
+    for source, lane in [(6, "identity"), (25, "aux1"), (32, "aux2"), (39, "aux3")]:
+        assert api["65"]["inputs"][f"use_{lane}"] == [str(source), 0]
+    flat = load_builder().build_flat_editor()
+    assert any(link[1:5] == [65, 0, 66, 0] for link in flat["links"])
+
+
 def test_inputs_have_one_main_one_identity_and_three_lazy_auxiliary_references():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
 
-    loaders = nodes(workflow, "LoadImage")
+    loaders = nodes(workflow, "RandomReferenceImageSource")
     assert len(loaders) == 5
     assert "main i2i" in loaders[0]["title"].casefold()
     assert "identity" in loaders[1]["title"].casefold()
@@ -60,14 +128,14 @@ def test_inputs_have_one_main_one_identity_and_three_lazy_auxiliary_references()
     # visible boolean control so the two paths cannot drift.
     switches = nodes(workflow, "ComfySwitchNode")
     assert len(switches) == 7
-    assert title_node(workflow, "identity source selector")["widgets_values"] == [False]
+    assert title_node(workflow, "identity source:")["widgets_values"] == [False]
     for index in range(1, 4):
         assert title_node(workflow, f"enable auxiliary reference {index}")["widgets_values"] == [False]
 
 
 def test_output_geometry_comes_only_from_safe_canvas_node():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
     canvas = nodes(workflow, "ArchCanvasSize")
     assert len(canvas) == 1
     assert canvas[0]["widgets_values"] == ["Auto (safe)"]
@@ -86,7 +154,7 @@ def test_output_geometry_comes_only_from_safe_canvas_node():
 
 def test_flux_path_keeps_baseline_stack_and_chains_optional_references():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
 
     assert nodes(workflow, "UNETLoader")[0]["widgets_values"] == [builder.KLEIN_MODEL, "default"]
     assert nodes(workflow, "CLIPLoader")[0]["widgets_values"] == [builder.KLEIN_CLIP, "flux2", "default"]
@@ -101,7 +169,7 @@ def test_flux_path_keeps_baseline_stack_and_chains_optional_references():
 
 def test_identity_finish_is_landmark_aligned_sam_bounded_and_locally_scored():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
 
     transfer = nodes(workflow, "ArchLocalFaceIdentityTransfer")
     assert len(transfer) == 1
@@ -118,7 +186,7 @@ def test_identity_finish_is_landmark_aligned_sam_bounded_and_locally_scored():
 
 def test_preflight_gates_flux_and_final_save_is_gated_by_dual_score():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
     links = {link[0]: link for link in workflow["links"]}
     preflight = nodes(workflow, "ArchFaceIdentityPreflight")[0]
     canvas = nodes(workflow, "ArchCanvasSize")[0]
@@ -129,7 +197,7 @@ def test_preflight_gates_flux_and_final_save_is_gated_by_dual_score():
 
     gate = nodes(workflow, "ArchIdentityGate")[0]
     dominance = next(item for item in gate["inputs"] if item["name"] == "require_reference_dominance")
-    identity_selector = title_node(workflow, "Identity source selector")
+    identity_selector = title_node(workflow, "Identity source:")
     assert links[dominance["link"]][1:3] == [identity_selector["id"], 0]
     final_save = title_node(workflow, "Save identity-preserved")
     save_input = next(item for item in final_save["inputs"] if item["name"] == "images")
@@ -170,7 +238,7 @@ def test_runtime_drift_paths_outside_the_repo_remain_reportable(tmp_path):
 
 def test_outputs_keep_base_and_identity_finished_results_distinct():
     builder = load_builder()
-    workflow = builder.build_artifacts()["editor"]
+    workflow = builder.flatten_editor(builder.build_artifacts()["editor"])
 
     prefixes = [node["widgets_values"][0] for node in nodes(workflow, "SaveImage")]
     assert prefixes == [

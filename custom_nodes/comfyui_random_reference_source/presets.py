@@ -101,6 +101,7 @@ def save_preset(
     *,
     store_path: str | os.PathLike[str] | None = None,
     legacy_path: str | os.PathLike[str] | None = None,
+    mode: str = "upsert",
 ) -> dict[str, object]:
     clean_name = str(name).strip()
     if not clean_name or clean_name == "None":
@@ -111,6 +112,12 @@ def save_preset(
         (current for current in presets if current.casefold() == clean_name.casefold()),
         None,
     )
+    if mode not in {"upsert", "create", "update"}:
+        raise ValueError("Unknown favorite save action")
+    if mode == "create" and existing_name:
+        raise ValueError("That favorite name already exists. Choose a new name.")
+    if mode == "update" and not existing_name:
+        raise ValueError("That favorite no longer exists. Use Save as new.")
     if existing_name and existing_name != clean_name:
         del presets[existing_name]
     normalized = normalize_preset(preset)

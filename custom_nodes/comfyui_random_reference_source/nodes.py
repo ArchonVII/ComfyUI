@@ -24,7 +24,7 @@ from .presets import (
 )
 
 
-VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
+VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".ppm")
 ARCH_CATEGORY = "arch-image/random reference"
 NONE_FAVORITE = "None"
 SOURCE_MODES = ["auto", "folder", "selection"]
@@ -135,7 +135,7 @@ def _resolved_source_values(
         return (
             str(preset["kind"]),
             str(preset["folder"]),
-            "\n".join(str(path) for path in preset["images"]),
+            "\n".join('"' + str(path).replace('"', '""') + '"' for path in preset["images"]),
             bool(preset["include_subfolders"]),
         )
     normalized_mode = str(source_mode or "").strip().lower().replace(" ", "_")
@@ -169,7 +169,9 @@ def resolve_source_folder(
             raise ValueError(f"Favorite not found: {favorite_name}")
         folder_text = str(normalize_preset(favorites[favorite_name])["folder"])
     else:
-        folder_text = folder or "."
+        folder_text = str(folder or "").strip()
+        if not folder_text:
+            raise ValueError("Choose a reference folder or select images before running.")
 
     folder_path = _resolve_path(folder_text, _input_directory())
     if not folder_path.is_dir():
@@ -231,10 +233,12 @@ def build_image_pool(
     if normalized_mode not in SOURCE_MODES:
         raise ValueError(f"Unsupported source_mode: {source_mode}")
 
-    source_folder = resolve_source_folder(folder, favorite, favorites)
     if normalized_mode == "selection":
-        return _resolve_selected_image_files(selected_images, source_folder)
+        # Absolute selections do not depend on the previous folder. Relative
+        # selections still resolve against the explicitly supplied base.
+        return _resolve_selected_image_files(selected_images, _resolve_path(folder, _input_directory()))
 
+    source_folder = resolve_source_folder(folder, favorite, favorites)
     image_files = find_image_files(source_folder, include_subfolders)
     if not image_files:
         raise ValueError(f"No supported images found in source folder: {source_folder}")
@@ -265,6 +269,10 @@ def build_reference_preview_payload(
     include_subfolders: bool,
     favorites: Mapping[str, object] | None = None,
     max_images: int = 8,
+    offset: int = 0,
+    browse: bool = False,
+    search: str = "",
+    thumbnail_size: int = 192,
 ) -> dict[str, object]:
     favorites = favorites or {}
     image_pool = build_image_pool(
@@ -290,25 +298,34 @@ def build_reference_preview_payload(
             "selection" if parse_selected_images(resolved_images) else "folder"
         )
 
-    if normalized_mode == "selection":
-        preview_paths = image_pool[:max_images]
-    elif str(selection_policy or "").strip().lower() == "seeded":
+    max_images = max(1, min(48, int(max_images)))
+    offset = max(0, int(offset))
+    thumbnail_size = max(64, min(1600, int(thumbnail_size)))
+    if thumbnail_size > 384:
+        max_images = 1
+    filtered = [path for path in image_pool if str(search).casefold() in path.name.casefold()]
+    exact = len(image_pool) == 1 or selection_policy in {"seeded", "sequential"}
+    if browse:
+        preview_paths = filtered[offset:offset + max_images]
+    elif exact:
         preview_paths = [choose_image(image_pool, seed, selection_policy)]
     else:
         preview_paths = image_pool[:max_images]
 
-    source_folder = resolve_source_folder(resolved_folder, favorite, favorites)
+    source_folder = _resolve_path(resolved_folder, _input_directory())
     return {
         "mode": normalized_mode,
         "source_folder": str(source_folder),
         "pool_size": len(image_pool),
-        "preview_is_exact_next": normalized_mode == "selection"
-        or str(selection_policy or "").strip().lower() == "seeded",
+        "preview_is_exact_next": exact and not browse,
+        "offset": offset,
+        "filtered_size": len(filtered),
+        "has_more": browse and offset + len(preview_paths) < len(filtered),
         "images": [
             {
                 "path": str(path),
                 "name": path.name,
-                "thumbnail_data_url": _thumbnail_data_url(path),
+                "thumbnail_data_url": _thumbnail_data_url(path, thumbnail_size),
             }
             for path in preview_paths
         ],
@@ -361,7 +378,7 @@ class RandomReferenceImageSource:
         return {
             "required": {
                 "lane": (REFERENCE_LANES,),
-                "source_mode": (SOURCE_MODES,),
+                "source_mode": (SOURCE_MODES, {"default": "folder"}),
                 "favorite": (favorite_options(),),
                 "folder": (
                     "STRING",
@@ -410,7 +427,7 @@ class RandomReferenceImageSource:
                     {
                         "default": "",
                         "multiline": True,
-                        "tooltip": "Prompt text stored with the selected favorite. Save or update the favorite to persist edits.",
+                        "tooltip": "Text added to prompt_with_favorite immediately. Save or update the favorite to reuse these edits later.",
                     },
                 ),
                 "prompt": (
@@ -490,7 +507,7 @@ class RandomReferenceImageSource:
         selection_policy,
         seed,
         include_subfolders,
-        favorite_prompt="",
+        favorite_prompt=None,
         prompt="",
     ):
         favorites = load_presets()
@@ -504,9 +521,12 @@ class RandomReferenceImageSource:
         )
         selected_path = choose_image(image_pool, seed, selection_policy)
         image, mask = load_image_and_mask(selected_path)
-        source_folder = resolve_source_folder(folder, favorite, favorites)
+        _, resolved_folder, _, _ = _resolved_source_values(
+            source_mode, folder, favorite, selected_images, include_subfolders, favorites)
+        source_folder = _resolve_path(resolved_folder, _input_directory())
         preset = _favorite_preset(favorite, favorites)
-        favorite_text = str(preset["prompt_text"]) if preset is not None else ""
+        favorite_text = (str(favorite_prompt) if favorite_prompt is not None else
+                         str(preset["prompt_text"]) if preset is not None else "")
         combined_prompt = compose_favorite_prompt(favorite_text, prompt)
         metadata = {
             "lane": lane,
@@ -527,6 +547,37 @@ class RandomReferenceImageSource:
             json.dumps(metadata, ensure_ascii=False),
             combined_prompt,
         )
+
+
+class ReferencePromptCompose:
+    """Include only the prompt lanes whose corresponding image is enabled."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "text": ("STRING", {"multiline": True, "default": ""}),
+                **{f"use_{lane}": ("BOOLEAN", {"default": False, "forceInput": True})
+                   for lane in ("identity", "aux1", "aux2", "aux3")},
+            },
+            "optional": {lane: ("STRING", {"forceInput": True, "lazy": True})
+                         for lane in ("main", "identity", "aux1", "aux2", "aux3")},
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("combined_prompt",)
+    FUNCTION = "compose"
+    CATEGORY = ARCH_CATEGORY
+
+    def check_lazy_status(self, text, use_identity, use_aux1, use_aux2, use_aux3, **lanes):
+        enabled = dict(main=True, identity=use_identity, aux1=use_aux1, aux2=use_aux2, aux3=use_aux3)
+        return [lane for lane, active in enabled.items() if active and lane in lanes and lanes[lane] is None]
+
+    def compose(self, text, use_identity, use_aux1, use_aux2, use_aux3, **lanes):
+        enabled = dict(main=True, identity=use_identity, aux1=use_aux1, aux2=use_aux2, aux3=use_aux3)
+        parts = [str(text).strip()]
+        parts.extend(str(lanes.get(lane) or "").strip() for lane, active in enabled.items() if active)
+        return ("\n\n".join(part for part in parts if part),)
 
 
 class ReferenceLanePack:
@@ -609,11 +660,13 @@ class ReferenceLanePack:
 
 
 NODE_CLASS_MAPPINGS = {
+    "ReferencePromptCompose": ReferencePromptCompose,
     "RandomReferenceImageSource": RandomReferenceImageSource,
     "ReferenceLanePack": ReferenceLanePack,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "ReferencePromptCompose": "arch-Reference Prompt Compose",
     "RandomReferenceImageSource": "arch-Random Reference Image Source",
     "ReferenceLanePack": "arch-Reference Lane Pack",
 }
