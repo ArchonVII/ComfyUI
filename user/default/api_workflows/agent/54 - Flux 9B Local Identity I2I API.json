@@ -1,0 +1,704 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "arch_flux9b_placeholder.ppm"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "arch_flux9b_placeholder.ppm"
+    }
+  },
+  "3": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "arch_flux9b_placeholder.ppm"
+    }
+  },
+  "4": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "arch_flux9b_placeholder.ppm"
+    }
+  },
+  "5": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "arch_flux9b_placeholder.ppm"
+    }
+  },
+  "6": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": false
+    }
+  },
+  "7": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "1",
+        0
+      ],
+      "on_true": [
+        "2",
+        0
+      ],
+      "switch": [
+        "6",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": true
+    }
+  },
+  "9": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": true
+    }
+  },
+  "10": {
+    "class_type": "ArchFaceIdentityPreflight",
+    "inputs": {
+      "identity_image": [
+        "7",
+        0
+      ],
+      "main_image": [
+        "1",
+        0
+      ],
+      "enabled": [
+        "8",
+        0
+      ],
+      "face_selection": "largest",
+      "source_face_index": 0,
+      "face_threshold": 0.7,
+      "mask_mode": "SAM local",
+      "sam_model": "sam_vit_b_01ec64.pth"
+    }
+  },
+  "11": {
+    "class_type": "ArchCanvasSize",
+    "inputs": {
+      "image": [
+        "10",
+        1
+      ],
+      "mode": "Auto (safe)"
+    }
+  },
+  "12": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "image": [
+        "10",
+        1
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 1
+    }
+  },
+  "15": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "Flux\\9b\\DarkBeast-Klein9b-V2-BFS-FP8-ComfyUI.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "16": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "lora_name": "Flux\\9b\\Look\\flux2Klein9BTrue_v20Bf16.safetensors",
+      "strength_model": 0.49
+    }
+  },
+  "17": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "16",
+        0
+      ],
+      "lora_name": "Flux\\9b\\1 ------ Helper\\FLUX.2-klein-base-9B_LoRa_by-AI_Characters_CONCEPT_BetterSkin_v2_TRIGGER$skin with textured detail$ with skin with textured detail.safetensors",
+      "strength_model": 0.78
+    }
+  },
+  "18": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "Qwen\\qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    }
+  },
+  "19": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "full_encoder_small_decoder.safetensors"
+    }
+  },
+  "20": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "18",
+        0
+      ],
+      "text": "Use image 1 as the main scene and composition. Apply the requested edit while preserving the same primary person's recognizable identity, facial structure, age, and natural proportions. Use only enabled additional images as visual references for clothing, pose, environment, style, or props."
+    }
+  },
+  "21": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "20",
+        0
+      ]
+    }
+  },
+  "22": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "12",
+        0
+      ],
+      "vae": [
+        "19",
+        0
+      ]
+    }
+  },
+  "23": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "20",
+        0
+      ],
+      "latent": [
+        "22",
+        0
+      ]
+    }
+  },
+  "24": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "21",
+        0
+      ],
+      "latent": [
+        "22",
+        0
+      ]
+    }
+  },
+  "25": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": false
+    }
+  },
+  "26": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "image": [
+        "3",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 1
+    }
+  },
+  "27": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "26",
+        0
+      ],
+      "vae": [
+        "19",
+        0
+      ]
+    }
+  },
+  "28": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "23",
+        0
+      ],
+      "latent": [
+        "27",
+        0
+      ]
+    }
+  },
+  "29": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "24",
+        0
+      ],
+      "latent": [
+        "27",
+        0
+      ]
+    }
+  },
+  "30": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "23",
+        0
+      ],
+      "on_true": [
+        "28",
+        0
+      ],
+      "switch": [
+        "25",
+        0
+      ]
+    }
+  },
+  "31": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "24",
+        0
+      ],
+      "on_true": [
+        "29",
+        0
+      ],
+      "switch": [
+        "25",
+        0
+      ]
+    }
+  },
+  "32": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": false
+    }
+  },
+  "33": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "image": [
+        "4",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 1
+    }
+  },
+  "34": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "33",
+        0
+      ],
+      "vae": [
+        "19",
+        0
+      ]
+    }
+  },
+  "35": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "30",
+        0
+      ],
+      "latent": [
+        "34",
+        0
+      ]
+    }
+  },
+  "36": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "31",
+        0
+      ],
+      "latent": [
+        "34",
+        0
+      ]
+    }
+  },
+  "37": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "30",
+        0
+      ],
+      "on_true": [
+        "35",
+        0
+      ],
+      "switch": [
+        "32",
+        0
+      ]
+    }
+  },
+  "38": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "31",
+        0
+      ],
+      "on_true": [
+        "36",
+        0
+      ],
+      "switch": [
+        "32",
+        0
+      ]
+    }
+  },
+  "39": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": false
+    }
+  },
+  "40": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "image": [
+        "5",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 1
+    }
+  },
+  "41": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "40",
+        0
+      ],
+      "vae": [
+        "19",
+        0
+      ]
+    }
+  },
+  "42": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "37",
+        0
+      ],
+      "latent": [
+        "41",
+        0
+      ]
+    }
+  },
+  "43": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "38",
+        0
+      ],
+      "latent": [
+        "41",
+        0
+      ]
+    }
+  },
+  "44": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "37",
+        0
+      ],
+      "on_true": [
+        "42",
+        0
+      ],
+      "switch": [
+        "39",
+        0
+      ]
+    }
+  },
+  "45": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "on_false": [
+        "38",
+        0
+      ],
+      "on_true": [
+        "43",
+        0
+      ],
+      "switch": [
+        "39",
+        0
+      ]
+    }
+  },
+  "46": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 921621740546458
+    }
+  },
+  "47": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "euler"
+    }
+  },
+  "48": {
+    "class_type": "Flux2Scheduler",
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "11",
+        0
+      ],
+      "height": [
+        "11",
+        1
+      ]
+    }
+  },
+  "49": {
+    "class_type": "CFGGuider",
+    "inputs": {
+      "model": [
+        "17",
+        0
+      ],
+      "positive": [
+        "44",
+        0
+      ],
+      "negative": [
+        "45",
+        0
+      ],
+      "cfg": 1.0
+    }
+  },
+  "50": {
+    "class_type": "EmptyFlux2LatentImage",
+    "inputs": {
+      "width": [
+        "11",
+        0
+      ],
+      "height": [
+        "11",
+        1
+      ],
+      "batch_size": 1
+    }
+  },
+  "51": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": [
+        "46",
+        0
+      ],
+      "guider": [
+        "49",
+        0
+      ],
+      "sampler": [
+        "47",
+        0
+      ],
+      "sigmas": [
+        "48",
+        0
+      ],
+      "latent_image": [
+        "50",
+        0
+      ]
+    }
+  },
+  "52": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "51",
+        0
+      ],
+      "vae": [
+        "19",
+        0
+      ]
+    }
+  },
+  "53": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "52",
+        0
+      ],
+      "filename_prefix": "Flux9B-Local-I2I/base"
+    }
+  },
+  "55": {
+    "class_type": "ArchLocalFaceIdentityTransfer",
+    "inputs": {
+      "identity": [
+        "10",
+        0
+      ],
+      "target_image": [
+        "52",
+        0
+      ],
+      "enabled": [
+        "8",
+        0
+      ],
+      "target_face_selection": "largest",
+      "target_face_index": 0,
+      "mask_mode": [
+        "10",
+        4
+      ],
+      "sam_model": "sam_vit_b_01ec64.pth",
+      "sam_device": "Auto (unload models)",
+      "face_threshold": 0.7,
+      "feather": 12,
+      "iterations": 2
+    }
+  },
+  "56": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "55",
+        1
+      ]
+    }
+  },
+  "58": {
+    "class_type": "DualIdentityScore",
+    "inputs": {
+      "base_image": [
+        "52",
+        0
+      ],
+      "reference_image": [
+        "7",
+        0
+      ],
+      "generated_image": [
+        "55",
+        0
+      ],
+      "experiment_mode": "face_swap",
+      "face_score_threshold": 0.7,
+      "same_identity_threshold": 0.363,
+      "face_selection": "largest",
+      "write_manifest": true,
+      "manifest_dir": "default/identity_score_runs",
+      "run_label": "flux9b-local-identity-i2i-dual",
+      "metadata_key": "identity_score_report"
+    }
+  },
+  "59": {
+    "class_type": "ArchIdentityGate",
+    "inputs": {
+      "image": [
+        "55",
+        0
+      ],
+      "face_mask": [
+        "55",
+        1
+      ],
+      "transfer_enabled": [
+        "8",
+        0
+      ],
+      "enforce_threshold": [
+        "9",
+        0
+      ],
+      "require_reference_dominance": [
+        "6",
+        0
+      ],
+      "reference_detected": [
+        "58",
+        1
+      ],
+      "reference_same_identity": [
+        "58",
+        2
+      ],
+      "reference_similarity": [
+        "58",
+        0
+      ],
+      "base_similarity": [
+        "58",
+        3
+      ]
+    }
+  },
+  "61": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "59",
+        0
+      ],
+      "filename_prefix": "Flux9B-Local-I2I/identity-finished"
+    }
+  }
+}
