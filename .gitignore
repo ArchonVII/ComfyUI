@@ -1,8 +1,9 @@
 __pycache__/
 *.py[cod]
 /output/
-/input/
+/input/*
 !/input/example.png
+!/input/arch_flux9b_placeholder.ppm
 /models/
 /temp/
 /custom_nodes/*
@@ -31,6 +32,8 @@ __pycache__/
 !/custom_nodes/comfyui_prompt_library/**
 !/custom_nodes/comfyui_arch_reference_library/
 !/custom_nodes/comfyui_arch_reference_library/**
+!/custom_nodes/comfyui_arch_image_tools/
+!/custom_nodes/comfyui_arch_image_tools/**
 !/custom_nodes/comfyui_reverse_prompter/
 !/custom_nodes/comfyui_reverse_prompter/**
 !/custom_nodes/comfyui_session_watchdog/
@@ -62,6 +65,12 @@ user/default/workflows/**
 !/user/default/workflows/agent/
 user/default/workflows/agent/**
 !/user/default/workflows/agent/29 - Arch Flux Klein 9B - All Custom Nodes I2I Reference v2.json
+!/user/default/workflows/agent/54 - Flux 9B Local Identity I2I.json
+!/user/default/api_workflows/
+user/default/api_workflows/**
+!/user/default/api_workflows/agent/
+user/default/api_workflows/agent/**
+!/user/default/api_workflows/agent/54 - Flux 9B Local Identity I2I API.json
 !/user/prompt_library/
 user/prompt_library/**
 !/user/prompt_library/prompts.json
