@@ -320,6 +320,7 @@ def build_flat_editor() -> dict[str, Any]:
             ("face_preview", "IMAGE"),
             ("status", "STRING"),
             ("mask_mode", "STRING"),
+            ("face_selection", "ARCH_FACE_SELECTION"),
         ),
         widgets=(True, "largest", 0, 0.7, "SAM local", "sam_vit_b_01ec64.pth"),
         size=(420, 340),
@@ -594,6 +595,7 @@ def build_flat_editor() -> dict[str, Any]:
             ("image", "IMAGE"),
             ("face_mask", "MASK"),
             ("status", "STRING"),
+            ("face_selection", "ARCH_FACE_SELECTION"),
         ),
         widgets=(
             True,
@@ -634,6 +636,9 @@ def build_flat_editor() -> dict[str, Any]:
             ("experiment_id", "STRING", False, True),
             ("run_id", "STRING", False, True),
             ("extra_metadata", "EXTRA_METADATA", False, True),
+            ("enabled", "BOOLEAN", False, True),
+            ("reference_face_selection", "ARCH_FACE_SELECTION", False, True),
+            ("target_face_selection", "ARCH_FACE_SELECTION", False, True),
             ("experiment_mode", "COMBO", True, False),
             ("face_score_threshold", "FLOAT", True, False),
             ("same_identity_threshold", "FLOAT", True, False),
@@ -672,6 +677,9 @@ def build_flat_editor() -> dict[str, Any]:
     graph.connect(decode, 0, score, "base_image")
     graph.connect(identity_switch, 0, score, "reference_image")
     graph.connect(identity_transfer, 0, score, "generated_image")
+    graph.connect(identity_finish_enabled, 0, score, "enabled")
+    graph.connect(preflight, 5, score, "reference_face_selection")
+    graph.connect(identity_transfer, 3, score, "target_face_selection")
 
     gate = graph.add(
         "ArchIdentityGate",
@@ -745,13 +753,13 @@ def build_flat_editor() -> dict[str, Any]:
     graph.group("Flux sampling", (470, -700, 1250, 1100))
     graph.group("Landmark + SAM identity transfer", (1980, -510, 960, 1100))
     graph.group("Local identity audit", (2880, -330, 900, 1100))
-    for slot, title in [(0, "Reference identity score"), (3, "Base identity score")]:
+    for source, slot, title in [(identity_transfer, 2, "Identity transfer status"), (gate, 1, "Final save status / scores")]:
         display = graph.add(
             "PreviewAny", title=title, pos=(0, 0),
             inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),),
-            size=(210, 120),
+            size=(440, 140),
         )
-        graph.connect(score, slot, display, "source")
+        graph.connect(source, slot, display, "source")
     # Keep the established node IDs stable while wiring favorite text into Flux.
     composer = graph.add(
         "ReferencePromptCompose", title="Edit instruction + enabled reference prompts",
@@ -770,6 +778,9 @@ def build_flat_editor() -> dict[str, Any]:
     prompt_preview = graph.add("PreviewAny", title="Combined prompt sent to Flux", pos=(550, -1010),
         inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),), size=(450, 260))
     graph.connect(composer, 0, prompt_preview, "source")
+    preflight_status = graph.add("PreviewAny", title="Identity preflight status", pos=(510, 1060),
+        inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),), size=(410, 160))
+    graph.connect(preflight, 3, preflight_status, "source")
     return graph.workflow()
 
 
@@ -923,8 +934,8 @@ def build_editor() -> dict[str, Any]:
         "Identity selector OFF uses the main face. Strict gate blocks only the final save.\n\n"
         "Double-click subgraphs for advanced settings."
     ])
-    by_id[63].update(pos=[960, 910])
-    by_id[64].update(pos=[1190, 910])
+    by_id[63].update(pos=[960, 900])
+    by_id[64].update(pos=[960, 1090])
     by_id[1]["title"] = "1 - Main I2I (required)"
     by_id[2]["title"] = "2 - Identity image (optional)"
     by_id[6]["title"] = "Identity source: use image 2"
@@ -945,7 +956,11 @@ def build_editor() -> dict[str, Any]:
             link = next(link for link in definition["links"] if link["id"] == port["linkIds"][0])
             source, source_slot = link["origin_id"], link["origin_slot"]
             if source == 10:
-                label = {0: "identity", 4: "mask mode"}[source_slot]
+                label = {0: "identity", 3: "preflight status", 4: "mask mode", 5: "source face selection"}[source_slot]
+            elif source == 55:
+                label = {2: "transfer status"}[source_slot]
+            elif source == 59:
+                label = {0: "final image", 1: "final save status"}[source_slot]
             elif source == 58:
                 label = {0: "reference score", 3: "base score"}[source_slot]
             else:
@@ -968,8 +983,8 @@ def build_editor() -> dict[str, Any]:
         ]
     ]
     workflow["extra"]["ds"] = {"scale": 0.72, "offset": [45, 55]}
-    workflow["extra"]["flux9b_local_identity_i2i"]["version"] = 6
-    workflow["revision"] = 3
+    workflow["extra"]["flux9b_local_identity_i2i"]["version"] = 7
+    workflow["revision"] = 4
     return workflow
 
 
@@ -1120,6 +1135,13 @@ def _runtime_files(
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "__init__.py", package_source / "__init__.py"),
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "canvas.py", package_source / "canvas.py"),
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "face_identity.py", package_source / "face_identity.py"),
+        *((install_root / "custom_nodes" / package / filename,
+           source_root / "custom_nodes" / package / filename)
+          for package, filename in [
+              ("comfyui_identity_score", "nodes.py"),
+              ("comfyui_identity_score", "identity_core.py"),
+              ("comfyui_random_reference_source", "nodes.py"),
+          ]),
     )
 
 

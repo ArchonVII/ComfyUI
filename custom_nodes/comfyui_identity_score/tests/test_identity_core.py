@@ -20,6 +20,39 @@ def test_resolve_path_uses_relative_base(tmp_path):
     assert resolve_path("people", tmp_path) == (tmp_path / "people").resolve()
 
 
+def test_dual_report_inherits_distinct_source_and_target_selection(monkeypatch, tmp_path):
+    calls = []
+    def detect(image, models, threshold, selection, index=0):
+        calls.append((threshold, selection, index))
+        return _face([1.0, 0.0])
+    monkeypatch.setattr("identity_core.detect_best_face", detect)
+    source = dict(threshold=.8, selection="highest_confidence", index=1)
+    target = dict(threshold=.6, selection="largest", index=2)
+    report = build_dual_report(None, None, None, default_model_paths(tmp_path),
+                              "face_swap", .7, .363, "largest",
+                              reference_face_selection=source, target_face_selection=target)
+    assert calls == [(.6, "largest", 2), (.8, "highest_confidence", 1), (.6, "largest", 2)]
+    assert report["settings"]["reference_face_selection"] == source
+
+
+def test_face_detector_selects_requested_index_and_never_falls_back(monkeypatch, tmp_path):
+    import identity_core as core
+    from unittest.mock import MagicMock
+    faces = np.array([[0, 0, 10, 10, *range(10), .99],
+                      [0, 0, 20, 20, *range(10), .8]], dtype=np.float32)
+    detector, recognizer = MagicMock(), MagicMock()
+    detector.detect.return_value = (None, faces)
+    recognizer.feature.return_value = np.array([1., 0.])
+    monkeypatch.setattr(core, "ensure_model_files", lambda *_: None)
+    monkeypatch.setattr(core.cv2.FaceDetectorYN, "create", lambda *_: detector)
+    monkeypatch.setattr(core.cv2.FaceRecognizerSF, "create", lambda *_: recognizer)
+    image = np.zeros((32, 32, 3), dtype=np.uint8)
+    models = default_model_paths(tmp_path)
+    assert core.detect_best_face(image, models, .7, "largest", 1).box[2] == 10
+    assert core.detect_best_face(image, models, .7, "highest_confidence", 1).box[2] == 20
+    assert core.detect_best_face(image, models, .7, "largest", 2) is None
+
+
 def test_aggregate_scores_modes():
     values = [0.1, 0.5, 0.3, 0.9]
     assert aggregate_scores(values, "best") == 0.9

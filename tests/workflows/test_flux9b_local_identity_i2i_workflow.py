@@ -39,10 +39,24 @@ def test_workspace_uses_native_subgraphs_and_preserves_executable_graph():
     definitions = editor.get("definitions", {}).get("subgraphs", [])
     assert len(definitions) == 3
     assert builder.api_from_editor(editor) == builder.api_from_editor(builder.build_flat_editor())
-    assert len(editor["nodes"]) <= 21
+    assert len(editor["nodes"]) <= 22
     assert len(nodes(editor, "RandomReferenceImageSource")) == 5
     assert len(nodes(editor, "SaveImage")) == 2
     assert not nodes(editor, "ComfySwitchNode")
+
+
+def test_identity_bypass_selection_and_status_are_wired_end_to_end():
+    builder = load_builder()
+    editor = builder.build_editor()
+    api = builder.api_from_editor(editor)
+    assert api["58"]["inputs"]["enabled"] == ["8", 0]
+    assert api["58"]["inputs"]["reference_face_selection"] == ["10", 5]
+    assert api["58"]["inputs"]["target_face_selection"] == ["55", 3]
+    flat = builder.flatten_editor(editor)
+    links = {link[0]: link for link in flat["links"]}
+    by_id = {node["id"]: node for node in flat["nodes"]}
+    for preview, source, slot in [(63, 55, 2), (64, 59, 1), (67, 10, 3)]:
+        assert links[by_id[preview]["inputs"][0]["link"]][1:3] == [source, slot]
 
 
 def test_workspace_controls_are_exposed_and_do_not_overlap():
@@ -54,7 +68,7 @@ def test_workspace_controls_are_exposed_and_do_not_overlap():
                   ("58", "same_identity_threshold")]:
         assert proxy in proxies
     assert len(nodes(editor, "RandomNoise")) == 1
-    assert len(nodes(editor, "PreviewAny")) == 2
+    assert len(nodes(editor, "PreviewAny")) == 3
     by_id = {node["id"]: node for node in editor["nodes"]}
     for image, switch in [(2, 6), (3, 25), (4, 32), (5, 39)]:
         assert abs(by_id[image]["pos"][0] - by_id[switch]["pos"][0]) < 10

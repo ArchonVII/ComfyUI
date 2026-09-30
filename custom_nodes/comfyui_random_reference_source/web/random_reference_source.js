@@ -271,6 +271,38 @@ async function refreshPresets(node, applyCurrent = false) {
   if (applyCurrent) applyFavorite(node);
 }
 
+async function loadSingleImage(node, file) {
+  if (!file) return;
+  const intent = node._archSourceIntent = (node._archSourceIntent || 0) + 1;
+  node._archSourceChoice = (node._archSourceChoice || 0) + 1;
+  const body = new FormData();
+  body.append("image", file);
+  body.append("type", "input");
+  body.append("overwrite", "false");
+  const response = await api.fetchApi("/upload/image", {method: "POST", body});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.name) throw new Error(data.error || "Could not load the image.");
+  if (!referenceNodes.has(node) || node._archSourceIntent !== intent) return;
+  const path = [data.subfolder, data.name].filter(Boolean).join("/");
+  selectImages(node, [path]);
+}
+
+function pickSingleImage(node) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.ppm";
+  input.multiple = false;
+  input.style.display = "none";
+  input.addEventListener("cancel", () => input.remove(), {once: true});
+  input.addEventListener("change", async () => {
+    try { await loadSingleImage(node, input.files?.[0]); }
+    catch (error) { notify(String(error.message || error), "error"); }
+    finally { input.remove(); }
+  }, {once: true});
+  document.body.append(input);
+  input.click();
+}
+
 async function chooseFavorite(node, name) {
   node._archSourceChoice = (node._archSourceChoice || 0) + 1;
   const intent = node._archSourceIntent = (node._archSourceIntent || 0) + 1;
@@ -531,6 +563,7 @@ app.registerExtension({
         return button;
       };
 
+      addTransientButton("Load image…", () => pickSingleImage(node));
       addTransientButton("Browse folder…", async () => {
         try {
           const data = await callDialog("browse-folder", findWidget(node, "folder")?.value);

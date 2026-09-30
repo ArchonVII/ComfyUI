@@ -283,7 +283,7 @@ class ArchFaceIdentityPreflight:
             sam_models = ["sam_vit_b_01ec64.pth"]
         return {
             "required": {
-                "identity_image": ("IMAGE",),
+                "identity_image": ("IMAGE", {"lazy": True}),
                 "main_image": ("IMAGE",),
                 "enabled": ("BOOLEAN", {"default": True}),
                 "face_selection": (["largest", "highest_confidence"],),
@@ -294,11 +294,14 @@ class ArchFaceIdentityPreflight:
             }
         }
 
-    RETURN_TYPES = ("ARCH_FACE_IDENTITY", "IMAGE", "IMAGE", "STRING", "STRING")
-    RETURN_NAMES = ("identity", "main_image", "face_preview", "status", "mask_mode")
+    RETURN_TYPES = ("ARCH_FACE_IDENTITY", "IMAGE", "IMAGE", "STRING", "STRING", "ARCH_FACE_SELECTION")
+    RETURN_NAMES = ("identity", "main_image", "face_preview", "status", "mask_mode", "face_selection")
     FUNCTION = "preflight"
     CATEGORY = "arch-image/identity"
     DESCRIPTION = "Validate local identity models and source face before expensive generation begins."
+
+    def check_lazy_status(self, enabled=True, identity_image=None, **kwargs):
+        return ["identity_image"] if enabled and identity_image is None else []
 
     def preflight(
         self,
@@ -311,8 +314,9 @@ class ArchFaceIdentityPreflight:
         mask_mode="SAM local",
         sam_model="sam_vit_b_01ec64.pth",
     ):
+        selection = dict(selection=str(face_selection), index=int(source_face_index), threshold=float(face_threshold))
         if not enabled:
-            return None, main_image, identity_image, "Identity finish disabled; preflight bypassed", str(mask_mode)
+            return None, main_image, main_image, "Identity finish disabled; preflight bypassed", str(mask_mode), selection
         paths = _model_paths(str(sam_model), require_sam=str(mask_mode) == "SAM local")
         source = _tensor_to_bgr(identity_image)
         faces = _detect_faces(source, float(face_threshold))
@@ -323,7 +327,7 @@ class ArchFaceIdentityPreflight:
             f"Identity preflight passed: {len(faces)} face(s), selected index {int(source_face_index)}, "
             f"confidence {float(face[-1]):.3f}, area {area:.3%}"
         )
-        return {"latent": latent}, main_image, _face_preview(source, face), status, str(mask_mode)
+        return {"latent": latent}, main_image, _face_preview(source, face), status, str(mask_mode), selection
 
 
 class ArchLocalFaceIdentityTransfer:
@@ -349,8 +353,8 @@ class ArchLocalFaceIdentityTransfer:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "MASK", "STRING")
-    RETURN_NAMES = ("image", "face_mask", "status")
+    RETURN_TYPES = ("IMAGE", "MASK", "STRING", "ARCH_FACE_SELECTION")
+    RETURN_NAMES = ("image", "face_mask", "status", "face_selection")
     FUNCTION = "transfer"
     CATEGORY = "arch-image/identity"
     DESCRIPTION = "Fully local 5-landmark affine identity transfer using ArcFace, INSwapper, and optional local SAM masking."
@@ -369,9 +373,10 @@ class ArchLocalFaceIdentityTransfer:
         feather=12,
         iterations=2,
     ):
+        selection = dict(selection=str(target_face_selection), index=int(target_face_index), threshold=float(face_threshold))
         if not enabled:
             height, width = int(target_image.shape[1]), int(target_image.shape[2])
-            return target_image, torch.zeros((1, height, width), dtype=torch.float32), "Identity transfer disabled"
+            return target_image, torch.zeros((1, height, width), dtype=torch.float32), "Identity transfer bypassed", selection
         mode = str(mask_mode)
         if mode not in {"SAM local", "Landmark feather"}:
             raise ValueError(f"Unknown identity mask mode: {mode}")
@@ -403,10 +408,17 @@ class ArchLocalFaceIdentityTransfer:
             _bgr_to_tensor(result),
             torch.from_numpy(combined_mask).unsqueeze(0),
             f"Local landmark identity transfer complete ({mask_mode}, {passes} pass{'es' if passes != 1 else ''})",
+            selection,
         )
 
 
 class ArchIdentityGate:
+    @staticmethod
+    def _blocked(message):
+        from comfy_execution.graph_utils import ExecutionBlocker
+        # Block only image consumers; allow the status preview and base save.
+        return ExecutionBlocker(None), message
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -444,18 +456,18 @@ class ArchIdentityGate:
         if not transfer_enabled:
             return image, "Identity transfer disabled; strict gate bypassed"
         if face_mask is None or face_mask.numel() == 0 or float(face_mask.max().item()) <= 0.0:
-            raise ValueError("Identity gate blocked final save: no usable transferred-face mask.")
+            return self._blocked("Identity gate blocked final save: no usable transferred-face mask.")
         score = float(reference_similarity)
         if enforce_threshold and (not reference_detected or not reference_same_identity):
-            raise ValueError(
+            return self._blocked(
                 f"Identity gate blocked final save: selected reference similarity {score:.6f} did not meet the configured threshold."
             )
         base_score = float(base_similarity)
         if enforce_threshold and require_reference_dominance and score <= base_score:
-            raise ValueError(
+            return self._blocked(
                 "Identity gate blocked final save: the result is closer to the base face "
                 f"({base_score:.6f}) than the selected reference ({score:.6f})."
             )
         mode = "enforced" if enforce_threshold else "diagnostic only"
-        comparison = f", base {base_score:.6f}" if require_reference_dominance else ""
+        comparison = f", base {base_score:.6f}"
         return image, f"Identity gate passed: reference {score:.6f}{comparison} ({mode})"

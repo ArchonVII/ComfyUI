@@ -468,14 +468,8 @@ class RandomReferenceImageSource:
         prompt="",
     ):
         try:
-            build_image_pool(
-                source_mode=source_mode,
-                folder=folder,
-                favorite=favorite,
-                selected_images=selected_images,
-                include_subfolders=include_subfolders,
-                favorites=load_presets(),
-            )
+            # Comfy validates even unused lazy branches. Resolve files only when
+            # this source executes, so an empty optional slot cannot block a run.
             choose_image([Path("placeholder.png")], seed, selection_policy)
         except ValueError as exc:
             return str(exc)

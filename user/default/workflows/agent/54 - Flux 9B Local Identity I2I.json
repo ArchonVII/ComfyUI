@@ -1,8 +1,8 @@
 {
   "id": "97a4c152-fda6-50ad-a241-8b4981ae2847",
-  "revision": 3,
-  "last_node_id": 69,
-  "last_link_id": 151,
+  "revision": 4,
+  "last_node_id": 70,
+  "last_link_id": 158,
   "nodes": [
     {
       "id": 1,
@@ -105,7 +105,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            122
+            126
           ]
         },
         {
@@ -137,7 +137,7 @@
           "type": "STRING",
           "slot_index": 5,
           "links": [
-            113
+            117
           ]
         }
       ],
@@ -259,7 +259,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            123
+            127
           ]
         },
         {
@@ -291,7 +291,7 @@
           "type": "STRING",
           "slot_index": 5,
           "links": [
-            114
+            118
           ]
         }
       ],
@@ -413,7 +413,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            129
+            133
           ]
         },
         {
@@ -445,7 +445,7 @@
           "type": "STRING",
           "slot_index": 5,
           "links": [
-            115
+            119
           ]
         }
       ],
@@ -567,7 +567,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            131
+            135
           ]
         },
         {
@@ -599,7 +599,7 @@
           "type": "STRING",
           "slot_index": 5,
           "links": [
-            116
+            120
           ]
         }
       ],
@@ -721,7 +721,7 @@
           "type": "IMAGE",
           "slot_index": 0,
           "links": [
-            133
+            137
           ]
         },
         {
@@ -753,7 +753,7 @@
           "type": "STRING",
           "slot_index": 5,
           "links": [
-            117
+            121
           ]
         }
       ],
@@ -804,9 +804,9 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            124,
-            148,
-            118
+            128,
+            155,
+            122
           ]
         }
       ],
@@ -848,8 +848,8 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            125,
-            144
+            129,
+            150
           ]
         }
       ],
@@ -891,7 +891,7 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            147
+            154
           ]
         }
       ],
@@ -933,8 +933,8 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            130,
-            119
+            134,
+            123
           ]
         }
       ],
@@ -976,8 +976,8 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            132,
-            120
+            136,
+            124
           ]
         }
       ],
@@ -1019,8 +1019,8 @@
           "type": "BOOLEAN",
           "slot_index": 0,
           "links": [
-            134,
-            121
+            138,
+            125
           ]
         }
       ],
@@ -1062,7 +1062,7 @@
           "type": "NOISE",
           "slot_index": 0,
           "links": [
-            135
+            139
           ]
         }
       ],
@@ -1173,7 +1173,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 95
+          "link": 98
         },
         {
           "name": "filename_prefix",
@@ -1229,11 +1229,11 @@
       "type": "PreviewAny",
       "pos": [
         960,
-        1020
+        1010
       ],
       "size": [
-        210,
-        120
+        440,
+        140
       ],
       "flags": {},
       "order": 62,
@@ -1242,7 +1242,7 @@
         {
           "name": "source",
           "type": "*",
-          "link": 96
+          "link": 99
         }
       ],
       "outputs": [
@@ -1253,7 +1253,7 @@
           "links": []
         }
       ],
-      "title": "Reference identity score",
+      "title": "Identity transfer status",
       "properties": {
         "Node name for S&R": "PreviewAny"
       },
@@ -1263,12 +1263,12 @@
       "id": 64,
       "type": "PreviewAny",
       "pos": [
-        1190,
-        1020
+        960,
+        1200
       ],
       "size": [
-        210,
-        120
+        440,
+        140
       ],
       "flags": {},
       "order": 63,
@@ -1277,7 +1277,7 @@
         {
           "name": "source",
           "type": "*",
-          "link": 97
+          "link": 100
         }
       ],
       "outputs": [
@@ -1288,7 +1288,7 @@
           "links": []
         }
       ],
-      "title": "Base identity score",
+      "title": "Final save status / scores",
       "properties": {
         "Node name for S&R": "PreviewAny"
       },
@@ -1296,6 +1296,41 @@
     },
     {
       "id": 67,
+      "type": "PreviewAny",
+      "pos": [
+        510,
+        1170
+      ],
+      "size": [
+        410,
+        160
+      ],
+      "flags": {},
+      "order": 66,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 112
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": []
+        }
+      ],
+      "title": "Identity preflight status",
+      "properties": {
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 68,
       "type": "f1833dfd-b05d-5d54-86ab-772e64c05189",
       "title": "1 - Edit prompt / model setup",
       "pos": [
@@ -1307,61 +1342,61 @@
         300
       ],
       "flags": {},
-      "order": 67,
+      "order": 68,
       "mode": 0,
       "inputs": [
         {
           "name": "1 - Main I2I image (scene and composition): prompt_with_favorite",
           "type": "STRING",
-          "link": 113,
+          "link": 117,
           "label": "reference 1 prompt"
         },
         {
           "name": "2 - Optional identity reference (clear face preferred): prompt_with_favorite",
           "type": "STRING",
-          "link": 114,
+          "link": 118,
           "label": "reference 2 prompt"
         },
         {
           "name": "3 - Auxiliary reference 1: prompt_with_favorite",
           "type": "STRING",
-          "link": 115,
+          "link": 119,
           "label": "reference 3 prompt"
         },
         {
           "name": "4 - Auxiliary reference 2: prompt_with_favorite",
           "type": "STRING",
-          "link": 116,
+          "link": 120,
           "label": "reference 4 prompt"
         },
         {
           "name": "5 - Auxiliary reference 3: prompt_with_favorite",
           "type": "STRING",
-          "link": 117,
+          "link": 121,
           "label": "reference 5 prompt"
         },
         {
           "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 118,
+          "link": 122,
           "label": "use identity image"
         },
         {
           "name": "Enable auxiliary reference 1: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 119,
+          "link": 123,
           "label": "use aux 1"
         },
         {
           "name": "Enable auxiliary reference 2: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 120,
+          "link": 124,
           "label": "use aux 2"
         },
         {
           "name": "Enable auxiliary reference 3: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 121,
+          "link": 125,
           "label": "use aux 3"
         }
       ],
@@ -1370,7 +1405,7 @@
           "name": "Flux 9B compact encoder/decoder: VAE",
           "type": "VAE",
           "links": [
-            126
+            130
           ],
           "label": "VAE"
         },
@@ -1378,7 +1413,7 @@
           "name": "Edit instruction - image 1 is main; enabled extras are references: CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            127
+            131
           ],
           "label": "positive"
         },
@@ -1386,7 +1421,7 @@
           "name": "Flux unconditional conditioning: CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            128
+            132
           ],
           "label": "negative"
         },
@@ -1394,7 +1429,7 @@
           "name": "Existing BetterSkin helper LoRA: MODEL",
           "type": "MODEL",
           "links": [
-            136
+            140
           ],
           "label": "model"
         }
@@ -1411,7 +1446,7 @@
       "widgets_values": []
     },
     {
-      "id": 68,
+      "id": 69,
       "type": "72612b49-8c7b-5bf9-8cc6-cabe8e23107a",
       "title": "2 - Generate / canvas and seed",
       "pos": [
@@ -1423,97 +1458,97 @@
         530
       ],
       "flags": {},
-      "order": 68,
+      "order": 69,
       "mode": 0,
       "inputs": [
         {
           "name": "1 - Main I2I image (scene and composition): image",
           "type": "IMAGE",
-          "link": 122,
+          "link": 126,
           "label": "main image"
         },
         {
           "name": "2 - Optional identity reference (clear face preferred): image",
           "type": "IMAGE",
-          "link": 123,
+          "link": 127,
           "label": "identity image"
         },
         {
           "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 124,
+          "link": 128,
           "label": "use identity image"
         },
         {
           "name": "Enable local identity finish: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 125,
+          "link": 129,
           "label": "identity finish"
         },
         {
           "name": "1 - Edit prompt / model setup: Flux 9B compact encoder/decoder: VAE",
           "type": "VAE",
-          "link": 126,
+          "link": 130,
           "label": "VAE"
         },
         {
           "name": "1 - Edit prompt / model setup: Edit instruction - image 1 is main; enabled extras are references: CONDITIONING",
           "type": "CONDITIONING",
-          "link": 127,
+          "link": 131,
           "label": "positive"
         },
         {
           "name": "1 - Edit prompt / model setup: Flux unconditional conditioning: CONDITIONING",
           "type": "CONDITIONING",
-          "link": 128,
+          "link": 132,
           "label": "negative"
         },
         {
           "name": "3 - Auxiliary reference 1: image",
           "type": "IMAGE",
-          "link": 129,
+          "link": 133,
           "label": "aux 1"
         },
         {
           "name": "Enable auxiliary reference 1: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 130,
+          "link": 134,
           "label": "use aux 1"
         },
         {
           "name": "4 - Auxiliary reference 2: image",
           "type": "IMAGE",
-          "link": 131,
+          "link": 135,
           "label": "aux 2"
         },
         {
           "name": "Enable auxiliary reference 2: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 132,
+          "link": 136,
           "label": "use aux 2"
         },
         {
           "name": "5 - Auxiliary reference 3: image",
           "type": "IMAGE",
-          "link": 133,
+          "link": 137,
           "label": "aux 3"
         },
         {
           "name": "Enable auxiliary reference 3: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 134,
+          "link": 138,
           "label": "use aux 3"
         },
         {
           "name": "Generation seed: NOISE",
           "type": "NOISE",
-          "link": 135,
+          "link": 139,
           "label": "seed / noise"
         },
         {
           "name": "1 - Edit prompt / model setup: Existing BetterSkin helper LoRA: MODEL",
           "type": "MODEL",
-          "link": 136,
+          "link": 140,
           "label": "model"
         }
       ],
@@ -1523,7 +1558,7 @@
           "type": "IMAGE",
           "links": [
             74,
-            143
+            149
           ],
           "label": "base image"
         },
@@ -1531,7 +1566,7 @@
           "name": "Preflight identity face and required local model artifacts: identity",
           "type": "ARCH_FACE_IDENTITY",
           "links": [
-            141
+            147
           ],
           "label": "identity"
         },
@@ -1539,7 +1574,7 @@
           "name": "Preflight identity face and required local model artifacts: mask_mode",
           "type": "STRING",
           "links": [
-            142
+            148
           ],
           "label": "mask mode"
         },
@@ -1547,9 +1582,25 @@
           "name": "Select identity source lazily: *",
           "type": "*",
           "links": [
-            146
+            152
           ],
           "label": "identity reference"
+        },
+        {
+          "name": "Preflight identity face and required local model artifacts: face_selection",
+          "type": "ARCH_FACE_SELECTION",
+          "links": [
+            153
+          ],
+          "label": "source face selection"
+        },
+        {
+          "name": "Preflight identity face and required local model artifacts: status",
+          "type": "STRING",
+          "links": [
+            112
+          ],
+          "label": "preflight status"
         }
       ],
       "properties": {
@@ -1584,7 +1635,7 @@
       "widgets_values": []
     },
     {
-      "id": 69,
+      "id": 70,
       "type": "9de8e4cd-7c07-55b5-8fc8-69436104dc34",
       "title": "3 - Identity finish / score",
       "pos": [
@@ -1596,49 +1647,55 @@
         370
       ],
       "flags": {},
-      "order": 69,
+      "order": 70,
       "mode": 0,
       "inputs": [
         {
           "name": "2 - Generate / canvas and seed: Preflight identity face and required local model artifacts: identity",
           "type": "ARCH_FACE_IDENTITY",
-          "link": 141,
+          "link": 147,
           "label": "identity"
         },
         {
           "name": "2 - Generate / canvas and seed: Preflight identity face and required local model artifacts: mask_mode",
           "type": "STRING",
-          "link": 142,
+          "link": 148,
           "label": "mask mode"
         },
         {
           "name": "2 - Generate / canvas and seed: Decode base Flux result: IMAGE",
           "type": "IMAGE",
-          "link": 143,
+          "link": 149,
           "label": "base image"
         },
         {
           "name": "Enable local identity finish: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 144,
+          "link": 150,
           "label": "identity finish"
         },
         {
           "name": "2 - Generate / canvas and seed: Select identity source lazily: *",
           "type": "*",
-          "link": 146,
+          "link": 152,
           "label": "identity reference"
+        },
+        {
+          "name": "2 - Generate / canvas and seed: Preflight identity face and required local model artifacts: face_selection",
+          "type": "ARCH_FACE_SELECTION",
+          "link": 153,
+          "label": "source face selection"
         },
         {
           "name": "Enforce identity threshold before final save: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 147,
+          "link": 154,
           "label": "strict gate"
         },
         {
           "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
           "type": "BOOLEAN",
-          "link": 148,
+          "link": 155,
           "label": "use identity image"
         }
       ],
@@ -1655,25 +1712,25 @@
           "name": "Optional strict identity gate before final save: image",
           "type": "IMAGE",
           "links": [
-            95
+            98
           ],
           "label": "final image"
         },
         {
-          "name": "Visible local identity diagnostic - reference and base vs final: reference_cosine_similarity",
-          "type": "FLOAT",
+          "name": "Local landmark-aligned identity transfer with SAM: status",
+          "type": "STRING",
           "links": [
-            96
+            99
           ],
-          "label": "reference score"
+          "label": "transfer status"
         },
         {
-          "name": "Visible local identity diagnostic - reference and base vs final: base_cosine_similarity",
-          "type": "FLOAT",
+          "name": "Optional strict identity gate before final save: status",
+          "type": "STRING",
           "links": [
-            97
+            100
           ],
-          "label": "base score"
+          "label": "final save status"
         }
       ],
       "properties": {
@@ -1706,292 +1763,308 @@
   ],
   "links": [
     [
-      122,
+      126,
       1,
       0,
-      68,
+      69,
       0,
       "IMAGE"
     ],
     [
-      123,
+      127,
       2,
       0,
-      68,
+      69,
       1,
       "IMAGE"
     ],
     [
-      124,
+      128,
       6,
       0,
-      68,
+      69,
       2,
       "BOOLEAN"
     ],
     [
-      125,
+      129,
       8,
       0,
-      68,
+      69,
       3,
       "BOOLEAN"
     ],
     [
-      126,
-      67,
-      0,
+      130,
       68,
+      0,
+      69,
       4,
       "VAE"
     ],
     [
-      127,
-      67,
-      1,
+      131,
       68,
+      1,
+      69,
       5,
       "CONDITIONING"
     ],
     [
-      128,
-      67,
-      2,
+      132,
       68,
+      2,
+      69,
       6,
       "CONDITIONING"
     ],
     [
-      129,
+      133,
       3,
       0,
-      68,
+      69,
       7,
       "IMAGE"
     ],
     [
-      130,
+      134,
       25,
       0,
-      68,
+      69,
       8,
       "BOOLEAN"
     ],
     [
-      131,
+      135,
       4,
       0,
-      68,
+      69,
       9,
       "IMAGE"
     ],
     [
-      132,
+      136,
       32,
       0,
-      68,
+      69,
       10,
       "BOOLEAN"
     ],
     [
-      133,
+      137,
       5,
       0,
-      68,
+      69,
       11,
       "IMAGE"
     ],
     [
-      134,
+      138,
       39,
       0,
-      68,
+      69,
       12,
       "BOOLEAN"
     ],
     [
-      135,
+      139,
       46,
       0,
-      68,
+      69,
       13,
       "NOISE"
     ],
     [
-      136,
-      67,
-      3,
+      140,
       68,
+      3,
+      69,
       14,
       "MODEL"
     ],
     [
       74,
-      68,
+      69,
       0,
       53,
       0,
       "IMAGE"
     ],
     [
-      141,
-      68,
-      1,
+      147,
       69,
+      1,
+      70,
       0,
       "ARCH_FACE_IDENTITY"
     ],
     [
-      142,
-      68,
-      2,
+      148,
       69,
+      2,
+      70,
       1,
       "STRING"
     ],
     [
-      143,
-      68,
-      0,
+      149,
       69,
+      0,
+      70,
       2,
       "IMAGE"
     ],
     [
-      144,
+      150,
       8,
       0,
-      69,
+      70,
       3,
       "BOOLEAN"
     ],
     [
       81,
-      69,
+      70,
       0,
       57,
       0,
       "IMAGE"
     ],
     [
-      146,
-      68,
-      3,
+      152,
       69,
+      3,
+      70,
       4,
       "*"
     ],
     [
-      147,
+      153,
+      69,
+      4,
+      70,
+      5,
+      "ARCH_FACE_SELECTION"
+    ],
+    [
+      154,
       9,
       0,
-      69,
-      5,
+      70,
+      6,
       "BOOLEAN"
     ],
     [
-      148,
+      155,
       6,
       0,
-      69,
-      6,
+      70,
+      7,
       "BOOLEAN"
     ],
     [
-      95,
-      69,
+      98,
+      70,
       1,
       61,
       0,
       "IMAGE"
     ],
     [
-      96,
-      69,
+      99,
+      70,
       2,
       63,
       0,
-      "FLOAT"
+      "STRING"
     ],
     [
-      97,
-      69,
+      100,
+      70,
       3,
       64,
       0,
-      "FLOAT"
-    ],
-    [
-      113,
-      1,
-      5,
-      67,
-      0,
-      "STRING"
-    ],
-    [
-      114,
-      2,
-      5,
-      67,
-      1,
-      "STRING"
-    ],
-    [
-      115,
-      3,
-      5,
-      67,
-      2,
-      "STRING"
-    ],
-    [
-      116,
-      4,
-      5,
-      67,
-      3,
       "STRING"
     ],
     [
       117,
+      1,
       5,
-      5,
-      67,
-      4,
+      68,
+      0,
       "STRING"
     ],
     [
       118,
+      2,
+      5,
+      68,
+      1,
+      "STRING"
+    ],
+    [
+      119,
+      3,
+      5,
+      68,
+      2,
+      "STRING"
+    ],
+    [
+      120,
+      4,
+      5,
+      68,
+      3,
+      "STRING"
+    ],
+    [
+      121,
+      5,
+      5,
+      68,
+      4,
+      "STRING"
+    ],
+    [
+      122,
       6,
       0,
-      67,
+      68,
       5,
       "BOOLEAN"
     ],
     [
-      119,
+      123,
       25,
       0,
-      67,
+      68,
       6,
       "BOOLEAN"
     ],
     [
-      120,
+      124,
       32,
       0,
-      67,
+      68,
       7,
       "BOOLEAN"
     ],
     [
-      121,
+      125,
       39,
       0,
-      67,
+      68,
       8,
       "BOOLEAN"
+    ],
+    [
+      112,
+      69,
+      5,
+      67,
+      0,
+      "STRING"
     ]
   ],
   "groups": [
@@ -2038,7 +2111,7 @@
   "config": {},
   "extra": {
     "flux9b_local_identity_i2i": {
-      "version": 6,
+      "version": 7,
       "runtime": "http://127.0.0.1:8192",
       "local_only": true,
       "input_roles": [
@@ -2070,7 +2143,7 @@
         "state": {
           "lastGroupId": 0,
           "lastNodeId": 66,
-          "lastLinkId": 121,
+          "lastLinkId": 125,
           "lastRerouteId": 0
         },
         "config": {},
@@ -2098,7 +2171,7 @@
             "name": "1 - Main I2I image (scene and composition): prompt_with_favorite",
             "type": "STRING",
             "linkIds": [
-              99
+              102
             ],
             "pos": [
               -100,
@@ -2111,7 +2184,7 @@
             "name": "2 - Optional identity reference (clear face preferred): prompt_with_favorite",
             "type": "STRING",
             "linkIds": [
-              100
+              103
             ],
             "pos": [
               -100,
@@ -2124,7 +2197,7 @@
             "name": "3 - Auxiliary reference 1: prompt_with_favorite",
             "type": "STRING",
             "linkIds": [
-              101
+              104
             ],
             "pos": [
               -100,
@@ -2137,7 +2210,7 @@
             "name": "4 - Auxiliary reference 2: prompt_with_favorite",
             "type": "STRING",
             "linkIds": [
-              102
+              105
             ],
             "pos": [
               -100,
@@ -2150,7 +2223,7 @@
             "name": "5 - Auxiliary reference 3: prompt_with_favorite",
             "type": "STRING",
             "linkIds": [
-              103
+              106
             ],
             "pos": [
               -100,
@@ -2163,7 +2236,7 @@
             "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
             "type": "BOOLEAN",
             "linkIds": [
-              104
+              107
             ],
             "pos": [
               -100,
@@ -2176,7 +2249,7 @@
             "name": "Enable auxiliary reference 1: BOOLEAN",
             "type": "BOOLEAN",
             "linkIds": [
-              105
+              108
             ],
             "pos": [
               -100,
@@ -2189,7 +2262,7 @@
             "name": "Enable auxiliary reference 2: BOOLEAN",
             "type": "BOOLEAN",
             "linkIds": [
-              106
+              109
             ],
             "pos": [
               -100,
@@ -2202,7 +2275,7 @@
             "name": "Enable auxiliary reference 3: BOOLEAN",
             "type": "BOOLEAN",
             "linkIds": [
-              107
+              110
             ],
             "pos": [
               -100,
@@ -2217,7 +2290,7 @@
             "name": "Flux 9B compact encoder/decoder: VAE",
             "type": "VAE",
             "linkIds": [
-              109
+              113
             ],
             "pos": [
               1470,
@@ -2230,7 +2303,7 @@
             "name": "Edit instruction - image 1 is main; enabled extras are references: CONDITIONING",
             "type": "CONDITIONING",
             "linkIds": [
-              110
+              114
             ],
             "pos": [
               1470,
@@ -2243,7 +2316,7 @@
             "name": "Flux unconditional conditioning: CONDITIONING",
             "type": "CONDITIONING",
             "linkIds": [
-              111
+              115
             ],
             "pos": [
               1470,
@@ -2256,7 +2329,7 @@
             "name": "Existing BetterSkin helper LoRA: MODEL",
             "type": "MODEL",
             "linkIds": [
-              112
+              116
             ],
             "pos": [
               1470,
@@ -2417,7 +2490,7 @@
                 "type": "MODEL",
                 "slot_index": 0,
                 "links": [
-                  112
+                  116
                 ]
               }
             ],
@@ -2521,7 +2594,7 @@
                 "type": "VAE",
                 "slot_index": 0,
                 "links": [
-                  109
+                  113
                 ]
               }
             ],
@@ -2556,7 +2629,7 @@
               {
                 "name": "text",
                 "type": "STRING",
-                "link": 98,
+                "link": 101,
                 "widget": {
                   "name": "text"
                 }
@@ -2569,7 +2642,7 @@
                 "slot_index": 0,
                 "links": [
                   14,
-                  110
+                  114
                 ]
               }
             ],
@@ -2608,7 +2681,7 @@
                 "type": "CONDITIONING",
                 "slot_index": 0,
                 "links": [
-                  111
+                  115
                 ]
               }
             ],
@@ -2645,51 +2718,51 @@
               {
                 "name": "use_identity",
                 "type": "BOOLEAN",
-                "link": 104
+                "link": 107
               },
               {
                 "name": "use_aux1",
                 "type": "BOOLEAN",
-                "link": 105
+                "link": 108
               },
               {
                 "name": "use_aux2",
                 "type": "BOOLEAN",
-                "link": 106
+                "link": 109
               },
               {
                 "name": "use_aux3",
                 "type": "BOOLEAN",
-                "link": 107
+                "link": 110
               },
               {
                 "name": "main",
-                "type": "STRING",
-                "link": 99,
-                "shape": 7
-              },
-              {
-                "name": "identity",
-                "type": "STRING",
-                "link": 100,
-                "shape": 7
-              },
-              {
-                "name": "aux1",
-                "type": "STRING",
-                "link": 101,
-                "shape": 7
-              },
-              {
-                "name": "aux2",
                 "type": "STRING",
                 "link": 102,
                 "shape": 7
               },
               {
-                "name": "aux3",
+                "name": "identity",
                 "type": "STRING",
                 "link": 103,
+                "shape": 7
+              },
+              {
+                "name": "aux1",
+                "type": "STRING",
+                "link": 104,
+                "shape": 7
+              },
+              {
+                "name": "aux2",
+                "type": "STRING",
+                "link": 105,
+                "shape": 7
+              },
+              {
+                "name": "aux3",
+                "type": "STRING",
+                "link": 106,
                 "shape": 7
               }
             ],
@@ -2699,8 +2772,8 @@
                 "type": "STRING",
                 "slot_index": 0,
                 "links": [
-                  98,
-                  108
+                  101,
+                  111
                 ]
               }
             ],
@@ -2730,7 +2803,7 @@
               {
                 "name": "source",
                 "type": "*",
-                "link": 108
+                "link": 111
               }
             ],
             "outputs": [
@@ -2783,7 +2856,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 109,
+            "id": 113,
             "origin_id": 19,
             "origin_slot": 0,
             "target_id": -20,
@@ -2791,7 +2864,7 @@
             "type": "VAE"
           },
           {
-            "id": 110,
+            "id": 114,
             "origin_id": 20,
             "origin_slot": 0,
             "target_id": -20,
@@ -2799,7 +2872,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 111,
+            "id": 115,
             "origin_id": 21,
             "origin_slot": 0,
             "target_id": -20,
@@ -2807,7 +2880,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 112,
+            "id": 116,
             "origin_id": 17,
             "origin_slot": 0,
             "target_id": -20,
@@ -2815,7 +2888,7 @@
             "type": "MODEL"
           },
           {
-            "id": 98,
+            "id": 101,
             "origin_id": 65,
             "origin_slot": 0,
             "target_id": 20,
@@ -2823,7 +2896,7 @@
             "type": "STRING"
           },
           {
-            "id": 99,
+            "id": 102,
             "origin_id": -10,
             "origin_slot": 0,
             "target_id": 65,
@@ -2831,7 +2904,7 @@
             "type": "STRING"
           },
           {
-            "id": 100,
+            "id": 103,
             "origin_id": -10,
             "origin_slot": 1,
             "target_id": 65,
@@ -2839,7 +2912,7 @@
             "type": "STRING"
           },
           {
-            "id": 101,
+            "id": 104,
             "origin_id": -10,
             "origin_slot": 2,
             "target_id": 65,
@@ -2847,7 +2920,7 @@
             "type": "STRING"
           },
           {
-            "id": 102,
+            "id": 105,
             "origin_id": -10,
             "origin_slot": 3,
             "target_id": 65,
@@ -2855,7 +2928,7 @@
             "type": "STRING"
           },
           {
-            "id": 103,
+            "id": 106,
             "origin_id": -10,
             "origin_slot": 4,
             "target_id": 65,
@@ -2863,7 +2936,7 @@
             "type": "STRING"
           },
           {
-            "id": 104,
+            "id": 107,
             "origin_id": -10,
             "origin_slot": 5,
             "target_id": 65,
@@ -2871,7 +2944,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 105,
+            "id": 108,
             "origin_id": -10,
             "origin_slot": 6,
             "target_id": 65,
@@ -2879,7 +2952,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 106,
+            "id": 109,
             "origin_id": -10,
             "origin_slot": 7,
             "target_id": 65,
@@ -2887,7 +2960,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 107,
+            "id": 110,
             "origin_id": -10,
             "origin_slot": 8,
             "target_id": 65,
@@ -2895,7 +2968,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 108,
+            "id": 111,
             "origin_id": 65,
             "origin_slot": 0,
             "target_id": 66,
@@ -2913,7 +2986,7 @@
         "state": {
           "lastGroupId": 0,
           "lastNodeId": 54,
-          "lastLinkId": 140,
+          "lastLinkId": 146,
           "lastRerouteId": 0
         },
         "config": {},
@@ -2932,7 +3005,7 @@
             7700,
             80,
             180,
-            96
+            144
           ]
         },
         "inputs": [
@@ -3146,7 +3219,7 @@
             "name": "Decode base Flux result: IMAGE",
             "type": "IMAGE",
             "linkIds": [
-              137
+              141
             ],
             "pos": [
               7720,
@@ -3159,7 +3232,7 @@
             "name": "Preflight identity face and required local model artifacts: identity",
             "type": "ARCH_FACE_IDENTITY",
             "linkIds": [
-              138
+              142
             ],
             "pos": [
               7720,
@@ -3172,7 +3245,7 @@
             "name": "Preflight identity face and required local model artifacts: mask_mode",
             "type": "STRING",
             "linkIds": [
-              139
+              143
             ],
             "pos": [
               7720,
@@ -3185,13 +3258,39 @@
             "name": "Select identity source lazily: *",
             "type": "*",
             "linkIds": [
-              140
+              144
             ],
             "pos": [
               7720,
               172
             ],
             "label": "identity reference"
+          },
+          {
+            "id": "93272756-0cac-5df6-80ac-5e4b1f18f638",
+            "name": "Preflight identity face and required local model artifacts: face_selection",
+            "type": "ARCH_FACE_SELECTION",
+            "linkIds": [
+              145
+            ],
+            "pos": [
+              7720,
+              196
+            ],
+            "label": "source face selection"
+          },
+          {
+            "id": "c06c1253-89cc-5dfc-a000-f7f8fbd5c40b",
+            "name": "Preflight identity face and required local model artifacts: status",
+            "type": "STRING",
+            "linkIds": [
+              146
+            ],
+            "pos": [
+              7720,
+              220
+            ],
+            "label": "preflight status"
           }
         ],
         "widgets": [],
@@ -3234,7 +3333,7 @@
                 "slot_index": 0,
                 "links": [
                   4,
-                  140
+                  144
                 ]
               }
             ],
@@ -3326,7 +3425,7 @@
                 "type": "ARCH_FACE_IDENTITY",
                 "slot_index": 0,
                 "links": [
-                  138
+                  142
                 ]
               },
               {
@@ -3350,14 +3449,24 @@
                 "name": "status",
                 "type": "STRING",
                 "slot_index": 3,
-                "links": []
+                "links": [
+                  146
+                ]
               },
               {
                 "name": "mask_mode",
                 "type": "STRING",
                 "slot_index": 4,
                 "links": [
-                  139
+                  143
+                ]
+              },
+              {
+                "name": "face_selection",
+                "type": "ARCH_FACE_SELECTION",
+                "slot_index": 5,
+                "links": [
+                  145
                 ]
               }
             ],
@@ -4866,7 +4975,7 @@
                 "type": "IMAGE",
                 "slot_index": 0,
                 "links": [
-                  137,
+                  141,
                   75
                 ]
               }
@@ -5468,7 +5577,7 @@
             "type": "VAE"
           },
           {
-            "id": 137,
+            "id": 141,
             "origin_id": 52,
             "origin_slot": 0,
             "target_id": -20,
@@ -5484,7 +5593,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 138,
+            "id": 142,
             "origin_id": 10,
             "origin_slot": 0,
             "target_id": -20,
@@ -5492,7 +5601,7 @@
             "type": "ARCH_FACE_IDENTITY"
           },
           {
-            "id": 139,
+            "id": 143,
             "origin_id": 10,
             "origin_slot": 4,
             "target_id": -20,
@@ -5500,12 +5609,28 @@
             "type": "STRING"
           },
           {
-            "id": 140,
+            "id": 144,
             "origin_id": 7,
             "origin_slot": 0,
             "target_id": -20,
             "target_slot": 3,
             "type": "*"
+          },
+          {
+            "id": 145,
+            "origin_id": 10,
+            "origin_slot": 5,
+            "target_id": -20,
+            "target_slot": 4,
+            "type": "ARCH_FACE_SELECTION"
+          },
+          {
+            "id": 146,
+            "origin_id": 10,
+            "origin_slot": 3,
+            "target_id": -20,
+            "target_slot": 5,
+            "type": "STRING"
           }
         ],
         "extra": {}
@@ -5518,7 +5643,7 @@
         "state": {
           "lastGroupId": 0,
           "lastNodeId": 60,
-          "lastLinkId": 151,
+          "lastLinkId": 158,
           "lastRerouteId": 0
         },
         "config": {},
@@ -5528,7 +5653,7 @@
             -260,
             80,
             180,
-            168
+            192
           ]
         },
         "outputNode": {
@@ -5587,7 +5712,8 @@
             "type": "BOOLEAN",
             "linkIds": [
               79,
-              87
+              85,
+              90
             ],
             "pos": [
               -100,
@@ -5610,27 +5736,40 @@
           },
           {
             "id": "f4afe2d1-500f-5221-85fb-4e97d0f48d6f",
-            "name": "Enforce identity threshold before final save: BOOLEAN",
-            "type": "BOOLEAN",
+            "name": "2 - Generate / canvas and seed: Preflight identity face and required local model artifacts: face_selection",
+            "type": "ARCH_FACE_SELECTION",
             "linkIds": [
-              88
+              86
             ],
             "pos": [
               -100,
               220
             ],
-            "label": "strict gate"
+            "label": "source face selection"
           },
           {
             "id": "0ee07666-e772-5485-9b67-9aaeec56ccd6",
-            "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
+            "name": "Enforce identity threshold before final save: BOOLEAN",
             "type": "BOOLEAN",
             "linkIds": [
-              89
+              91
             ],
             "pos": [
               -100,
               244
+            ],
+            "label": "strict gate"
+          },
+          {
+            "id": "6ce18ada-6f75-58b2-a5f9-03d01b57751b",
+            "name": "Identity source selector - OFF uses main image; ON uses image 2: BOOLEAN",
+            "type": "BOOLEAN",
+            "linkIds": [
+              92
+            ],
+            "pos": [
+              -100,
+              268
             ],
             "label": "use identity image"
           }
@@ -5641,7 +5780,7 @@
             "name": "Convert final SAM mask for preview: IMAGE",
             "type": "IMAGE",
             "linkIds": [
-              145
+              151
             ],
             "pos": [
               2000,
@@ -5654,7 +5793,7 @@
             "name": "Optional strict identity gate before final save: image",
             "type": "IMAGE",
             "linkIds": [
-              149
+              156
             ],
             "pos": [
               2000,
@@ -5664,29 +5803,29 @@
           },
           {
             "id": "48dcd06b-07e7-59bf-9a61-e5e83ca4770c",
-            "name": "Visible local identity diagnostic - reference and base vs final: reference_cosine_similarity",
-            "type": "FLOAT",
+            "name": "Local landmark-aligned identity transfer with SAM: status",
+            "type": "STRING",
             "linkIds": [
-              150
+              157
             ],
             "pos": [
               2000,
               148
             ],
-            "label": "reference score"
+            "label": "transfer status"
           },
           {
             "id": "350b741b-4c55-59a4-8f3c-1b15604bc91d",
-            "name": "Visible local identity diagnostic - reference and base vs final: base_cosine_similarity",
-            "type": "FLOAT",
+            "name": "Optional strict identity gate before final save: status",
+            "type": "STRING",
             "linkIds": [
-              151
+              158
             ],
             "pos": [
               2000,
               172
             ],
-            "label": "base score"
+            "label": "final save status"
           }
         ],
         "widgets": [],
@@ -5797,7 +5936,7 @@
                 "slot_index": 0,
                 "links": [
                   84,
-                  85
+                  88
                 ]
               },
               {
@@ -5806,14 +5945,24 @@
                 "slot_index": 1,
                 "links": [
                   80,
-                  86
+                  89
                 ]
               },
               {
                 "name": "status",
                 "type": "STRING",
                 "slot_index": 2,
-                "links": []
+                "links": [
+                  157
+                ]
+              },
+              {
+                "name": "face_selection",
+                "type": "ARCH_FACE_SELECTION",
+                "slot_index": 3,
+                "links": [
+                  87
+                ]
               }
             ],
             "title": "Local landmark-aligned identity transfer with SAM",
@@ -5858,7 +6007,7 @@
                 "type": "IMAGE",
                 "slot_index": 0,
                 "links": [
-                  145
+                  151
                 ]
               }
             ],
@@ -5914,6 +6063,24 @@
                 "name": "extra_metadata",
                 "type": "EXTRA_METADATA",
                 "link": null,
+                "shape": 7
+              },
+              {
+                "name": "enabled",
+                "type": "BOOLEAN",
+                "link": 85,
+                "shape": 7
+              },
+              {
+                "name": "reference_face_selection",
+                "type": "ARCH_FACE_SELECTION",
+                "link": 86,
+                "shape": 7
+              },
+              {
+                "name": "target_face_selection",
+                "type": "ARCH_FACE_SELECTION",
+                "link": 87,
                 "shape": 7
               },
               {
@@ -5988,8 +6155,7 @@
                 "type": "FLOAT",
                 "slot_index": 0,
                 "links": [
-                  92,
-                  150
+                  95
                 ]
               },
               {
@@ -5997,7 +6163,7 @@
                 "type": "BOOLEAN",
                 "slot_index": 1,
                 "links": [
-                  90
+                  93
                 ]
               },
               {
@@ -6005,7 +6171,7 @@
                 "type": "BOOLEAN",
                 "slot_index": 2,
                 "links": [
-                  91
+                  94
                 ]
               },
               {
@@ -6013,8 +6179,7 @@
                 "type": "FLOAT",
                 "slot_index": 3,
                 "links": [
-                  93,
-                  151
+                  96
                 ]
               },
               {
@@ -6099,47 +6264,47 @@
               {
                 "name": "image",
                 "type": "IMAGE",
-                "link": 85
+                "link": 88
               },
               {
                 "name": "face_mask",
                 "type": "MASK",
-                "link": 86
+                "link": 89
               },
               {
                 "name": "transfer_enabled",
                 "type": "BOOLEAN",
-                "link": 87
+                "link": 90
               },
               {
                 "name": "enforce_threshold",
                 "type": "BOOLEAN",
-                "link": 88
+                "link": 91
               },
               {
                 "name": "require_reference_dominance",
                 "type": "BOOLEAN",
-                "link": 89
+                "link": 92
               },
               {
                 "name": "reference_detected",
                 "type": "BOOLEAN",
-                "link": 90
+                "link": 93
               },
               {
                 "name": "reference_same_identity",
                 "type": "BOOLEAN",
-                "link": 91
+                "link": 94
               },
               {
                 "name": "reference_similarity",
                 "type": "FLOAT",
-                "link": 92
+                "link": 95
               },
               {
                 "name": "base_similarity",
                 "type": "FLOAT",
-                "link": 93
+                "link": 96
               }
             ],
             "outputs": [
@@ -6148,15 +6313,17 @@
                 "type": "IMAGE",
                 "slot_index": 0,
                 "links": [
-                  94,
-                  149
+                  97,
+                  156
                 ]
               },
               {
                 "name": "status",
                 "type": "STRING",
                 "slot_index": 1,
-                "links": []
+                "links": [
+                  158
+                ]
               }
             ],
             "title": "Optional strict identity gate before final save",
@@ -6183,7 +6350,7 @@
               {
                 "name": "images",
                 "type": "IMAGE",
-                "link": 94
+                "link": 97
               }
             ],
             "outputs": [
@@ -6244,7 +6411,7 @@
             "type": "MASK"
           },
           {
-            "id": 145,
+            "id": 151,
             "origin_id": 56,
             "origin_slot": 0,
             "target_id": -20,
@@ -6277,6 +6444,30 @@
           },
           {
             "id": 85,
+            "origin_id": -10,
+            "origin_slot": 3,
+            "target_id": 58,
+            "target_slot": 6,
+            "type": "BOOLEAN"
+          },
+          {
+            "id": 86,
+            "origin_id": -10,
+            "origin_slot": 5,
+            "target_id": 58,
+            "target_slot": 7,
+            "type": "ARCH_FACE_SELECTION"
+          },
+          {
+            "id": 87,
+            "origin_id": 55,
+            "origin_slot": 3,
+            "target_id": 58,
+            "target_slot": 8,
+            "type": "ARCH_FACE_SELECTION"
+          },
+          {
+            "id": 88,
             "origin_id": 55,
             "origin_slot": 0,
             "target_id": 59,
@@ -6284,7 +6475,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 86,
+            "id": 89,
             "origin_id": 55,
             "origin_slot": 1,
             "target_id": 59,
@@ -6292,7 +6483,7 @@
             "type": "MASK"
           },
           {
-            "id": 87,
+            "id": 90,
             "origin_id": -10,
             "origin_slot": 3,
             "target_id": 59,
@@ -6300,23 +6491,23 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 88,
+            "id": 91,
             "origin_id": -10,
-            "origin_slot": 5,
+            "origin_slot": 6,
             "target_id": 59,
             "target_slot": 3,
             "type": "BOOLEAN"
           },
           {
-            "id": 89,
+            "id": 92,
             "origin_id": -10,
-            "origin_slot": 6,
+            "origin_slot": 7,
             "target_id": 59,
             "target_slot": 4,
             "type": "BOOLEAN"
           },
           {
-            "id": 90,
+            "id": 93,
             "origin_id": 58,
             "origin_slot": 1,
             "target_id": 59,
@@ -6324,7 +6515,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 91,
+            "id": 94,
             "origin_id": 58,
             "origin_slot": 2,
             "target_id": 59,
@@ -6332,7 +6523,7 @@
             "type": "BOOLEAN"
           },
           {
-            "id": 92,
+            "id": 95,
             "origin_id": 58,
             "origin_slot": 0,
             "target_id": 59,
@@ -6340,7 +6531,7 @@
             "type": "FLOAT"
           },
           {
-            "id": 93,
+            "id": 96,
             "origin_id": 58,
             "origin_slot": 3,
             "target_id": 59,
@@ -6348,7 +6539,7 @@
             "type": "FLOAT"
           },
           {
-            "id": 94,
+            "id": 97,
             "origin_id": 59,
             "origin_slot": 0,
             "target_id": 60,
@@ -6356,7 +6547,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 149,
+            "id": 156,
             "origin_id": 59,
             "origin_slot": 0,
             "target_id": -20,
@@ -6364,20 +6555,20 @@
             "type": "IMAGE"
           },
           {
-            "id": 150,
-            "origin_id": 58,
-            "origin_slot": 0,
+            "id": 157,
+            "origin_id": 55,
+            "origin_slot": 2,
             "target_id": -20,
             "target_slot": 2,
-            "type": "FLOAT"
+            "type": "STRING"
           },
           {
-            "id": 151,
-            "origin_id": 58,
-            "origin_slot": 3,
+            "id": 158,
+            "origin_id": 59,
+            "origin_slot": 1,
             "target_id": -20,
             "target_slot": 3,
-            "type": "FLOAT"
+            "type": "STRING"
           }
         ],
         "extra": {}

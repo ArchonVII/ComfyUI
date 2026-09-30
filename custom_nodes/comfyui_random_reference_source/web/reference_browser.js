@@ -115,7 +115,8 @@ async function favorites(view) {
       view.favoriteList.append(entry);
       view.favoriteObserver?.observe(entry);
     }
-    if (!view.favoriteList.childElementCount) view.favoriteList.append(element("p", "rr-muted", "No matching favorites"));
+    if (!view.favoriteList.childElementCount) view.favoriteList.append(element("p", "rr-muted",
+      Object.keys(data).length ? "No matching favorites" : "No favorites yet. Choose a source and use Save as new in the prompt panel."));
   };
   view.favoriteSearch.oninput = draw;
   draw();

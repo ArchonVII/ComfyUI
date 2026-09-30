@@ -266,3 +266,32 @@ Favorite prompt edits now apply immediately to the node, including clearing text
 Verification: 75 focused tests passed; after the optional-unconnected-lane correction all 27 backend node tests passed again. An isolated CPU-only ComfyUI server executed real source → composer → PreviewAny prompts with optional lanes both disabled and enabled and returned the exact expected text. The temporary server was stopped. Live workflow/package files are synchronized, but an immediate pre-restart queue check found new work, so live port 8192 was not restarted. Activation requires a restart when the owner queue is clear, then browser refresh and reopening #54.
 
 Activation completed on the following turn: live queue was empty, the manager restart was issued after a second queue check, and /object_info/ReferencePromptCompose confirmed the new node loaded on port 8192. Browser refresh and reopening the updated #54 are still required for an already-open canvas.
+
+## Workflow usability follow-up — 2026-09-29
+
+Owner authorized the four review fixes. Workflow v7 defers reference filesystem
+validation until a source executes, allowing empty disabled slots. Preflight and
+transfer publish their face selection order, index, and detection threshold to
+the dual scorer; unavailable indices remain undetected instead of silently
+scoring another face. Existing output slots keep their indices.
+
+Identity finish OFF bypasses preflight detection, transfer, scoring, and manifest
+writes. Scorer image inputs and preflight identity input are lazy. The separate
+identity-reference switch still controls that image's Flux conditioning and
+prompt contribution independently of the post-generation identity finish.
+
+Three root status cards show preflight, transfer, and final-save status. The last
+includes identity scores when the gate passes. Gate failures return an execution
+blocker only on the image output, preserving the reason on the status output and
+allowing the independent base branch to complete. No failing final image passes
+to PreviewImage or SaveImage.
+
+Verification: 77 focused tests passed, plus the 16 workflow tests after extending
+runtime installation checks. A separate CPU-only process using the actual Comfy
+executor validated and executed an empty optional source with identity finish
+disabled, and verified that a weak identity blocks its image consumer while
+status and base consumers complete. Runtime workflow and changed backend files
+match the canonical build. Existing live #54 matched the previous commit before
+backup and installation; no owner images were used for these checks.
+
+Live activation also passed: the idle queue was rechecked immediately before restarting port 8192. Both smoke cases then passed through the live /prompt API. Refresh the frontend and reopen saved #54 to replace an already-open canvas.

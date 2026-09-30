@@ -4,6 +4,10 @@ This local ComfyUI package loads one reference image from a folder or an explici
 
 ## Reference browser
 
+Click **Load image…** on a source node for a plain single-image file picker.
+It uses ComfyUI's local input upload and selects only that image, clearing the
+previous folder/favorite selection. Cancel or a failed upload preserves the source.
+
 Click **Browse folder…** on a source node to open the native folder picker directly.
 The **Folder** and **Selected images** buttons inside the browser open their
 native pickers directly; cancelling keeps

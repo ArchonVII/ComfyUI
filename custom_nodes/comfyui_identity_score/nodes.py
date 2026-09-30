@@ -157,9 +157,9 @@ class DualIdentityScore:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "base_image": ("IMAGE", {"tooltip": "Base/input image that supplies composition."}),
-                "reference_image": ("IMAGE", {"tooltip": "Identity/reference image."}),
-                "generated_image": ("IMAGE", {"tooltip": "Generated final image to score."}),
+                "base_image": ("IMAGE", {"lazy": True, "tooltip": "Base/input image that supplies composition."}),
+                "reference_image": ("IMAGE", {"lazy": True, "tooltip": "Identity/reference image."}),
+                "generated_image": ("IMAGE", {"lazy": True, "tooltip": "Generated final image to score."}),
                 "experiment_mode": (["face_swap", "identity_i2i"],),
                 "face_score_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "same_identity_threshold": (
@@ -183,6 +183,9 @@ class DualIdentityScore:
                 "experiment_id": ("STRING", {"default": "", "forceInput": True}),
                 "run_id": ("STRING", {"default": "", "forceInput": True}),
                 "extra_metadata": ("EXTRA_METADATA", {"forceInput": True}),
+                "enabled": ("BOOLEAN", {"default": True, "forceInput": True}),
+                "reference_face_selection": ("ARCH_FACE_SELECTION",),
+                "target_face_selection": ("ARCH_FACE_SELECTION",),
             },
             "hidden": {
                 "prompt": "PROMPT",
@@ -223,6 +226,10 @@ class DualIdentityScore:
     OUTPUT_NODE = True
     DESCRIPTION = "Compare generated identity against both the reference and base images for local experiment ranking."
 
+    def check_lazy_status(self, enabled=True, **kwargs):
+        return [name for name in ("base_image", "reference_image", "generated_image")
+                if enabled and kwargs.get(name) is None]
+
     def score_identity(
         self,
         base_image,
@@ -241,7 +248,18 @@ class DualIdentityScore:
         extra_metadata=None,
         prompt=None,
         extra_pnginfo=None,
+        enabled=True,
+        reference_face_selection=None,
+        target_face_selection=None,
     ):
+        if not enabled:
+            report_json = json.dumps({"status": "bypassed", "rankable": False,
+                                      "reason": "Identity finish disabled; scoring and manifest skipped"})
+            metadata = dict(extra_metadata or {})
+            metadata[metadata_key or "identity_score_report"] = report_json
+            return {"ui": {"text": ["Identity scoring bypassed"], "status": ["bypassed"]},
+                    "result": (0.0, False, False, 0.0, False, False, False, 0.0, False, False,
+                               report_json, metadata)}
         started_at = time.perf_counter()
         node_dir = Path(__file__).resolve().parent
         report = build_dual_report(
@@ -253,6 +271,8 @@ class DualIdentityScore:
             face_score_threshold=face_score_threshold,
             same_identity_threshold=same_identity_threshold,
             face_selection=face_selection,
+            reference_face_selection=reference_face_selection,
+            target_face_selection=target_face_selection,
         )
         if experiment_id:
             report["experiment_id"] = str(experiment_id)

@@ -35,6 +35,10 @@ const context = {{
   }},
   clearTimeout() {{}},
   console,
+  FormData: class {{
+    constructor() {{ this.fields = {{}}; }}
+    append(name, value) {{ this.fields[name] = value; }}
+  }},
   document: {{
     createElement() {{
       return {{ innerHTML: "", style: {{}} }};
@@ -419,6 +423,7 @@ def test_favorite_manager_controls_are_transient_and_named_by_action():
 
     assert 'addTransientButton("Open Reference Browser…"' in source
     assert 'addTransientButton("Browse folder…"' in source
+    assert 'addTransientButton("Load image…"' in source
     assert 'addTransientButton("★ Save new favorite…"' not in source
 
 
@@ -634,4 +639,42 @@ def test_completing_save_cannot_cancel_a_newer_pending_favorite_choice():
   finishChoice(); await choosing;
   assertWidget(node, "favorite", "B");
   assertWidget(node, "favorite_prompt", "saved B");
+''')
+
+
+def test_plain_load_image_uses_exactly_one_local_uploaded_image():
+    _run_extension_assertions('''
+  const node = createNode({folder:"old folder",favorite:"Old",selected_images:"old.png"});
+  const button = findWidget(node, "Load image…");
+  assertEqual(button.serialize, false, "load button is transient");
+  context.api.fetchApi = async (path, options) => {
+    assertEqual(path, "/upload/image", "standard ComfyUI upload endpoint");
+    assertEqual(options.body.fields.overwrite, "false", "existing files are preserved");
+    return {ok:true,json:async()=>({name:"portrait, chosen.png",subfolder:"references",type:"input"})};
+  };
+  await context.loadSingleImage(node, {name:"portrait.png"});
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", '"references/portrait, chosen.png"');
+  assertWidget(node, "folder", "");
+  assertWidget(node, "favorite", "None");
+''')
+
+
+def test_cancel_failed_or_late_single_image_load_preserves_current_source():
+    _run_extension_assertions('''
+  const node = createNode({folder:"original",selected_images:"original.png"});
+  await context.loadSingleImage(node, undefined);
+  assertWidget(node, "selected_images", "original.png");
+  context.api.fetchApi = async () => ({ok:false,json:async()=>({error:"Upload failed"})});
+  let failed = false;
+  try { await context.loadSingleImage(node, {}); } catch { failed = true; }
+  assertEqual(failed, true, "upload failure reported");
+  assertWidget(node, "selected_images", "original.png");
+  let finish;
+  context.api.fetchApi = () => new Promise(resolve => {finish = () => resolve({ok:true,json:async()=>({name:"late.png"})});});
+  const loading = context.loadSingleImage(node, {});
+  context.selectFolder(node, "new folder");
+  finish(); await loading;
+  assertWidget(node, "folder", "new folder");
+  assertWidget(node, "source_mode", "folder");
 ''')

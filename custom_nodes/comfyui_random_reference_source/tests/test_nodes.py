@@ -26,6 +26,15 @@ def _png(path: Path, color=(255, 0, 0)):
     Image.new("RGB", (2, 1), color=color).save(path)
 
 
+def test_empty_optional_source_validates_but_fails_if_actually_executed():
+    args = dict(lane="generic", source_mode="selection", favorite="None",
+                folder="", selected_images="", selection_policy="seeded", seed=0,
+                include_subfolders=False)
+    assert RandomReferenceImageSource.VALIDATE_INPUTS(**args) is True
+    with pytest.raises(ValueError, match="selected_images is required"):
+        RandomReferenceImageSource().load_random_reference(**args)
+
+
 def test_parse_selected_images_accepts_lines_commas_and_comments():
     selected = """
     # saved picks
