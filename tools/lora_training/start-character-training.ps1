@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('flux2-klein9b', 'qwen-edit-2511')]
+    [ValidateSet('flux2-klein9b', 'qwen-edit-2511', 'krea2')]
     [string] $Model,
 
     [Parameter(Mandatory)]
@@ -25,6 +25,12 @@ param(
     [Parameter(Mandatory)]
     [string] $TextEncoder,
 
+    [ValidateSet('proof', 'quality')]
+    [string] $Stage = 'quality',
+    [Alias('TrainerRoot')]
+    [string] $TrainerRootOverride,
+    [Alias('TrainingRoot')]
+    [string] $TrainingRootOverride,
     [string] $DatasetDir,
     [string] $ControlDir,
     [switch] $DryRun,
@@ -42,13 +48,24 @@ if ($DryRun -and $ApproveOutput) {
 
 $TrainerRoot = 'C:\tools\image\trainers\musubi-tuner'
 $TrainingRoot = 'C:\tools\image\training\characters'
+if ($Model -eq 'krea2') {
+    $TrainerRoot = 'E:\image-training\krea2\trainer\musubi-tuner'
+    $TrainingRoot = 'E:\image-training\krea2'
+}
+if ($TrainerRootOverride) {
+    $TrainerRoot = $TrainerRootOverride
+}
+if ($TrainingRootOverride) {
+    $TrainingRoot = $TrainingRootOverride
+}
 $TrainerPython = Join-Path $TrainerRoot '.venv\Scripts\python.exe'
 $Renderer = Join-Path $PSScriptRoot 'render_musubi_config.py'
 $RendererPython = (Get-Command py -ErrorAction Stop).Source
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $ApprovedLoraRoot = Join-Path $RepositoryRoot 'models\loras\trained\characters'
-$RunDir = Join-Path (Join-Path (Join-Path $TrainingRoot 'runs') $RunName) $Model
-$OutputDir = Join-Path (Join-Path (Join-Path $TrainingRoot 'outputs') $RunName) $Model
+$EffectiveRunName = if ($Model -eq 'krea2') { $RunName + '-' + $Stage } else { $RunName }
+$RunDir = Join-Path (Join-Path (Join-Path $TrainingRoot 'runs') $EffectiveRunName) $Model
+$OutputDir = Join-Path (Join-Path (Join-Path $TrainingRoot 'outputs') $EffectiveRunName) $Model
 $DatasetDir = if ($DatasetDir) { $DatasetDir } else { Join-Path (Join-Path (Join-Path $TrainingRoot 'datasets') $Character) 'targets' }
 
 function Assert-UnderRoot {
@@ -96,8 +113,8 @@ function Invoke-Checked {
     }
 }
 
-$expectedOutput = Join-Path $OutputDir ($RunName + '.safetensors')
-$approved = Join-Path $ApprovedLoraRoot ($RunName + '-' + $Model + '.safetensors')
+$expectedOutput = Join-Path $OutputDir ($EffectiveRunName + '.safetensors')
+$approved = Join-Path $ApprovedLoraRoot ($EffectiveRunName + '-' + $Model + '.safetensors')
 if ($ApproveOutput) {
     Assert-UnderRoot -Path $OutputDir -Root $TrainingRoot -Label 'Output directory'
     if (-not (Test-Path -LiteralPath $expectedOutput -PathType Leaf)) {
@@ -121,8 +138,8 @@ if ($ControlDir) {
 if ($Model -eq 'qwen-edit-2511' -and -not $ControlDir) {
     throw "Qwen Edit 2511 requires -ControlDir with one or more matching starting images per target."
 }
-if ($Model -eq 'flux2-klein9b' -and $ControlDir) {
-    throw "This Klein character template is caption-only; do not pass -ControlDir."
+if ($Model -in @('flux2-klein9b', 'krea2') -and $ControlDir) {
+    throw "This $Model character template is caption-only; do not pass -ControlDir."
 }
 Assert-FreeSpace -Path $TrainingRoot -MinimumGiB $MinimumFreeGiB
 
@@ -131,12 +148,20 @@ $rendererArgs = @(
     '--model', $Model,
     '--dataset-dir', $DatasetDir,
     '--run-dir', $RunDir,
-    '--run-name', $RunName,
+    '--run-name', $EffectiveRunName,
     '--trigger-token', $TriggerToken,
     '--dit', $Dit,
     '--vae', $Vae,
-    '--text-encoder', $TextEncoder
+    '--text-encoder', $TextEncoder,
+    '--minimum-free-gib', $MinimumFreeGiB
 )
+if ($Model -eq 'krea2') {
+    $rendererArgs += @(
+        '--stage', $Stage,
+        '--training-root', $TrainingRoot,
+        '--trainer-root', $TrainerRoot
+    )
+}
 if ($ControlDir) {
     $rendererArgs += @('--control-dir', $ControlDir)
 }
@@ -147,6 +172,9 @@ if ($Model -eq 'qwen-edit-2511' -and $ramGiB -lt 64) {
 }
 elseif ($Model -eq 'flux2-klein9b' -and $ramGiB -lt 32) {
     Write-Warning ("FLUX.2 Klein 9B training with {0:N1} GiB RAM is experimental and may page heavily." -f $ramGiB)
+}
+elseif ($Model -eq 'krea2' -and $ramGiB -lt 64) {
+    Write-Warning ("Krea 2 training with {0:N1} GiB RAM is experimental and may page heavily." -f $ramGiB)
 }
 Write-Warning "This low-memory lane targets approximately 16 GB VRAM and remains experimental. Keep batch size 1 and close other GPU workloads."
 
@@ -179,12 +207,19 @@ if ($Model -eq 'flux2-klein9b') {
     $trainScript = 'flux_2_train_network.py'
     $textFp8Flag = '--fp8_text_encoder'
 }
-else {
+elseif ($Model -eq 'qwen-edit-2511') {
     $modelVersion = 'edit-2511'
     $latentScript = 'qwen_image_cache_latents.py'
     $textScript = 'qwen_image_cache_text_encoder_outputs.py'
     $trainScript = 'qwen_image_train_network.py'
     $textFp8Flag = '--fp8_vl'
+}
+else {
+    $modelVersion = $null
+    $latentScript = 'krea2_cache_latents.py'
+    $textScript = 'krea2_cache_text_encoder_outputs.py'
+    $trainScript = 'krea2_train_network.py'
+    $textFp8Flag = $null
 }
 
 Push-Location $RunDir
@@ -192,21 +227,28 @@ try {
     $latentArgs = @(
         (Join-Path $SourceRoot $latentScript),
         '--dataset_config', $DatasetConfig,
-        '--vae', $Vae,
-        '--model_version', $modelVersion
+        '--vae', $Vae
     )
+    if ($modelVersion) {
+        $latentArgs += @('--model_version', $modelVersion)
+    }
     if ($Model -eq 'flux2-klein9b') {
         $latentArgs += @('--vae_dtype', 'bfloat16')
     }
     Invoke-Checked -FilePath $TrainerPython -ArgumentList $latentArgs
-    Invoke-Checked -FilePath $TrainerPython -ArgumentList @(
+    $textArgs = @(
         (Join-Path $SourceRoot $textScript),
         '--dataset_config', $DatasetConfig,
         '--text_encoder', $TextEncoder,
-        '--batch_size', '1',
-        '--model_version', $modelVersion,
-        $textFp8Flag
+        '--batch_size', '1'
     )
+    if ($modelVersion) {
+        $textArgs += @('--model_version', $modelVersion)
+    }
+    if ($textFp8Flag) {
+        $textArgs += $textFp8Flag
+    }
+    Invoke-Checked -FilePath $TrainerPython -ArgumentList $textArgs
     Invoke-Checked -FilePath $TrainerPython -ArgumentList @(
         '-m', 'accelerate.commands.launch',
         '--num_cpu_threads_per_process', '1',
@@ -227,7 +269,7 @@ $completion = @{
     completed_utc = [DateTime]::UtcNow.ToString('o')
     model = $Model
     output = $expectedOutput
-    run_name = $RunName
+    run_name = $EffectiveRunName
 } | ConvertTo-Json
 $completion | Set-Content -LiteralPath (Join-Path $RunDir 'training-complete.json') -Encoding utf8
 Write-Host "Training output remains staged locally. Re-run with -ApproveOutput only after reviewing it."

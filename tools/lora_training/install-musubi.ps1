@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [switch] $Krea2,
     [switch] $DryRun,
     [ValidateRange(1, 500)]
     [int] $MinimumTrainerFreeGiB = 20,
@@ -13,6 +14,10 @@ $ErrorActionPreference = 'Stop'
 $MusubiRevision = '8934cfbbb4b9bcfa8071ce209129f0c5eb5df2e6'
 $TrainerRoot = 'C:\tools\image\trainers\musubi-tuner'
 $TrainingRoot = 'C:\tools\image\training\characters'
+if ($Krea2) {
+    $TrainerRoot = 'E:\image-training\krea2\trainer\musubi-tuner'
+    $TrainingRoot = 'E:\image-training\krea2'
+}
 $TrainerVenv = Join-Path $TrainerRoot '.venv'
 $TrainerPython = Join-Path $TrainerVenv 'Scripts\python.exe'
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
@@ -81,7 +86,7 @@ elseif (-not (Test-Path -LiteralPath (Join-Path $TrainerRoot '.git'))) {
 }
 
 if (Test-Path -LiteralPath (Join-Path $TrainerRoot '.git')) {
-    $dirty = & $Git -C $TrainerRoot status --porcelain
+    $dirty = & $Git -c ('safe.directory=' + $TrainerRoot) -C $TrainerRoot status --porcelain
     if ($LASTEXITCODE -ne 0) {
         throw "Could not inspect the existing trainer checkout."
     }
@@ -90,8 +95,8 @@ if (Test-Path -LiteralPath (Join-Path $TrainerRoot '.git')) {
     }
 }
 
-Invoke-Checked -FilePath $Git -ArgumentList @('-C', $TrainerRoot, 'fetch', 'origin', $MusubiRevision)
-Invoke-Checked -FilePath $Git -ArgumentList @('-C', $TrainerRoot, 'checkout', '--detach', $MusubiRevision)
+Invoke-Checked -FilePath $Git -ArgumentList @('-c', ('safe.directory=' + $TrainerRoot), '-C', $TrainerRoot, 'fetch', 'origin', $MusubiRevision)
+Invoke-Checked -FilePath $Git -ArgumentList @('-c', ('safe.directory=' + $TrainerRoot), '-C', $TrainerRoot, 'checkout', '--detach', $MusubiRevision)
 
 if (-not (Test-Path -LiteralPath $TrainerPython)) {
     Invoke-Checked -FilePath $Uv -ArgumentList @(
@@ -133,9 +138,21 @@ Invoke-Checked -FilePath $TrainerPython -ArgumentList @(
 )
 
 if (-not $DryRun) {
-    $installedRevision = (& $Git -C $TrainerRoot rev-parse HEAD).Trim()
+    $installedRevision = (& $Git -c ('safe.directory=' + $TrainerRoot) -C $TrainerRoot rev-parse HEAD).Trim()
     if ($installedRevision -ne $MusubiRevision) {
         throw "Installed revision '$installedRevision' does not match required revision '$MusubiRevision'."
+    }
+    if ($Krea2) {
+        foreach ($required in @(
+            'src\musubi_tuner\krea2_cache_latents.py',
+            'src\musubi_tuner\krea2_cache_text_encoder_outputs.py',
+            'src\musubi_tuner\krea2_train_network.py',
+            'src\musubi_tuner\networks\lora_krea2.py'
+        )) {
+            if (-not (Test-Path -LiteralPath (Join-Path $TrainerRoot $required) -PathType Leaf)) {
+                throw "Pinned trainer is missing required Krea 2 module: $required"
+            }
+        }
     }
 }
 

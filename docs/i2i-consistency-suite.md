@@ -302,6 +302,72 @@ models\loras\trained\characters\<run-name>-<model>.safetensors
   trainer update, record the new revisions/hashes and rerun the schema and reduced
   smokes below.
 
+### Krea 2 identity training
+
+Krea 2 uses a dedicated, local-only lane under `E:\image-training\krea2` so its
+large RAW checkpoint, private datasets, caches, and staged outputs do not consume
+the live ComfyUI volume or alter the established Klein/Qwen trainer. Install the
+same pinned Musubi revision with its Krea modules verified:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\lora_training\install-musubi.ps1 -Krea2
+```
+
+Training requires the official BF16 `raw.safetensors`, the Qwen-Image VAE, and
+an unquantized Qwen3-VL-4B BF16 single-file encoder. Turbo, FP8-scaled, and GGUF
+weights are rejected as training bases. Train on
+[`krea/Krea-2-Raw`](https://huggingface.co/krea/Krea-2-Raw) and apply the LoRA to
+Turbo for inference, matching the
+[`krea-ai/krea-2`](https://github.com/krea-ai/krea-2) recommendation and the
+pinned [Musubi Krea 2 guide](https://github.com/kohya-ss/musubi-tuner/blob/8934cfbbb4b9bcfa8071ce209129f0c5eb5df2e6/docs/krea2.md).
+
+Keep the original photo folder read-only. Create a private selection JSON outside
+the repository, with a flat source filename, local caption, and short selection
+reason for each image:
+
+```json
+{
+  "images": [
+    {
+      "file": "portrait.jpg",
+      "caption": "subjectToken, smiling woman outdoors, close-up photograph",
+      "reason": "clear current face"
+    }
+  ]
+}
+```
+
+Prepare immutable, generically named working copies. The generated manifest
+contains file hashes and selection reasons but omits caption text:
+
+```powershell
+py -3 .\tools\lora_training\prepare_identity_dataset.py `
+  --source-dir 'C:\private\source-photos' `
+  --destination-dir 'E:\image-training\krea2\datasets\subject\targets' `
+  --selection-file 'E:\image-training\krea2\selections\subject.json' `
+  --trigger-token subjectToken
+```
+
+Run the two-epoch proof first. The launcher automatically suffixes the run with
+`-proof`, uses batch one, scaled FP8, gradient checkpointing, resolution-aware
+Krea timestep sampling, rank/alpha 32, and 26 swapped blocks:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\lora_training\start-character-training.ps1 `
+  -Model krea2 -Stage proof -Character subject -RunName subject-krea2-v1 `
+  -TriggerToken subjectToken `
+  -Dit 'E:\image-training\krea2\models\raw.safetensors' `
+  -Vae 'C:\tools\image\ComfyUI\models\vae\qwen_image_vae.safetensors' `
+  -TextEncoder 'E:\image-training\krea2\models\qwen3vl_4b_bf16.safetensors' `
+  -DryRun
+```
+
+Remove `-DryRun` to execute. Review the staged proof on Krea 2 Turbo before
+starting the separate sixteen-epoch `-Stage quality` run. Approval remains a
+distinct `-ApproveOutput` invocation and never overwrites an installed LoRA.
+Krea 2 support and training on this 16 GiB VRAM / 31 GiB RAM workstation are
+experimental; preserve a failed run directory and its saved state for diagnosis.
+
 ## Live validation evidence
 
 Validation ran against the generated workflows at suite head

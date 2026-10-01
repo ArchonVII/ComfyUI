@@ -1,0 +1,40 @@
+# Musubi Tuner v0.3.4 context, pinned by install-musubi.ps1.
+# Train only on the official Krea 2 RAW BF16 checkpoint. Turbo and scaled-FP8
+# checkpoints are inference assets, not training bases. Krea 2 is caption-only;
+# cache target latents and Qwen3-VL text outputs before training.
+
+dataset_config = {{DATASET_CONFIG}}
+dit = {{DIT}}
+vae = {{VAE}}
+text_encoder = {{TEXT_ENCODER}}
+network_module = "networks.lora_krea2"
+
+mixed_precision = "bf16"
+save_precision = "bf16"
+sdpa = true
+timestep_sampling = "krea2_shift"
+weighting_scheme = "none"
+
+optimizer_type = "adamw8bit"
+learning_rate = 1e-4
+lr_scheduler = "constant"
+network_dim = 32
+network_alpha = 32
+max_train_epochs = {{MAX_TRAIN_EPOCHS}}
+save_every_n_epochs = 1
+save_last_n_epochs = 3
+save_state = true
+seed = 42
+
+gradient_checkpointing = true
+fp8_base = true
+fp8_scaled = true
+blocks_to_swap = 26
+block_swap_h2d_only = true
+block_swap_ring_size = 1
+max_data_loader_n_workers = 2
+persistent_data_loader_workers = true
+
+output_dir = {{OUTPUT_DIR}}
+output_name = {{OUTPUT_NAME}}
+training_comment = {{TRIGGER_TOKEN}}

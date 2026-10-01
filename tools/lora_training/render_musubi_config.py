@@ -64,12 +64,12 @@ class ModelCheckpointError(ValueError):
 @dataclass(frozen=True)
 class ModelProfile:
     template: str
-    model_version: str
+    model_version: str | None
     network_module: str
     latent_script: str
     text_script: str
     train_script: str
-    text_fp8_flag: str
+    text_fp8_flag: str | None
     blocks_to_swap: int
 
 
@@ -103,6 +103,16 @@ MODEL_PROFILES = {
         text_fp8_flag="--fp8_vl",
         blocks_to_swap=45,
     ),
+    "krea2": ModelProfile(
+        template="character-krea2.toml",
+        model_version=None,
+        network_module="networks.lora_krea2",
+        latent_script="krea2_cache_latents.py",
+        text_script="krea2_cache_text_encoder_outputs.py",
+        train_script="krea2_train_network.py",
+        text_fp8_flag=None,
+        blocks_to_swap=26,
+    ),
 }
 
 
@@ -120,6 +130,11 @@ def resource_warnings(model: str, vram_gib: float, ram_gib: float) -> list[str]:
             warnings.append(
                 f"Qwen Edit block swap is documented with 64 GiB main RAM recommended; "
                 f"this host has {ram_gib:g} GiB, so heavy paging or failure is possible."
+            )
+        elif model == "krea2":
+            warnings.append(
+                f"Krea 2 block swap on {ram_gib:g} GiB RAM is experimental; "
+                "heavy paging or failure is possible."
             )
         else:
             warnings.append(
@@ -237,6 +252,10 @@ def _checkpoint_advice(model: str, label: str) -> str:
         return "Select the unquantized Qwen-Image-Edit-2511 BF16 .safetensors checkpoint."
     if model == "qwen-edit-2511" and label == "text_encoder":
         return "Select the unquantized Qwen2.5-VL BF16 text encoder, not fp8_scaled."
+    if model == "krea2" and label == "dit":
+        return "Select the official Krea 2 RAW BF16 checkpoint, not Turbo or fp8_scaled."
+    if model == "krea2" and label == "text_encoder":
+        return "Select the unquantized Qwen3-VL-4B BF16 text encoder, not fp8_scaled."
     return f"Select an unquantized training-compatible .safetensors asset for {label}."
 
 
@@ -283,7 +302,7 @@ def _validate_model_paths(model: str, model_paths: Mapping[str, Path | str]) -> 
                 f"{label} checkpoint '{path.name}' contains unsupported quantized tensor "
                 f"dtype(s): {', '.join(quantized)}. {_checkpoint_advice(model, label)}"
             )
-        if model == "qwen-edit-2511" and label in {"dit", "text_encoder"} and "BF16" not in dtypes:
+        if model in {"qwen-edit-2511", "krea2"} and label in {"dit", "text_encoder"} and "BF16" not in dtypes:
             observed = ", ".join(sorted(dtypes))
             raise ModelCheckpointError(
                 f"{label} checkpoint '{path.name}' does not declare BF16 tensors "
@@ -346,6 +365,8 @@ def _dataset_toml(
 def _prepare(
     *,
     model: str,
+    stage: str | None,
+    training_root: Path | str,
     dataset_dir: Path | str,
     control_dir: Path | str | None,
     run_dir: Path | str,
@@ -354,20 +375,30 @@ def _prepare(
     model_paths: Mapping[str, Path | str],
     template_root: Path | str,
     available_bytes: int | None,
+    minimum_free_gib: float,
 ) -> tuple[ModelProfile, Path, Path | None, Path, dict[str, Path], dict, str, str]:
     profile = _profile(model)
+    if model == "krea2":
+        normalized_stage = stage or "quality"
+        if normalized_stage not in {"proof", "quality"}:
+            raise ValueError("Krea 2 stage must be 'proof' or 'quality'.")
+    elif stage is not None:
+        raise ValueError("The stage option is only available for Krea 2 training.")
+    else:
+        normalized_stage = "quality"
     safe_name = _validate_run_name(run_name)
+    root = Path(training_root).expanduser().resolve()
     dataset = Path(dataset_dir).expanduser().resolve()
     controls = Path(control_dir).expanduser().resolve() if control_dir is not None else None
     run = Path(run_dir).expanduser().resolve()
-    check_free_space(run.parent, MINIMUM_TRAINING_FREE_GIB, available_bytes)
+    check_free_space(run.parent, minimum_free_gib, available_bytes)
     paths = _validate_model_paths(model, model_paths)
     if model == "qwen-edit-2511" and controls is None:
         raise DatasetValidationError(
             "Qwen Edit 2511 requires a paired control directory; no control directory was provided."
         )
     manifest = build_dataset_manifest(dataset, trigger_token, controls)
-    cache_dir = TRAINING_ROOT / "cache" / safe_name / model
+    cache_dir = root / "cache" / safe_name / model
     dataset_text = _dataset_toml(
         model=model,
         dataset_dir=dataset,
@@ -378,7 +409,7 @@ def _prepare(
     if not template_path.is_file():
         raise FileNotFoundError(f"Musubi template not found: {template_path}")
     template = template_path.read_text(encoding="utf-8")
-    output_dir = TRAINING_ROOT / "outputs" / safe_name / model
+    output_dir = root / "outputs" / safe_name / model
     training_text = _render_template(
         template,
         {
@@ -389,6 +420,7 @@ def _prepare(
             "OUTPUT_DIR": _toml_string(output_dir),
             "OUTPUT_NAME": _toml_string(safe_name),
             "TRIGGER_TOKEN": _toml_string(trigger_token),
+            "MAX_TRAIN_EPOCHS": "2" if normalized_stage == "proof" else "16",
         },
     )
     return profile, dataset, controls, run, paths, manifest, dataset_text, training_text
@@ -397,6 +429,8 @@ def _prepare(
 def render_run(
     *,
     model: str,
+    stage: str | None = None,
+    training_root: Path | str = TRAINING_ROOT,
     dataset_dir: Path | str,
     control_dir: Path | str | None = None,
     run_dir: Path | str,
@@ -405,6 +439,7 @@ def render_run(
     model_paths: Mapping[str, Path | str],
     template_root: Path | str | None = None,
     available_bytes: int | None = None,
+    minimum_free_gib: float = MINIMUM_TRAINING_FREE_GIB,
 ) -> RenderResult:
     requested_run = Path(run_dir).expanduser().resolve()
     _assert_run_available(requested_run)
@@ -415,6 +450,8 @@ def render_run(
     )
     _, _, _, run, _, manifest_data, dataset_text, training_text = _prepare(
         model=model,
+        stage=stage,
+        training_root=training_root,
         dataset_dir=dataset_dir,
         control_dir=control_dir,
         run_dir=run_dir,
@@ -423,6 +460,7 @@ def render_run(
         model_paths=model_paths,
         template_root=templates,
         available_bytes=available_bytes,
+        minimum_free_gib=minimum_free_gib,
     )
     run.parent.mkdir(parents=True, exist_ok=True)
     lock_path = _run_lock_path(run)
@@ -513,9 +551,9 @@ def build_musubi_commands(
         str(Path(dataset_config)),
         "--vae",
         str(paths["vae"]),
-        "--model_version",
-        profile.model_version,
     )
+    if profile.model_version is not None:
+        latent += ("--model_version", profile.model_version)
     if model == "flux2-klein9b":
         latent += ("--vae_dtype", "bfloat16")
     text = (
@@ -527,10 +565,11 @@ def build_musubi_commands(
         str(paths["text_encoder"]),
         "--batch_size",
         "1",
-        "--model_version",
-        profile.model_version,
-        profile.text_fp8_flag,
     )
+    if profile.model_version is not None:
+        text += ("--model_version", profile.model_version)
+    if profile.text_fp8_flag is not None:
+        text += (profile.text_fp8_flag,)
     train = (
         str(python),
         "-m",
@@ -551,6 +590,9 @@ def _parser() -> argparse.ArgumentParser:
         description="Validate a local character dataset and render pinned Musubi run configs."
     )
     parser.add_argument("--model", choices=sorted(MODEL_PROFILES), required=True)
+    parser.add_argument("--stage", choices=("proof", "quality"))
+    parser.add_argument("--training-root", type=Path, default=TRAINING_ROOT)
+    parser.add_argument("--trainer-root", type=Path, default=MUSUBI_ROOT)
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--control-dir", type=Path)
     parser.add_argument("--run-dir", type=Path, required=True)
@@ -560,6 +602,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--vae", type=Path, required=True)
     parser.add_argument("--text-encoder", type=Path, required=True)
     parser.add_argument("--available-disk-gib", type=float, help=argparse.SUPPRESS)
+    parser.add_argument("--minimum-free-gib", type=float, default=MINIMUM_TRAINING_FREE_GIB)
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -594,6 +637,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _assert_run_available(run)
             _prepare(
                 model=args.model,
+                stage=args.stage,
+                training_root=args.training_root,
                 dataset_dir=args.dataset_dir,
                 control_dir=args.control_dir,
                 run_dir=args.run_dir,
@@ -602,11 +647,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 model_paths=model_paths,
                 template_root=templates,
                 available_bytes=available,
+                minimum_free_gib=args.minimum_free_gib,
             )
             _assert_run_available(run)
             commands = build_musubi_commands(
                 model=args.model,
-                trainer_root=MUSUBI_ROOT,
+                trainer_root=args.trainer_root,
                 dataset_config=args.run_dir / "dataset.toml",
                 train_config=args.run_dir / "train.toml",
                 model_paths=model_paths,
@@ -622,6 +668,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         result = render_run(
             model=args.model,
+            stage=args.stage,
+            training_root=args.training_root,
             dataset_dir=args.dataset_dir,
             control_dir=args.control_dir,
             run_dir=args.run_dir,
@@ -630,6 +678,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             model_paths=model_paths,
             template_root=templates,
             available_bytes=available,
+            minimum_free_gib=args.minimum_free_gib,
         )
         print(f"Rendered run config: {result.train_config}")
         for warning in result.warnings:
