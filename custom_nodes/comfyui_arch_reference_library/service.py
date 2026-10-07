@@ -10,6 +10,7 @@ from pathlib import Path
 import random
 import secrets
 import tempfile
+from threading import RLock
 from typing import Any
 from uuid import uuid4
 
@@ -33,6 +34,8 @@ _FORMAT_EXTENSIONS = {
 class ReferenceLibraryService:
     """Coordinates the ignored local catalog, managed images, and thumbnails."""
 
+    _import_lock = RLock()
+
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
         self.images_root = self.root / "images"
@@ -43,6 +46,15 @@ class ReferenceLibraryService:
         self.store = ReferenceLibraryStore(self.root / "catalog.sqlite3")
 
     def import_image(
+        self, collection_id: str, filename: str, media_type: str, content: bytes,
+        *, max_bytes: int = DEFAULT_MAX_IMAGE_BYTES,
+    ) -> dict[str, Any]:
+        # File creation, catalog insertion and rollback must stay atomic across
+        # native-path workers and regular browser uploads of identical content.
+        with self._import_lock:
+            return self._import_image(collection_id, filename, media_type, content, max_bytes=max_bytes)
+
+    def _import_image(
         self,
         collection_id: str,
         filename: str,
