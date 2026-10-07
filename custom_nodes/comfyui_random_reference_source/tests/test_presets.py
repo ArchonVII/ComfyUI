@@ -17,6 +17,43 @@ def test_default_preset_store_lives_in_custom_node_config_folder():
     assert preset_store_path() == PACKAGE_DIR / "config" / "presets.json"
 
 
+def test_rename_group_updates_membership_atomically_and_rejects_collisions(tmp_path):
+    args = {"store_path": tmp_path / "presets.json", "legacy_path": tmp_path / "absent.json"}
+    preset = {"kind": "selection", "images": ["first.png"]}
+    save_preset("Old group", preset, mode="create", **args)
+    save_preset("Other group", preset, mode="create", **args)
+    with pytest.raises(ValueError, match="already exists"):
+        save_preset("other group", preset, mode="update", original_name="Old group", **args)
+    assert "Old group" in load_presets(**args)
+    save_preset("Renamed group", {**preset, "images": ["second.png"]},
+                mode="update", original_name="Old group", **args)
+    stored = load_presets(**args)
+    assert "Old group" not in stored
+    assert stored["Renamed group"]["images"] == ["second.png"]
+
+
+def test_explicit_save_actions_cannot_overwrite_a_new_name_or_recreate_deleted_favorite(tmp_path):
+    store = tmp_path / "presets.json"
+    args = {"store_path": store, "legacy_path": tmp_path / "absent.json"}
+    preset = {"kind": "folder", "folder": "portraits", "prompt_text": "original"}
+    save_preset("Portraits", preset, mode="create", **args)
+    with pytest.raises(ValueError, match="already exists"):
+        save_preset("portraits", {**preset, "prompt_text": "overwrite"}, mode="create", **args)
+    assert load_presets(**args)["Portraits"]["prompt_text"] == "original"
+    save_preset("Portraits", {**preset, "prompt_text": "edited"}, mode="update", **args)
+    assert load_presets(**args)["Portraits"]["prompt_text"] == "edited"
+    delete_preset("Portraits", **args)
+    with pytest.raises(ValueError, match="no longer exists"):
+        save_preset("Portraits", preset, mode="update", **args)
+
+
+@pytest.mark.parametrize("mode", ["folder", "selection"])
+def test_preset_save_requires_explicit_source(mode):
+    with pytest.raises(ValueError, match="before saving"):
+        preset_from_payload({"source_mode": mode, "folder": "", "selected_images": ""})
+    assert preset_from_payload({"source_mode": "folder", "folder": "."})["folder"] == "."
+
+
 def test_legacy_folder_favorites_are_normalized_when_user_store_is_absent(tmp_path):
     legacy = tmp_path / "legacy.json"
     legacy.write_text(

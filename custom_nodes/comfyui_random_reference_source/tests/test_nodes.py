@@ -11,6 +11,7 @@ from custom_nodes.comfyui_random_reference_source.nodes import (
     NONE_FAVORITE,
     RandomReferenceImageSource,
     ReferenceLanePack,
+    ReferencePromptCompose,
     build_reference_preview_payload,
     build_image_pool,
     choose_image,
@@ -23,6 +24,15 @@ from custom_nodes.comfyui_random_reference_source.nodes import (
 def _png(path: Path, color=(255, 0, 0)):
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (2, 1), color=color).save(path)
+
+
+def test_empty_optional_source_validates_but_fails_if_actually_executed():
+    args = dict(lane="generic", source_mode="selection", favorite="None",
+                folder="", selected_images="", selection_policy="seeded", seed=0,
+                include_subfolders=False)
+    assert RandomReferenceImageSource.VALIDATE_INPUTS(**args) is True
+    with pytest.raises(ValueError, match="selected_images is required"):
+        RandomReferenceImageSource().load_random_reference(**args)
 
 
 def test_parse_selected_images_accepts_lines_commas_and_comments():
@@ -40,6 +50,78 @@ def test_parse_selected_images_accepts_lines_commas_and_comments():
         "third.png",
         "fourth image.png",
     ]
+
+
+def test_browser_selection_uses_canonical_paths_and_bulk_selection_skips_thumbnails(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    for i in range(55):
+        _png(tmp_path / f"{i}.png")
+    source = dict(source_mode="selection", folder="", favorite="None",
+                  selected_images="0.png\n1.png", selection_policy="seeded", seed=1, include_subfolders=False)
+    page = build_reference_preview_payload(**source, browse=True, max_images=1)
+    assert page["selection_paths"] == [str(tmp_path / "0.png"), str(tmp_path / "1.png")]
+    source.update(source_mode="folder", folder=str(tmp_path))
+    import custom_nodes.comfyui_random_reference_source.nodes as module
+    monkeypatch.setattr(module, "_thumbnail_data_url", lambda *_: pytest.fail("bulk selection generated thumbnails"))
+    assert len(build_reference_preview_payload(**source, paths_only=True)["paths"]) == 55
+
+
+def test_blank_folder_requires_explicit_source(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    with pytest.raises(ValueError, match="Choose a reference folder"):
+        resolve_source_folder("", "None")
+    assert resolve_source_folder(".", "None") == tmp_path
+
+
+def test_selection_favorite_preserves_filename_commas(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    image = tmp_path / "last, first.png"
+    _png(image)
+    assert build_image_pool(source_mode="selection", folder="", favorite="Chosen",
+        selected_images="", include_subfolders=False,
+        favorites={"Chosen": {"kind": "selection", "folder": "", "images": [str(image)]}}) == [image]
+
+
+def test_absolute_selection_ignores_stale_folder_in_load_and_preview(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    image = tmp_path / "chosen.png"
+    _png(image)
+    source = dict(source_mode="selection", folder=str(tmp_path / "missing"),
+                  favorite="None", selected_images=str(image), include_subfolders=False)
+    assert build_image_pool(**source) == [image]
+    preview = build_reference_preview_payload(**source, selection_policy="seeded", seed=1)
+    assert preview["images"][0]["path"] == str(image)
+    result = RandomReferenceImageSource().load_random_reference(
+        **source, lane="generic", selection_policy="seeded", seed=1)
+    assert result[2] == str(image)
+
+
+def test_browser_pages_cover_pool_and_seeded_preview_is_exact(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    for i in range(7):
+        _png(tmp_path / f"{i}.png")
+    source = dict(source_mode="folder", folder=str(tmp_path), favorite="None",
+                  selected_images="", include_subfolders=False, selection_policy="seeded", seed=3)
+    pages = [build_reference_preview_payload(**source, offset=i, max_images=3, browse=True)
+             for i in (0, 3, 6)]
+    assert [p["pool_size"] for p in pages] == [7, 7, 7]
+    assert [len(p["images"]) for p in pages] == [3, 3, 1]
+    assert len({im["path"] for p in pages for im in p["images"]}) == 7
+    assert pages[-1]["has_more"] is False
+    preview = build_reference_preview_payload(**source)
+    assert len(preview["images"]) == 1
+    assert preview["preview_is_exact_next"] is True
+
+
+def test_selection_pool_is_not_misrepresented_as_exact_random_next(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    paths = [tmp_path / f"{i}.png" for i in range(2)]
+    for path in paths:
+        _png(path)
+    preview = build_reference_preview_payload(
+        "selection", str(tmp_path), "None", "\n".join(map(str, paths)),
+        "random_each_queue", 1, False)
+    assert preview["preview_is_exact_next"] is False
 
 
 def test_nodes_are_arch_prefixed_for_searchability():
@@ -206,6 +288,7 @@ def test_reference_preview_payload_returns_thumbnail_data_urls(tmp_path, monkeyp
         seed=1,
         include_subfolders=False,
         favorites={},
+        browse=True,
     )
 
     assert payload["mode"] == "selection"
@@ -356,3 +439,27 @@ def test_reference_lane_pack_passes_named_lanes_and_metadata():
     assert result[0] is primary
     assert result[2] is environment
     assert metadata["present_lanes"] == ["primary_subject", "environment"]
+
+
+def test_prompt_composer_uses_only_enabled_reference_lanes():
+    node = ReferencePromptCompose()
+    options = dict(text="edit instruction", use_identity=False, use_aux1=True, use_aux2=False, use_aux3=True)
+    assert node.check_lazy_status(**options, main="main text", aux1=None, aux3="third") == ["aux1"]
+    assert node.check_lazy_status(**options) == []
+    assert node.compose(**options, main="main text", identity="disabled identity",
+                        aux1="first", aux2="disabled second", aux3="third") == (
+                            "edit instruction\n\nmain text\n\nfirst\n\nthird",)
+
+
+@pytest.mark.parametrize("edited", ["edited text", ""])
+def test_current_prompt_edits_override_saved_favorite(tmp_path, monkeypatch, edited):
+    image = tmp_path / "image.png"
+    _png(image)
+    monkeypatch.setattr("custom_nodes.comfyui_random_reference_source.nodes.load_presets", lambda: {
+        "Hero": {"kind": "selection", "folder": "", "images": [str(image)],
+                 "include_subfolders": False, "prompt_text": "saved text"}})
+    result = RandomReferenceImageSource().load_random_reference(
+        lane="generic", source_mode="selection", favorite="Hero", folder="",
+        selected_images="", selection_policy="seeded", seed=1, include_subfolders=False,
+        favorite_prompt=edited, prompt="instruction")
+    assert result[-1] == (f"{edited}, instruction" if edited else "instruction")

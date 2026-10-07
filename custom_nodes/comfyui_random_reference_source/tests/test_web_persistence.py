@@ -24,6 +24,10 @@ const app = {{
 }};
 const context = {{
   app,
+  installReferenceBrowser() {{}},
+  openReferenceBrowser() {{}},
+  refreshReferenceBrowser() {{}},
+  refreshReferencePrompt() {{}},
   api: {{
     fetchApi: async () => {{
       throw new Error("Network access is not expected in persistence tests");
@@ -31,6 +35,10 @@ const context = {{
   }},
   clearTimeout() {{}},
   console,
+  FormData: class {{
+    constructor() {{ this.fields = {{}}; }}
+    append(name, value) {{ this.fields[name] = value; }}
+  }},
   document: {{
     createElement() {{
       return {{ innerHTML: "", style: {{}} }};
@@ -154,6 +162,7 @@ function assertPersistedState(node, expected) {{
 }}
 
 function NodeType() {{}}
+NodeType.prototype.configure = function(info) {{ configureWidgetValues(this, info.widgets_values); }};
 
 (async () => {{
   await extension.beforeRegisterNodeDef(NodeType, {{ name: "RandomReferenceImageSource" }});
@@ -246,7 +255,7 @@ def test_legacy_dense_workflow_restores_include_subfolders_without_stealing_cont
     selected_images: "",
     selection_policy: "seeded",
     seed: 77,
-    control_after_generate: "randomize",
+    control_after_generate: "fixed",
     include_subfolders: true,
   });
 """
@@ -279,7 +288,7 @@ def test_sparse_interleaved_workflow_is_migrated_by_widget_name():
     selected_images: "a.png\\nb.png",
     selection_policy: "seeded",
     seed: 9001,
-    control_after_generate: "increment",
+    control_after_generate: "fixed",
     include_subfolders: true,
   });
 """
@@ -345,7 +354,7 @@ def test_sparse_resave_recovers_legacy_include_from_stolen_control_slot():
     selected_images: "",
     selection_policy: "seeded",
     seed: 77,
-    control_after_generate: "randomize",
+    control_after_generate: "fixed",
     include_subfolders: true,
   });
 """
@@ -370,7 +379,7 @@ def test_selecting_sequential_mode_sets_incrementing_seed_control():
 
 
 @pytest.mark.parametrize("control_mode", ["fixed", "decrement", "randomize"])
-def test_sequential_restore_preserves_saved_seed_control_mode(control_mode):
+def test_sequential_restore_always_advances_the_index(control_mode):
     _run_extension_assertions(
         f"""
   const restored = createNode();
@@ -386,7 +395,7 @@ def test_sequential_restore_preserves_saved_seed_control_mode(control_mode):
     false,
   ]);
   assertWidget(restored, "seed", 7);
-  assertWidget(restored, "control_after_generate", {json.dumps(control_mode)});
+  assertWidget(restored, "control_after_generate", "increment");
 """
     )
 
@@ -413,6 +422,317 @@ def test_advanced_sequential_cursor_round_trips_after_frontend_increment():
 def test_favorite_manager_controls_are_transient_and_named_by_action():
     source = SCRIPT_PATH.read_text(encoding="utf-8")
 
-    assert 'addTransientButton("★ Save new favorite…"' in source
-    assert 'addTransientButton("★ Update favorite"' in source
-    assert 'addTransientButton("☆ Delete favorite"' in source
+    assert 'addTransientButton("Open Reference Browser…"' in source
+    assert 'addTransientButton("Browse folder…"' in source
+    assert 'addTransientButton("Load image…"' in source
+    assert 'addTransientButton("★ Save new favorite…"' not in source
+
+
+def test_compact_widgets_use_frontend_visibility_flag():
+    _run_extension_assertions("""
+  const node = createNode({ selection_policy: "random_each_queue" });
+  for (const name of ["seed", "folder", "selected_images", "control_after_generate"])
+    assertEqual(findWidget(node, name).hidden, true, name + " hidden");
+  findWidget(node, "selection_policy").value = "seeded";
+  context.compactWidgets(node);
+  assertEqual(findWidget(node, "seed").hidden, false, "seed restored");
+""")
+
+
+def test_picking_folder_replaces_selection_and_detaches_favorite():
+    _run_extension_assertions("""
+  const node = createNode({ favorite: "Old", selected_images: "old.png" });
+  context.selectFolder(node, "C:/new-folder");
+  assertWidget(node, "source_mode", "folder");
+  assertWidget(node, "folder", "C:/new-folder");
+  assertWidget(node, "selected_images", "");
+  assertWidget(node, "favorite", "None");
+""")
+
+
+def test_picking_images_clears_folder_and_detaches_favorite():
+    _run_extension_assertions("""
+  const node = createNode({ folder: "C:/old", favorite: "Old" });
+  context.selectImages(node, ["C:/new/a.png", "C:/new/b.png"]);
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "folder", "");
+  assertWidget(node, "selected_images", "C:/new/a.png\\nC:/new/b.png");
+  assertWidget(node, "favorite", "None");
+""")
+
+
+def test_applying_favorite_is_atomic_and_manual_edit_detaches_it():
+    _run_extension_assertions("""
+  const node = createNode({ favorite: "New" });
+  node._archReferencePresets = { New: { kind: "folder", folder: "C:/fav", prompt_text: "prefix" } };
+  context.applyFavorite(node);
+  assertWidget(node, "favorite", "New");
+  assertWidget(node, "folder", "C:/fav");
+  assertWidget(node, "selected_images", "");
+  const folder = findWidget(node, "folder");
+  folder.value = "C:/manual";
+  folder.callback();
+  assertWidget(node, "favorite", "None");
+  assertWidget(node, "folder", "C:/manual");
+""")
+
+
+def test_seeded_policy_uses_fixed_seed_after_user_switch():
+    _run_extension_assertions("""
+  const node = createNode({ selection_policy: "random_each_queue", control_after_generate: "randomize" });
+  const policy = findWidget(node, "selection_policy");
+  policy.value = "seeded";
+  policy.callback();
+  assertWidget(node, "control_after_generate", "fixed");
+""")
+
+
+def test_missing_or_deleted_favorite_keeps_the_current_source():
+    _run_extension_assertions("""
+  const node = createNode({ favorite: "Old", folder: "C:/chosen", selected_images: "C:/chosen/a.png" });
+  context.refreshFavoriteOptions(node, {});
+  assertWidget(node, "favorite", "None");
+  assertWidget(node, "folder", "C:/chosen");
+  assertWidget(node, "selected_images", "C:/chosen/a.png");
+  context.api.fetchApi = async () => ({ ok: true, json: async () => ({presets: {}}) });
+  await context.deleteFavorite(node, "Old");
+  assertWidget(node, "folder", "C:/chosen");
+  assertWidget(node, "selected_images", "C:/chosen/a.png");
+""")
+
+
+def test_empty_folder_payload_stays_empty():
+    _run_extension_assertions("""
+  const node = createNode({ folder: "", selected_images: "" });
+  assertEqual(context.referencePayload(node).folder, "", "empty source");
+""")
+
+
+def test_picker_quotes_filenames_containing_commas():
+    _run_extension_assertions('''
+  const node = createNode();
+  context.selectImages(node, ["C:/portraits/last, first.png", "C:/portraits/plain.png"]);
+  assertWidget(node, "selected_images", '"C:/portraits/last, first.png"\\nC:/portraits/plain.png');
+''')
+
+
+def test_prompt_drafts_survive_source_changes_and_workflow_round_trip():
+    _run_extension_assertions('''
+  const node = createNode();
+  node._archReferencePresets = { A: {prompt_text: "saved A"}, B: {prompt_text: "saved B"} };
+  context.applySource(node, {favorite:"A", folder:"C:/a", source_mode:"folder", favorite_prompt:"saved A"});
+  findWidget(node, "favorite_prompt").value = "draft A";
+  findWidget(node, "favorite_prompt").callback();
+  context.setPromptName(node, "My separate favorite");
+  context.selectFolder(node, "C:/manual");
+  assertWidget(node, "favorite_prompt", "draft A");
+  context.applySource(node, {favorite:"B", folder:"C:/b", favorite_prompt:"saved B"});
+  const restored = createNode();
+  restored.properties = JSON.parse(JSON.stringify(node.properties));
+  configureWidgetValues(restored, serialiseWidgetValues(node));
+  restored._archReferencePresets = node._archReferencePresets;
+  context.applySource(restored, {favorite:"A", folder:"C:/a", favorite_prompt:"saved A"});
+  assertWidget(restored, "favorite_prompt", "draft A");
+  assertEqual(context.promptState(restored).name, "My separate favorite", "saved draft name");
+  assertEqual(context.promptState(restored).modified, true, "modified state");
+  context.applySource(restored, {favorite_prompt:context.promptState(restored).baseline});
+  assertWidget(restored, "favorite_prompt", "saved A");
+  assertEqual(context.promptState(restored).modified, false, "reverted state");
+''')
+
+
+def test_slow_save_preserves_newer_text_and_new_favorite_name():
+    _run_extension_assertions('''
+  const node = createNode({favorite_prompt:"submitted text"});
+  context.setPromptName(node, "New");
+  let finish;
+  context.api.fetchApi = async (path, options) => {
+    const body = JSON.parse(options.body);
+    assertEqual(body.save_mode, "create", "save action");
+    assertEqual(body.prompt_text, "submitted text", "save snapshot");
+    return new Promise(resolve => { finish = () => resolve({ok:true,json:async()=>({name:"New",presets:{New:{kind:"selection",folder:"",images:["a.png"],prompt_text:"submitted text"}}})}); });
+  };
+  const pending = context.saveFavorite(node, "New", "create");
+  findWidget(node, "favorite_prompt").value = "newer text";
+  findWidget(node, "favorite_prompt").callback();
+  context.setPromptName(node, "Next favorite");
+  finish(); await pending;
+  assertWidget(node, "favorite", "New");
+  assertWidget(node, "favorite_prompt", "newer text");
+  assertEqual(context.promptState(node).modified, true, "newer edit remains unsaved");
+  assertEqual(context.promptState(node).name, "Next favorite", "newer name preserved");
+''')
+
+
+def test_failed_save_preserves_draft_and_name():
+    _run_extension_assertions('''
+  const node = createNode({favorite_prompt:"keep me"});
+  context.setPromptName(node, "New");
+  context.api.fetchApi = async () => ({ok:false,status:400,json:async()=>({error:"Name exists"})});
+  let failed = false;
+  try { await context.saveFavorite(node, "New", "create"); } catch { failed = true; }
+  assertEqual(failed, true, "save failure reported");
+  assertWidget(node, "favorite_prompt", "keep me");
+  assertWidget(node, "favorite", "None");
+  assertEqual(context.promptState(node).name, "New", "failed save keeps name");
+''')
+
+
+def test_checked_group_save_and_rename_select_exact_saved_membership():
+    _run_extension_assertions('''
+  const node = createNode({favorite:"Old", source_mode:"folder", folder:"all-images", selected_images:"", favorite_prompt:"group prompt"});
+  node._archReferencePresets = {Old:{kind:"folder",folder:"all-images",prompt_text:"group prompt"}};
+  node.graph = {};
+  let sent;
+  context.api.fetchApi = async (_, options) => {
+    sent = JSON.parse(options.body);
+    const preset = {kind:"selection",folder:".",images:["C:/last, first.png"],prompt_text:"group prompt"};
+    return {ok:true,json:async()=>({name:"Renamed",preset,presets:{Renamed:preset}})};
+  };
+  await context.saveFavorite(node, "Renamed", "update", ["C:/last, first.png"], "Old");
+  assertEqual(sent.source_mode, "selection", "checked group source");
+  assertEqual(sent.original_name, "Old", "rename original");
+  assertEqual(sent.selected_images, '"C:/last, first.png"', "comma path encoding");
+  assertWidget(node, "favorite", "Renamed");
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", '"C:/last, first.png"');
+''')
+
+
+def test_dom_widget_setters_cannot_change_source_during_atomic_updates():
+    _run_extension_assertions('''
+  const node = createNode();
+  for (const name of ["selected_images", "folder", "favorite_prompt"]) {
+    const widget = findWidget(node, name);
+    let value = widget.value;
+    Object.defineProperty(widget, "value", {get:()=>value, set:next=>{
+      value=next; widget.callback?.(next);
+    }});
+  }
+  context.selectFolder(node, "C:/photos");
+  assertWidget(node, "source_mode", "folder");
+  assertWidget(node, "folder", "C:/photos");
+  assertWidget(node, "selected_images", "");
+  node._archReferencePresets = {Group:{kind:"selection",folder:".",images:["C:/one.png"],prompt_text:"portrait"}};
+  findWidget(node, "favorite").value="Group";
+  context.applyFavorite(node);
+  assertWidget(node, "favorite", "Group");
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", "C:/one.png");
+''')
+
+
+def test_workflow_configuration_preserves_folder_and_favorite_with_dom_callbacks():
+    _run_extension_assertions('''
+  const node = createNode();
+  const widget = findWidget(node, "selected_images");
+  let value = widget.value;
+  Object.defineProperty(widget, "value", {get:()=>value,set:next=>{value=next;widget.callback?.(next);}});
+  node.configure({widgets_values:["primary_subject","folder","Saved folder","C:/photos","","seeded",1,"fixed",false,"portrait"]});
+  assertWidget(node, "source_mode", "folder");
+  assertWidget(node, "favorite", "Saved folder");
+  assertWidget(node, "folder", "C:/photos");
+''')
+
+
+def test_reselecting_favorite_preserves_draft_and_latest_choice_wins():
+    _run_extension_assertions('''
+  const node = createNode();
+  const presets = {A:{kind:"folder",folder:"a",prompt_text:"saved A"},B:{kind:"folder",folder:"b",prompt_text:"saved B"}};
+  const response = {ok:true,json:async()=>({presets})};
+  context.api.fetchApi = async () => response;
+  await context.chooseFavorite(node, "A");
+  findWidget(node, "favorite_prompt").value = "unsaved A";
+  findWidget(node, "favorite_prompt").callback();
+  await context.chooseFavorite(node, "A");
+  assertWidget(node, "favorite_prompt", "unsaved A");
+  let requests = [];
+  context.api.fetchApi = () => new Promise(resolve => requests.push(resolve));
+  const first = context.chooseFavorite(node, "A");
+  const second = context.chooseFavorite(node, "B");
+  requests[1](response); await second;
+  requests[0](response); await first;
+  assertWidget(node, "favorite", "B");
+  const third = context.chooseFavorite(node, "A");
+  context.selectFolder(node, "manual");
+  requests[2](response); await third;
+  assertWidget(node, "folder", "manual");
+  assertWidget(node, "favorite", "None");
+''')
+
+
+def test_deleting_favorite_preserves_current_text_over_older_source_draft():
+    _run_extension_assertions('''
+  const node = createNode({favorite:"None", source_mode:"folder", folder:"C:/folder", selected_images:"", favorite_prompt:"old manual draft"});
+  context.rememberPromptDraft(node);
+  context.applySource(node, {favorite:"Saved", favorite_prompt:"current favorite text"});
+  context.api.fetchApi = async () => ({ok:true,json:async()=>({presets:{}})});
+  await context.deleteFavorite(node, "Saved");
+  assertWidget(node, "favorite", "None");
+  assertWidget(node, "favorite_prompt", "current favorite text");
+''')
+
+
+def test_saved_state_ignores_whitespace_normalized_by_preset_store():
+    _run_extension_assertions('''
+  const node = createNode({favorite:"Saved", favorite_prompt:"  saved text\\n"});
+  node._archReferencePresets = {Saved:{prompt_text:"saved text"}};
+  assertEqual(context.promptState(node).modified, false, "saved normalized text");
+''')
+
+
+def test_completing_save_cannot_cancel_a_newer_pending_favorite_choice():
+    _run_extension_assertions('''
+  const node = createNode({favorite:"A",source_mode:"folder",folder:"a",favorite_prompt:"draft A"});
+  const presets = {A:{kind:"folder",folder:"a",prompt_text:"draft A"},B:{kind:"folder",folder:"b",prompt_text:"saved B"}};
+  node._archReferencePresets = presets;
+  let finishSave, finishChoice;
+  context.api.fetchApi = (path, options) => new Promise(resolve => {
+    const finish = () => resolve({ok:true,json:async()=>({name:"A",presets})});
+    if (options?.method === "POST") finishSave = finish; else finishChoice = finish;
+  });
+  const saving = context.saveFavorite(node, "A", "update");
+  const choosing = context.chooseFavorite(node, "B");
+  finishSave(); await saving;
+  finishChoice(); await choosing;
+  assertWidget(node, "favorite", "B");
+  assertWidget(node, "favorite_prompt", "saved B");
+''')
+
+
+def test_plain_load_image_uses_exactly_one_local_uploaded_image():
+    _run_extension_assertions('''
+  const node = createNode({folder:"old folder",favorite:"Old",selected_images:"old.png"});
+  const button = findWidget(node, "Load image…");
+  assertEqual(button.serialize, false, "load button is transient");
+  context.api.fetchApi = async (path, options) => {
+    assertEqual(path, "/upload/image", "standard ComfyUI upload endpoint");
+    assertEqual(options.body.fields.overwrite, "false", "existing files are preserved");
+    return {ok:true,json:async()=>({name:"portrait, chosen.png",subfolder:"references",type:"input"})};
+  };
+  await context.loadSingleImage(node, {name:"portrait.png"});
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", '"references/portrait, chosen.png"');
+  assertWidget(node, "folder", "");
+  assertWidget(node, "favorite", "None");
+''')
+
+
+def test_cancel_failed_or_late_single_image_load_preserves_current_source():
+    _run_extension_assertions('''
+  const node = createNode({folder:"original",selected_images:"original.png"});
+  await context.loadSingleImage(node, undefined);
+  assertWidget(node, "selected_images", "original.png");
+  context.api.fetchApi = async () => ({ok:false,json:async()=>({error:"Upload failed"})});
+  let failed = false;
+  try { await context.loadSingleImage(node, {}); } catch { failed = true; }
+  assertEqual(failed, true, "upload failure reported");
+  assertWidget(node, "selected_images", "original.png");
+  let finish;
+  context.api.fetchApi = () => new Promise(resolve => {finish = () => resolve({ok:true,json:async()=>({name:"late.png"})});});
+  const loading = context.loadSingleImage(node, {});
+  context.selectFolder(node, "new folder");
+  finish(); await loading;
+  assertWidget(node, "folder", "new folder");
+  assertWidget(node, "source_mode", "folder");
+''')

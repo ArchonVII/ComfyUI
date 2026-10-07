@@ -31,6 +31,16 @@ def import_named(service, collection_id, name, color):
     return service.import_image(collection_id, name, "image/png", png_bytes(color))
 
 
+def test_concurrent_duplicate_imports_preserve_managed_file(service, subject):
+    from concurrent.futures import ThreadPoolExecutor
+    content = png_bytes()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda i: service.import_image(subject["id"], f"copy{i}.png", "image/png", content), range(16)))
+    assert len({result["image"]["id"] for result in results}) == 1
+    assert service.store.count_images(subject["id"]) == 1
+    assert service.managed_path(results[0]["image"]).read_bytes() == content
+
+
 def test_import_copies_without_changing_source_and_deduplicates_content(
     service, tmp_path
 ):

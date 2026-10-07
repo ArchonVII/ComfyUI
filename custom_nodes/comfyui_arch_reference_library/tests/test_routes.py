@@ -22,6 +22,34 @@ def png_bytes(color):
     return buffer.getvalue()
 
 
+def test_browser_import_paths_copies_to_character_and_deduplicates(tmp_path, monkeypatch):
+    service = ReferenceLibraryService(tmp_path / "library")
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+    character = service.store.create_collection("subject", "Character")
+    original = tmp_path / "source.png"
+    content = png_bytes("blue")
+    original.write_bytes(content)
+    async def exercise():
+        app = web.Application()
+        routes.add_routes(app.router)
+        async with TestClient(TestServer(app)) as client:
+            url = f"/collections/{character['id']}/import-paths"
+            for _ in range(2):
+                response = await client.post(url, json={"paths": [str(original), str(original)]})
+                assert response.status == 200, await response.text()
+                assert len((await response.json())["imports"]) == 1
+            bad = await client.post(url, json={"paths": ["relative.png", str(original)]})
+            assert bad.status == 200
+            partial = await bad.json()
+            assert len(partial["imports"]) == 1
+            assert partial["failures"][0]["path"] == "relative.png"
+    asyncio.run(exercise())
+    assert original.read_bytes() == content
+    assert service.store.count_images(character["id"]) == 1
+    image = service.store.list_images(character["id"])[0]
+    assert service.managed_path(image).read_bytes() == content
+
+
 def test_payload_validators_reject_unknown_fields_bad_ids_and_unsafe_delete():
     with pytest.raises(ValueError, match="JSON object"):
         routes.require_object([])

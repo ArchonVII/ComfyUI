@@ -1,5 +1,9 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { installReferenceBrowser, openReferenceBrowser, refreshReferenceBrowser, refreshReferencePrompt } from "./reference_browser.js";
+import { buildCombinedPromptPreview } from "./prompt_preview.js";
+
+const referenceNodes = new Set();
 
 const NODE_NAME = "RandomReferenceImageSource";
 const SELECTION_POLICIES = new Set([
@@ -48,12 +52,109 @@ function ensurePositiveSeed(node) {
 }
 
 function syncSequentialSeedControl(node) {
-  if (findWidget(node, "selection_policy")?.value !== "sequential") return;
+  const policy = findWidget(node, "selection_policy")?.value;
+  if (policy === "random_each_queue") return;
   ensurePositiveSeed(node);
-  const controlWidget = findWidget(node, "control_after_generate");
-  if (controlWidget?.value !== "increment") {
-    setWidgetValue(node, controlWidget, "increment");
+  setWidgetValue(node, findWidget(node, "control_after_generate"),
+    policy === "sequential" ? "increment" : "fixed");
+}
+
+function promptContext(node) {
+  const payload = referencePayload(node);
+  return payload.favorite !== "None" ? JSON.stringify(["favorite", payload.favorite])
+    : JSON.stringify(["source", payload.source_mode, payload.folder, payload.selected_images]);
+}
+
+function promptDrafts(node) {
+  node.properties ||= {};
+  return node.properties.archReferencePromptDrafts ||= {};
+}
+
+function rememberPromptDraft(node) {
+  const key = promptContext(node);
+  const drafts = promptDrafts(node);
+  const text = findWidget(node, "favorite_prompt")?.value || "";
+  drafts[key] ||= {text, name: ""};
+  drafts[key].text = text;
+  return drafts[key];
+}
+
+function promptState(node) {
+  const draft = rememberPromptDraft(node);
+  const favorite = referencePayload(node).favorite;
+  const saved = node._archReferencePresets?.[favorite];
+  const baseline = saved?.prompt_text || "";
+  return {text: draft.text, name: draft.name, favorite,
+    saved: Boolean(saved), modified: draft.text.trim() !== baseline.trim(), baseline};
+}
+
+function setPromptName(node, name) {
+  rememberPromptDraft(node).name = name;
+  node.graph?.change?.();
+}
+
+function applySource(node, values, {restoreDraft = true} = {}) {
+  node._archSourceIntent = (node._archSourceIntent || 0) + 1;
+  if (["favorite", "source_mode", "folder", "selected_images"].some(name => name in values))
+    node._archSourceChoice = (node._archSourceChoice || 0) + 1;
+  const oldKey = promptContext(node);
+  rememberPromptDraft(node);
+  // One atomic update: field callbacks must not detach a favorite midway
+  // through applying that favorite or briefly preview a mixture of sources.
+  node._archApplyingSource = (node._archApplyingSource || 0) + 1;
+  try {
+    for (const [name, value] of Object.entries(values)) {
+      const widget = findWidget(node, name);
+      if (widget) widget.value = value;
+    }
+    const nextKey = promptContext(node);
+    const draft = promptDrafts(node)[nextKey];
+    if (restoreDraft && nextKey !== oldKey && draft) findWidget(node, "favorite_prompt").value = draft.text;
+  } finally {
+    node._archApplyingSource--;
   }
+  rememberPromptDraft(node);
+  node.graph?.change?.();
+  node.setDirtyCanvas(true, true);
+  schedulePreview(node);
+  refreshReferenceBrowser(node);
+}
+
+function selectFolder(node, folder) {
+  applySource(node, {source_mode: "folder", folder, selected_images: "",
+    favorite: "None"});
+}
+
+function encodeImagePaths(paths) {
+  return paths.map(path => /[,"\n\r]/.test(path) ? `"${path.replaceAll('"', '""')}"` : path).join("\n");
+}
+
+function selectImages(node, paths) {
+  applySource(node, {source_mode: "selection", folder: "", selected_images: encodeImagePaths(paths),
+    include_subfolders: false, favorite: "None"});
+}
+
+function compactWidgets(node) {
+  const visible = new Set(["selection_policy"]);
+  if (findWidget(node, "selection_policy")?.value !== "random_each_queue") visible.add("seed");
+  for (const widget of node.widgets || []) {
+    if (!widget._archOriginal) widget._archOriginal = {type: widget.type, computeSize: widget.computeSize};
+    if (["lane", "source_mode", "favorite", "folder", "selected_images", "seed",
+         "control_after_generate", "include_subfolders", "favorite_prompt"].includes(widget.name)) {
+      const hidden = !visible.has(widget.name);
+      // Current LiteGraph concrete widgets still draw when only their type is
+      // changed. Its visibility flag excludes them from drawing and layout.
+      widget.hidden = hidden;
+      widget.type = hidden ? "hidden" : widget._archOriginal.type;
+      widget.computeSize = hidden ? () => [0, -4] : widget._archOriginal.computeSize;
+      if (widget.inputEl) widget.inputEl.style.display = hidden ? "none" : "";
+      if (widget.element) widget.element.hidden = hidden;
+    }
+  }
+  const policy = findWidget(node, "selection_policy");
+  if (policy) policy.label = "Image selection";
+  const seed = findWidget(node, "seed");
+  if (seed) seed.label = findWidget(node, "selection_policy")?.value === "sequential" ? "Next image index" : "Repeatable seed";
 }
 
 // Older workflows were saved either as the original compact eight backend
@@ -153,40 +254,72 @@ function refreshFavoriteOptions(node, presets) {
   ];
   widget.options ||= {};
   widget.options.values = values;
-  if (!values.includes(widget.value)) setWidgetValue(node, widget, "None");
+  if (!values.includes(widget.value)) applySource(node, {favorite: "None"}, {restoreDraft: false});
 }
 
 function applyFavorite(node) {
   const name = findWidget(node, "favorite")?.value || "None";
   const preset = node._archReferencePresets?.[name];
   if (!preset) {
-    setWidgetValue(node, findWidget(node, "favorite_prompt"), "");
+    applySource(node, {favorite: "None"});
     return;
   }
-  setWidgetValue(node, findWidget(node, "source_mode"), preset.kind || "folder");
-  setWidgetValue(node, findWidget(node, "folder"), preset.folder || ".");
-  setWidgetValue(
-    node,
-    findWidget(node, "selected_images"),
-    (preset.images || []).join("\n"),
-  );
-  setWidgetValue(
-    node,
-    findWidget(node, "include_subfolders"),
-    Boolean(preset.include_subfolders),
-  );
-  setWidgetValue(
-    node,
-    findWidget(node, "favorite_prompt"),
-    preset.prompt_text || "",
-  );
-  schedulePreview(node);
+  applySource(node, {favorite: name, source_mode: preset.kind || "folder",
+    folder: preset.folder || "", selected_images: encodeImagePaths(preset.images || []),
+    include_subfolders: Boolean(preset.include_subfolders), favorite_prompt:
+      promptDrafts(node)[JSON.stringify(["favorite", name])]?.text ?? preset.prompt_text ?? ""});
 }
 
-async function refreshPresets(node, applyCurrent = true) {
+async function refreshPresets(node, applyCurrent = false) {
   const data = await callPresetApi();
   refreshFavoriteOptions(node, data.presets);
   if (applyCurrent) applyFavorite(node);
+}
+
+async function loadSingleImage(node, file) {
+  if (!file) return;
+  const intent = node._archSourceIntent = (node._archSourceIntent || 0) + 1;
+  node._archSourceChoice = (node._archSourceChoice || 0) + 1;
+  const body = new FormData();
+  body.append("image", file);
+  body.append("type", "input");
+  body.append("overwrite", "false");
+  const response = await api.fetchApi("/upload/image", {method: "POST", body});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.name) throw new Error(data.error || "Could not load the image.");
+  if (!referenceNodes.has(node) || node._archSourceIntent !== intent) return;
+  const path = [data.subfolder, data.name].filter(Boolean).join("/");
+  selectImages(node, [path]);
+}
+
+function pickSingleImage(node) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.ppm";
+  input.multiple = false;
+  input.style.display = "none";
+  input.addEventListener("cancel", () => input.remove(), {once: true});
+  input.addEventListener("change", async () => {
+    try { await loadSingleImage(node, input.files?.[0]); }
+    catch (error) { notify(String(error.message || error), "error"); }
+    finally { input.remove(); }
+  }, {once: true});
+  document.body.append(input);
+  input.click();
+}
+
+async function chooseFavorite(node, name) {
+  node._archSourceChoice = (node._archSourceChoice || 0) + 1;
+  const intent = node._archSourceIntent = (node._archSourceIntent || 0) + 1;
+  const data = await callPresetApi();
+  if (!referenceNodes.has(node) || intent !== node._archSourceIntent) return;
+  refreshFavoriteOptions(node, data.presets);
+  const preset = node._archReferencePresets?.[name];
+  if (!preset) throw new Error("That favorite no longer exists.");
+  const draft = promptDrafts(node)[JSON.stringify(["favorite", name])];
+  applySource(node, {favorite: name, source_mode: preset.kind || "folder",
+    folder: preset.folder || "", selected_images: encodeImagePaths(preset.images || []),
+    include_subfolders: Boolean(preset.include_subfolders), favorite_prompt: draft?.text ?? preset.prompt_text ?? ""});
 }
 
 function favoritePayload(node, name) {
@@ -197,14 +330,37 @@ function favoritePayload(node, name) {
   };
 }
 
-async function saveFavorite(node, name) {
+async function saveFavorite(node, name, mode = "update", paths = null, renamedFrom = null) {
+  const originalKey = promptContext(node);
+  const originalChoice = node._archSourceChoice || 0;
+  const snapshot = favoritePayload(node, name);
+  if (paths) Object.assign(snapshot, {source_mode: "selection", folder: "",
+    selected_images: encodeImagePaths(paths), include_subfolders: false, favorite: "None"});
+  if (renamedFrom) snapshot.original_name = renamedFrom;
+  const originalName = rememberPromptDraft(node).name;
   const data = await callPresetApi("", {
     method: "POST",
-    body: JSON.stringify(favoritePayload(node, name)),
+    body: JSON.stringify({...snapshot, save_mode: mode}),
   });
+  // Renaming removes the old entry. Capture source intent before refreshing
+  // options detaches that now-missing name, so the successful save still applies.
+  const sameSource = promptContext(node) === originalKey && (node._archSourceChoice || 0) === originalChoice;
+  const currentText = findWidget(node, "favorite_prompt")?.value || "";
+  const currentName = rememberPromptDraft(node).name;
   refreshFavoriteOptions(node, data.presets);
-  setWidgetValue(node, findWidget(node, "favorite"), data.name);
-  applyFavorite(node);
+  if (sameSource) {
+    const newKey = JSON.stringify(["favorite", data.name]);
+    promptDrafts(node)[newKey] = {text: currentText,
+      name: mode === "create" && currentName === originalName ? "" : currentName};
+    applySource(node, {favorite: data.name});
+    applyFavorite(node);
+    // A slow save must not erase text typed while the request was in flight.
+    applySource(node, {favorite_prompt: currentText});
+  }
+  for (const source of referenceNodes) {
+    if (source !== node) refreshFavoriteOptions(source, data.presets);
+    refreshReferenceBrowser(source);
+  }
   notify(`Saved favorite “${data.name}”.`);
 }
 
@@ -213,9 +369,8 @@ async function deleteFavorite(node, name) {
     method: "DELETE",
     body: JSON.stringify({ name }),
   });
-  refreshFavoriteOptions(node, data.presets);
-  setWidgetValue(node, findWidget(node, "favorite"), "None");
-  applyFavorite(node);
+  for (const source of referenceNodes) refreshFavoriteOptions(source, data.presets);
+  refreshReferenceBrowser(node);
   notify(`Deleted favorite “${name}”.`);
 }
 
@@ -224,7 +379,7 @@ function referencePayload(node) {
     lane: findWidget(node, "lane")?.value || "",
     source_mode: findWidget(node, "source_mode")?.value || "auto",
     favorite: findWidget(node, "favorite")?.value || "None",
-    folder: findWidget(node, "folder")?.value || ".",
+    folder: findWidget(node, "folder")?.value ?? "",
     selected_images: findWidget(node, "selected_images")?.value || "",
     selection_policy:
       findWidget(node, "selection_policy")?.value || "random_each_queue",
@@ -233,64 +388,66 @@ function referencePayload(node) {
   };
 }
 
-async function fetchPreview(node) {
+async function fetchPreview(node, options = {}) {
+  const payload = {...referencePayload(node), ...options};
   const response = await api.fetchApi("/arch-random-reference/preview", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(referencePayload(node)),
+    body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data?.error || `Preview failed (${response.status})`);
   }
-  return data;
+  const folderName = String(payload.folder).split(/[\\/]/).filter(Boolean).pop() || "Input folder";
+  return {...data, source_label: payload.favorite !== "None" ? payload.favorite
+    : payload.source_mode === "folder" ? folderName : "Selected images"};
 }
 
 function renderPreview(container, data) {
-  const images = data?.images || [];
-  if (!images.length) {
-    container.innerHTML =
-      '<div style="opacity:.7;padding:8px;font-size:12px;">No preview images</div>';
-    return;
+  const image = data?.images?.[0];
+  container.replaceChildren();
+  const source = document.createElement("div");
+  source.style.cssText = "font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+  source.textContent = data?.source_label || "No source selected";
+  container.append(source);
+  if (image) {
+    const img = document.createElement("img");
+    img.src = image.thumbnail_data_url;
+    img.alt = image.name;
+    img.style.cssText = "width:100%;height:70px;object-fit:contain;border-radius:4px";
+    container.append(img);
   }
-
-  const note = data.preview_is_exact_next
-    ? ""
-    : '<div style="grid-column:1/-1;font-size:11px;opacity:.7;">Folder/random mode shows a pool preview; the exact next image is chosen when queued.</div>';
-  const escapeHtml = (value) =>
-    String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;");
-  container.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-items:start;">
-      ${images
-        .map(
-          (image) => `
-            <div title="${escapeHtml(image.path || image.name)}" style="min-width:0;">
-              <img src="${image.thumbnail_data_url}" alt="${escapeHtml(image.name)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.18);" />
-              <div style="font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8;">${escapeHtml(image.name)}</div>
-            </div>
-          `,
-        )
-        .join("")}
-      ${note}
-    </div>
-  `;
+  const status = document.createElement("div");
+  status.style.cssText = "font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+  status.textContent = image
+    ? `${data.pool_size} image(s) · ${data.preview_is_exact_next ? "Next: " + image.name : "Pool preview · chosen at run time"}`
+    : "Choose a folder or images in Reference Browser";
+  container.append(status);
+  container.title = data?.source_folder || "";
 }
 
 function schedulePreview(node) {
   clearTimeout(node._archReferencePreviewTimer);
+  const revision = (node._archPreviewRevision || 0) + 1;
+  node._archPreviewRevision = revision;
+  compactWidgets(node);
   node._archReferencePreviewTimer = setTimeout(async () => {
-    if (!node._archReferencePreviewContainer) return;
+    const container = node._archReferencePreviewContainer;
+    if (!container) return;
     try {
-      const data = await fetchPreview(node);
-      renderPreview(node._archReferencePreviewContainer, data);
+      const payload = referencePayload(node);
+      if (payload.favorite === "None" && !String(findWidget(node,
+          payload.source_mode === "selection" ? "selected_images" : "folder")?.value || "").trim()) {
+        renderPreview(container, null);
+        return;
+      }
+      const data = await fetchPreview(node, {max_images: 1});
+      if (revision !== node._archPreviewRevision) return;
+      renderPreview(container, data);
     } catch (err) {
-      node._archReferencePreviewContainer.innerHTML = `<div style="opacity:.75;padding:8px;font-size:12px;">${String(
-        err.message || err,
-      )}</div>`;
+      if (revision !== node._archPreviewRevision) return;
+      container.textContent = String(err.message || err);
     }
     node.setDirtyCanvas(true, true);
   }, 200);
@@ -301,7 +458,7 @@ function installPreviewWidget(node) {
 
   const container = document.createElement("div");
   container.style.width = "100%";
-  container.style.minHeight = "120px";
+  container.style.minHeight = "112px";
   container.style.boxSizing = "border-box";
   container.style.padding = "6px 2px";
   container.style.overflow = "hidden";
@@ -309,8 +466,8 @@ function installPreviewWidget(node) {
 
   const previewWidget = node.addDOMWidget("reference_preview", "div", container, {
     serialize: false,
-    getMinHeight: () => 128,
-    getMaxHeight: () => 180,
+    getMinHeight: () => 112,
+    getMaxHeight: () => 126,
     getValue: () => "",
     setValue: () => {},
   });
@@ -336,8 +493,28 @@ function installPreviewWidget(node) {
     const callback = widget.callback;
     widget.callback = function () {
       const result = callback?.apply(this, arguments);
+      // DOMWidgetImpl.value invokes callbacks even for programmatic writes.
+      // These writes belong to one source transaction, not manual field edits.
+      if (node._archApplyingSource) return result;
       if (name === "selection_policy") syncSequentialSeedControl(node);
+      if (name === "favorite_prompt") {
+        node._archSourceIntent = (node._archSourceIntent || 0) + 1;
+        rememberPromptDraft(node);
+        node.graph?.change?.();
+        refreshReferencePrompt(node);
+        return result;
+      }
       if (name === "favorite") applyFavorite(node);
+      if (name === "folder") selectFolder(node, widget.value);
+      if (name === "selected_images") applySource(node, {source_mode: "selection", favorite: "None"});
+      if (name === "source_mode") {
+        if (widget.value === "folder") selectFolder(node, "");
+        if (widget.value === "selection") selectImages(node, []);
+      }
+      if (name === "include_subfolders" && findWidget(node, "favorite")?.value !== "None") {
+        applySource(node, {favorite: "None"});
+      }
+      refreshReferenceBrowser(node);
       schedulePreview(node);
       return result;
     };
@@ -348,15 +525,57 @@ function installPreviewWidget(node) {
 
 app.registerExtension({
   name: "arch.RandomReferenceSource",
+  setup() {
+    installReferenceBrowser(app, {
+      nodes: () => [...referenceNodes].filter(node => node.graph),
+      payload: referencePayload, preview: fetchPreview, selectFolder, selectImages,
+      async library(path, body) {
+        const response = await api.fetchApi(`/arch-reference-library${path}`, body === undefined ? {} : {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
+        });
+        const text = await response.text();
+        if (!response.ok) throw new Error(text || "Could not save character references.");
+        const data = JSON.parse(text);
+        return data;
+      },
+      promptState, setPromptName,
+      revertPrompt(node) { applySource(node, {favorite_prompt: promptState(node).baseline}); },
+      async combinedPreview() {
+        const {output} = await app.graphToPrompt(app.rootGraph || app.graph);
+        return buildCombinedPromptPreview(output);
+      },
+      setField(node, name, value) { setWidgetValue(node, findWidget(node, name), value); },
+      async presets(node) { await refreshPresets(node); return node._archReferencePresets; },
+      favorite: chooseFavorite,
+      save: saveFavorite, delete: deleteFavorite, dialog: callDialog,
+    });
+  },
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData.name !== NODE_NAME) return;
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     const onConfigure = nodeType.prototype.onConfigure;
+    const configure = nodeType.prototype.configure;
+    nodeType.prototype.configure = function () {
+      // LiteGraph restores DOM widget values before calling onConfigure.
+      // Treat the complete restore as a transaction so saved folder sources
+      // and favorites aren't detached by the selected_images setter.
+      this._archApplyingSource = (this._archApplyingSource || 0) + 1;
+      try { return configure?.apply(this, arguments); }
+      finally { this._archApplyingSource--; }
+    };
+    const onRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      clearTimeout(this._archReferencePreviewTimer);
+      this._archPreviewRevision = (this._archPreviewRevision || 0) + 1;
+      referenceNodes.delete(this);
+      return onRemoved?.apply(this, arguments);
+    };
     nodeType.prototype.onConfigure = function (info) {
       const result = onConfigure?.apply(this, arguments);
       migrateWorkflowWidgetValues(this, info?.widgets_values);
       ensurePositiveSeed(this);
+      syncSequentialSeedControl(this);
       schedulePreview(this);
       return result;
     };
@@ -364,6 +583,7 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function () {
       const result = onNodeCreated?.apply(this, arguments);
       const node = this;
+      referenceNodes.add(node);
 
       // LiteGraph persists widgets positionally. Keep every transient control
       // appended after the Python widgets so skipped values cannot create
@@ -375,82 +595,25 @@ app.registerExtension({
         return button;
       };
 
-      addTransientButton("📁 Browse folder…", async () => {
-        const folderWidget = findWidget(node, "folder");
+      addTransientButton("Load image…", () => pickSingleImage(node));
+      addTransientButton("Browse folder…", async () => {
         try {
-          const data = await callDialog("browse-folder", folderWidget?.value);
-          if (data.path) {
-            setWidgetValue(node, folderWidget, data.path);
-            schedulePreview(node);
-          }
-        } catch (err) {
-          notify(String(err.message || err), "error");
+          const data = await callDialog("browse-folder", findWidget(node, "folder")?.value);
+          if (data.path && referenceNodes.has(node)) selectFolder(node, data.path);
+        } catch (error) {
+          notify(String(error.message || error), "error");
         }
       });
+      addTransientButton("Open Reference Browser…", () => openReferenceBrowser(node));
 
-      addTransientButton("🖼 Pick images…", async () => {
-        const folderWidget = findWidget(node, "folder");
-        const selWidget = findWidget(node, "selected_images");
-        const modeWidget = findWidget(node, "source_mode");
-        try {
-          const data = await callDialog("pick-images", folderWidget?.value);
-          if (data.paths?.length) {
-            setWidgetValue(node, selWidget, data.paths.join("\n"));
-            // Picking explicit files only matters in selection mode,
-            // so flip the toggle for the user.
-            setWidgetValue(node, modeWidget, "selection");
-            schedulePreview(node);
-            notify(`Added ${data.paths.length} image(s) to the selection.`);
-          }
-        } catch (err) {
-          notify(String(err.message || err), "error");
-        }
-      });
-
-      addTransientButton("★ Save new favorite…", async () => {
-        const name = window.prompt("Name this favorite:", "")?.trim();
-        if (!name) return;
-        try {
-          await saveFavorite(node, name);
-        } catch (err) {
-          notify(String(err.message || err), "error");
-        }
-      });
-
-      addTransientButton("★ Update favorite", async () => {
-        const name = findWidget(node, "favorite")?.value || "None";
-        if (name === "None") {
-          notify("Select a favorite to update.", "warning");
-          return;
-        }
-        try {
-          await saveFavorite(node, name);
-        } catch (err) {
-          notify(String(err.message || err), "error");
-        }
-      });
-
-      addTransientButton("☆ Delete favorite", async () => {
-        const name = findWidget(node, "favorite")?.value || "None";
-        if (name === "None") {
-          notify("Select a favorite to delete.", "warning");
-          return;
-        }
-        if (!window.confirm(`Delete favorite “${name}”?`)) return;
-        try {
-          await deleteFavorite(node, name);
-        } catch (err) {
-          notify(String(err.message || err), "error");
-        }
-      });
-
-      // The two new widgets make the node taller; grow it to fit.
+      installPreviewWidget(node);
+      compactWidgets(node);
+      // Keep the compact node usable in existing saved workflows.
       const size = node.computeSize();
       node.setSize([
-        Math.max(node.size[0], size[0]),
-        Math.max(node.size[1], size[1]),
+        Math.max(260, size[0]),
+        Math.max(320, size[1]),
       ]);
-      installPreviewWidget(node);
       setTimeout(() => {
         refreshPresets(node).catch((err) =>
           notify(String(err.message || err), "error"),
