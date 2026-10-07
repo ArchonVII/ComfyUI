@@ -57,3 +57,16 @@ def test_preview_reports_cycles_instead_of_fabricating_text():
     graph = {"1": {"class_type": "ReferencePromptCompose", "inputs": {
         "text": ["1", 0], "use_identity": False, "use_aux1": False, "use_aux2": False, "use_aux3": False}}}
     assert "cycle" in preview(graph)[0]["error"]
+
+
+def test_preview_uses_reference_card_titles_for_general_image_editing():
+    graph = {
+        "1": {"class_type": "RandomReferenceImageSource", "_meta": {"title": "Image to edit"}, "inputs": {}},
+        "2": {"class_type": "RandomReferenceImageSource", "_meta": {"title": "Optional reference 1"}, "inputs": {}},
+        "3": {"class_type": "ReferencePromptCompose", "inputs": {
+            "text": "edit", "main": ["1", 5], "identity": ["2", 5],
+            "use_identity": False, "use_aux1": False, "use_aux2": False, "use_aux3": False}},
+    }
+    parts = preview(graph)[0]["contributions"]
+    assert parts[1]["label"] == "Image to edit"
+    assert parts[2]["label"] == "Optional reference 1"

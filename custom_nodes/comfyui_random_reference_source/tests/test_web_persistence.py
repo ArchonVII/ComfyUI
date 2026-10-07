@@ -162,6 +162,7 @@ function assertPersistedState(node, expected) {{
 }}
 
 function NodeType() {{}}
+NodeType.prototype.configure = function(info) {{ configureWidgetValues(this, info.widgets_values); }};
 
 (async () => {{
   await extension.beforeRegisterNodeDef(NodeType, {{ name: "RandomReferenceImageSource" }});
@@ -574,6 +575,63 @@ def test_failed_save_preserves_draft_and_name():
   assertWidget(node, "favorite_prompt", "keep me");
   assertWidget(node, "favorite", "None");
   assertEqual(context.promptState(node).name, "New", "failed save keeps name");
+''')
+
+
+def test_checked_group_save_and_rename_select_exact_saved_membership():
+    _run_extension_assertions('''
+  const node = createNode({favorite:"Old", source_mode:"folder", folder:"all-images", selected_images:"", favorite_prompt:"group prompt"});
+  node._archReferencePresets = {Old:{kind:"folder",folder:"all-images",prompt_text:"group prompt"}};
+  node.graph = {};
+  let sent;
+  context.api.fetchApi = async (_, options) => {
+    sent = JSON.parse(options.body);
+    const preset = {kind:"selection",folder:".",images:["C:/last, first.png"],prompt_text:"group prompt"};
+    return {ok:true,json:async()=>({name:"Renamed",preset,presets:{Renamed:preset}})};
+  };
+  await context.saveFavorite(node, "Renamed", "update", ["C:/last, first.png"], "Old");
+  assertEqual(sent.source_mode, "selection", "checked group source");
+  assertEqual(sent.original_name, "Old", "rename original");
+  assertEqual(sent.selected_images, '"C:/last, first.png"', "comma path encoding");
+  assertWidget(node, "favorite", "Renamed");
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", '"C:/last, first.png"');
+''')
+
+
+def test_dom_widget_setters_cannot_change_source_during_atomic_updates():
+    _run_extension_assertions('''
+  const node = createNode();
+  for (const name of ["selected_images", "folder", "favorite_prompt"]) {
+    const widget = findWidget(node, name);
+    let value = widget.value;
+    Object.defineProperty(widget, "value", {get:()=>value, set:next=>{
+      value=next; widget.callback?.(next);
+    }});
+  }
+  context.selectFolder(node, "C:/photos");
+  assertWidget(node, "source_mode", "folder");
+  assertWidget(node, "folder", "C:/photos");
+  assertWidget(node, "selected_images", "");
+  node._archReferencePresets = {Group:{kind:"selection",folder:".",images:["C:/one.png"],prompt_text:"portrait"}};
+  findWidget(node, "favorite").value="Group";
+  context.applyFavorite(node);
+  assertWidget(node, "favorite", "Group");
+  assertWidget(node, "source_mode", "selection");
+  assertWidget(node, "selected_images", "C:/one.png");
+''')
+
+
+def test_workflow_configuration_preserves_folder_and_favorite_with_dom_callbacks():
+    _run_extension_assertions('''
+  const node = createNode();
+  const widget = findWidget(node, "selected_images");
+  let value = widget.value;
+  Object.defineProperty(widget, "value", {get:()=>value,set:next=>{value=next;widget.callback?.(next);}});
+  node.configure({widgets_values:["primary_subject","folder","Saved folder","C:/photos","","seeded",1,"fixed",false,"portrait"]});
+  assertWidget(node, "source_mode", "folder");
+  assertWidget(node, "favorite", "Saved folder");
+  assertWidget(node, "folder", "C:/photos");
 ''')
 
 

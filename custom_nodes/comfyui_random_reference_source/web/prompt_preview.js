@@ -32,7 +32,9 @@ export function buildCombinedPromptPreview(graph) {
       ["aux1", "Auxiliary 1"], ["aux2", "Auxiliary 2"], ["aux3", "Auxiliary 3"]]) {
       const enabled = lane === "main" ? true : resolve(inputs[`use_${lane}`], seen);
       if (typeof enabled !== "boolean") throw new Error(`${label} switch is unavailable before execution.`);
-      contributions.push({label, enabled, text: enabled ? String(resolve(inputs[lane], seen)).trim() : ""});
+      const source = isLink(inputs[lane]) ? graph[inputs[lane][0]] : null;
+      contributions.push({label: source?._meta?.title || label, enabled,
+        text: enabled ? String(resolve(inputs[lane], seen)).trim() : ""});
     }
     return {contributions, text: contributions.filter(part => part.enabled && part.text).map(part => part.text).join("\n\n")};
   };

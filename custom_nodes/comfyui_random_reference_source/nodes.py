@@ -273,6 +273,7 @@ def build_reference_preview_payload(
     browse: bool = False,
     search: str = "",
     thumbnail_size: int = 192,
+    paths_only: bool = False,
 ) -> dict[str, object]:
     favorites = favorites or {}
     image_pool = build_image_pool(
@@ -304,6 +305,8 @@ def build_reference_preview_payload(
     if thumbnail_size > 384:
         max_images = 1
     filtered = [path for path in image_pool if str(search).casefold() in path.name.casefold()]
+    if paths_only:
+        return {"paths": [str(path) for path in filtered]}
     exact = len(image_pool) == 1 or selection_policy in {"seeded", "sequential"}
     if browse:
         preview_paths = filtered[offset:offset + max_images]
@@ -315,6 +318,7 @@ def build_reference_preview_payload(
     source_folder = _resolve_path(resolved_folder, _input_directory())
     return {
         "mode": normalized_mode,
+        "selection_paths": [str(path) for path in image_pool] if normalized_mode == "selection" else [],
         "source_folder": str(source_folder),
         "pool_size": len(image_pool),
         "preview_is_exact_next": exact and not browse,

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sys
+import asyncio
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 from uuid import UUID
 
@@ -376,6 +378,30 @@ async def post_import(request: web.Request) -> web.Response:
     return web.json_response({"imports": imported})
 
 
+async def post_import_paths(request: web.Request) -> web.Response:
+    collection_id = require_id(request.match_info["collection_id"])
+    payload = _strict(await _body(request), allowed={"paths"}, required={"paths"})
+    paths = payload["paths"]
+    if not isinstance(paths, list) or not paths or any(not isinstance(p, str) for p in paths):
+        raise ValueError("paths must be a nonempty array of local image paths")
+    service = get_service()
+    service.store.get_collection(collection_id)
+    def copy_images():
+        imported, failures = [], []
+        for value in dict.fromkeys(paths):
+            try:
+                path = Path(value)
+                if not path.is_absolute() or not path.is_file():
+                    raise ValueError(f"Local image not found: {value}")
+                with path.open("rb") as stream:
+                    content = stream.read(DEFAULT_MAX_IMAGE_BYTES + 1)
+                imported.append(service.import_image(collection_id, path.name, "application/octet-stream", content))
+            except Exception as error:
+                failures.append({"path": value, "error": str(error)})
+        return {"imports": imported, "failures": failures}
+    return web.json_response(await asyncio.to_thread(copy_images))
+
+
 async def delete_membership(request: web.Request) -> web.Response:
     collection_id = require_id(request.match_info["collection_id"])
     image_id = require_id(request.match_info["image_id"])
@@ -483,6 +509,7 @@ async def delete_managed_image(request: web.Request) -> web.Response:
 
 
 def add_routes(router: web.UrlDispatcher, prefix: str = "") -> None:
+    router.add_post(f"{prefix}/collections/{{collection_id}}/import-paths", _validated(post_import_paths))
     router.add_get(f"{prefix}/bootstrap", _validated(get_bootstrap))
     router.add_post(f"{prefix}/collections", _validated(post_collection))
     router.add_patch(
@@ -531,6 +558,7 @@ def register_routes() -> None:
     )
     routes.put(f"{ROOT}/active/{{kind}}")(_validated(put_active))
     routes.post(f"{ROOT}/import/{{collection_id}}")(_validated(post_import))
+    routes.post(f"{ROOT}/collections/{{collection_id}}/import-paths")(_validated(post_import_paths))
     routes.delete(f"{ROOT}/collections/{{collection_id}}/images/{{image_id}}")(
         _validated(delete_membership)
     )

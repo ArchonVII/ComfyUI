@@ -145,6 +145,7 @@ async def post_preview(request: web.Request) -> web.Response:
             browse=bool(data.get("browse", False)),
             search=str(data.get("search", "")),
             thumbnail_size=int(data.get("thumbnail_size", 192)),
+            paths_only=bool(data.get("paths_only", False)),
         )
     except Exception as exc:  # noqa: BLE001 - report preview issues to the node UI
         return web.json_response({"error": str(exc)}, status=400)
@@ -184,7 +185,8 @@ async def post_preset(request: web.Request) -> web.Response:
     data = await _read_json(request)
     try:
         name = str(data.get("name", "")).strip()
-        preset = save_preset(name, preset_from_payload(data), mode=str(data.get("save_mode", "upsert")))
+        preset = save_preset(name, preset_from_payload(data), mode=str(data.get("save_mode", "upsert")),
+                             original_name=str(data["original_name"]) if "original_name" in data else None)
         presets = load_presets()
     except ValueError as exc:
         return web.json_response({"error": str(exc)}, status=400)

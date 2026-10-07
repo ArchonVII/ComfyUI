@@ -52,6 +52,20 @@ def test_parse_selected_images_accepts_lines_commas_and_comments():
     ]
 
 
+def test_browser_selection_uses_canonical_paths_and_bulk_selection_skips_thumbnails(tmp_path, monkeypatch):
+    monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
+    for i in range(55):
+        _png(tmp_path / f"{i}.png")
+    source = dict(source_mode="selection", folder="", favorite="None",
+                  selected_images="0.png\n1.png", selection_policy="seeded", seed=1, include_subfolders=False)
+    page = build_reference_preview_payload(**source, browse=True, max_images=1)
+    assert page["selection_paths"] == [str(tmp_path / "0.png"), str(tmp_path / "1.png")]
+    source.update(source_mode="folder", folder=str(tmp_path))
+    import custom_nodes.comfyui_random_reference_source.nodes as module
+    monkeypatch.setattr(module, "_thumbnail_data_url", lambda *_: pytest.fail("bulk selection generated thumbnails"))
+    assert len(build_reference_preview_payload(**source, paths_only=True)["paths"]) == 55
+
+
 def test_blank_folder_requires_explicit_source(tmp_path, monkeypatch):
     monkeypatch.setattr(folder_paths, "get_input_directory", lambda: str(tmp_path))
     with pytest.raises(ValueError, match="Choose a reference folder"):

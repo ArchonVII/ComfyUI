@@ -101,13 +101,18 @@ function applySource(node, values, {restoreDraft = true} = {}) {
   rememberPromptDraft(node);
   // One atomic update: field callbacks must not detach a favorite midway
   // through applying that favorite or briefly preview a mixture of sources.
-  for (const [name, value] of Object.entries(values)) {
-    const widget = findWidget(node, name);
-    if (widget) widget.value = value;
+  node._archApplyingSource = (node._archApplyingSource || 0) + 1;
+  try {
+    for (const [name, value] of Object.entries(values)) {
+      const widget = findWidget(node, name);
+      if (widget) widget.value = value;
+    }
+    const nextKey = promptContext(node);
+    const draft = promptDrafts(node)[nextKey];
+    if (restoreDraft && nextKey !== oldKey && draft) findWidget(node, "favorite_prompt").value = draft.text;
+  } finally {
+    node._archApplyingSource--;
   }
-  const nextKey = promptContext(node);
-  const draft = promptDrafts(node)[nextKey];
-  if (restoreDraft && nextKey !== oldKey && draft) findWidget(node, "favorite_prompt").value = draft.text;
   rememberPromptDraft(node);
   node.graph?.change?.();
   node.setDirtyCanvas(true, true);
@@ -325,19 +330,25 @@ function favoritePayload(node, name) {
   };
 }
 
-async function saveFavorite(node, name, mode = "update") {
+async function saveFavorite(node, name, mode = "update", paths = null, renamedFrom = null) {
   const originalKey = promptContext(node);
   const originalChoice = node._archSourceChoice || 0;
   const snapshot = favoritePayload(node, name);
+  if (paths) Object.assign(snapshot, {source_mode: "selection", folder: "",
+    selected_images: encodeImagePaths(paths), include_subfolders: false, favorite: "None"});
+  if (renamedFrom) snapshot.original_name = renamedFrom;
   const originalName = rememberPromptDraft(node).name;
   const data = await callPresetApi("", {
     method: "POST",
     body: JSON.stringify({...snapshot, save_mode: mode}),
   });
+  // Renaming removes the old entry. Capture source intent before refreshing
+  // options detaches that now-missing name, so the successful save still applies.
+  const sameSource = promptContext(node) === originalKey && (node._archSourceChoice || 0) === originalChoice;
+  const currentText = findWidget(node, "favorite_prompt")?.value || "";
+  const currentName = rememberPromptDraft(node).name;
   refreshFavoriteOptions(node, data.presets);
-  if (promptContext(node) === originalKey && (node._archSourceChoice || 0) === originalChoice) {
-    const currentText = findWidget(node, "favorite_prompt")?.value || "";
-    const currentName = rememberPromptDraft(node).name;
+  if (sameSource) {
     const newKey = JSON.stringify(["favorite", data.name]);
     promptDrafts(node)[newKey] = {text: currentText,
       name: mode === "create" && currentName === originalName ? "" : currentName};
@@ -482,6 +493,9 @@ function installPreviewWidget(node) {
     const callback = widget.callback;
     widget.callback = function () {
       const result = callback?.apply(this, arguments);
+      // DOMWidgetImpl.value invokes callbacks even for programmatic writes.
+      // These writes belong to one source transaction, not manual field edits.
+      if (node._archApplyingSource) return result;
       if (name === "selection_policy") syncSequentialSeedControl(node);
       if (name === "favorite_prompt") {
         node._archSourceIntent = (node._archSourceIntent || 0) + 1;
@@ -515,6 +529,15 @@ app.registerExtension({
     installReferenceBrowser(app, {
       nodes: () => [...referenceNodes].filter(node => node.graph),
       payload: referencePayload, preview: fetchPreview, selectFolder, selectImages,
+      async library(path, body) {
+        const response = await api.fetchApi(`/arch-reference-library${path}`, body === undefined ? {} : {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
+        });
+        const text = await response.text();
+        if (!response.ok) throw new Error(text || "Could not save character references.");
+        const data = JSON.parse(text);
+        return data;
+      },
       promptState, setPromptName,
       revertPrompt(node) { applySource(node, {favorite_prompt: promptState(node).baseline}); },
       async combinedPreview() {
@@ -532,6 +555,15 @@ app.registerExtension({
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     const onConfigure = nodeType.prototype.onConfigure;
+    const configure = nodeType.prototype.configure;
+    nodeType.prototype.configure = function () {
+      // LiteGraph restores DOM widget values before calling onConfigure.
+      // Treat the complete restore as a transaction so saved folder sources
+      // and favorites aren't detached by the selected_images setter.
+      this._archApplyingSource = (this._archApplyingSource || 0) + 1;
+      try { return configure?.apply(this, arguments); }
+      finally { this._archApplyingSource--; }
+    };
     const onRemoved = nodeType.prototype.onRemoved;
     nodeType.prototype.onRemoved = function () {
       clearTimeout(this._archReferencePreviewTimer);

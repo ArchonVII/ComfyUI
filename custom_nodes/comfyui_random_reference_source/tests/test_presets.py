@@ -17,6 +17,21 @@ def test_default_preset_store_lives_in_custom_node_config_folder():
     assert preset_store_path() == PACKAGE_DIR / "config" / "presets.json"
 
 
+def test_rename_group_updates_membership_atomically_and_rejects_collisions(tmp_path):
+    args = {"store_path": tmp_path / "presets.json", "legacy_path": tmp_path / "absent.json"}
+    preset = {"kind": "selection", "images": ["first.png"]}
+    save_preset("Old group", preset, mode="create", **args)
+    save_preset("Other group", preset, mode="create", **args)
+    with pytest.raises(ValueError, match="already exists"):
+        save_preset("other group", preset, mode="update", original_name="Old group", **args)
+    assert "Old group" in load_presets(**args)
+    save_preset("Renamed group", {**preset, "images": ["second.png"]},
+                mode="update", original_name="Old group", **args)
+    stored = load_presets(**args)
+    assert "Old group" not in stored
+    assert stored["Renamed group"]["images"] == ["second.png"]
+
+
 def test_explicit_save_actions_cannot_overwrite_a_new_name_or_recreate_deleted_favorite(tmp_path):
     store = tmp_path / "presets.json"
     args = {"store_path": store, "legacy_path": tmp_path / "absent.json"}
