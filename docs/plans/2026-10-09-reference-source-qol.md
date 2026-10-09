@@ -45,4 +45,18 @@ merge to master requires the owner's landing instruction.
 
 ## State
 
-Implementation pending. Next: regression tests and four-stage implementation.
+All four stages implemented and deployed to port 8192 on October 9, 2026.
+ComfyUI Manager's native restart activated the Python changes after an idle-queue
+check. Every deployed package file matches the reviewed source; both favorite
+configuration files retained their original hashes. No saved workflow was edited.
+
+Verification: 96 reference-source tests and 60 library tests passed. Independent
+spec/correctness review found no remaining blockers. An isolated CPU-only browser
+smoke checked comma-path enlargement, pending/applied state, environment saves,
+opening the correct library collection, loading a collection snapshot, execution
+metadata, and exact-image reuse. A final preview-only prompt on 8192 completed
+successfully and reported `Doe, Jane.png` as the actual last-used synthetic image.
+No diffusion model or personal image was used in verification.
+
+Fork PR: https://github.com/ArchonVII/ComfyUI/pull/25
+Implementation complete; merge to master remains outside the current authorization.

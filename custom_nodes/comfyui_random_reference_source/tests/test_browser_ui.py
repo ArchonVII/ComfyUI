@@ -38,7 +38,7 @@ function byText(root, text) { return all(root).find(n => n.textContent === text)
 function byAria(root, label) { return all(root).find(n => n.attributes['aria-label'] === label); }
 const document = { body, head, createElement: tag => new Element(tag),
   getElementById: id => [...all(body), ...all(head)].find(n => n.id === id) };
-const context = {document, console, setTimeout, clearTimeout, window: {confirm: () => true}};
+const context = {document, console, setTimeout, clearTimeout, URLSearchParams, window: {confirm: () => true}};
 vm.runInNewContext(fs.readFileSync(SCRIPT, 'utf8').replace(/^export /gm, ''), context);
 assert.equal(context.imagePaths('"C:/last, first.png"\nC:/plain.png')[0], 'C:/last, first.png');
 const nodes = [1, 2].map(id => ({id, title: 'Source ' + id, widgets: []}));
@@ -49,11 +49,14 @@ const drafts = {1: {text:'', name:'', favorite:'None', saved:false, modified:fal
 let sidebar, selected, requests = [], pending = [], folderCalls = [], dialogCalls = [], dialogResult = {};
 let delayed = false;
 let saveCalls = [], libraryCalls = [], savedGroupPaths, saveError = false, combinedText = 'instruction\n\nmain prompt';
+let librarySelection, openedCollection;
+let profileWait = null, sourceWait = null;
 const page = (id, offset, count) => ({pool_size: 27, filtered_size: 27, has_more: offset === 0,
   selection_paths: payload.source_mode === 'selection' ? Array.from({length:27}, (_,i)=>`C:/${id}/${i}.png`) : [],
   images: Array.from({length: count}, (_, i) => ({path: `C:/${id}/${offset+i}.png`, name: `${id}-${offset+i}.png`, thumbnail_data_url: 'data:image/png;base64,fixture'}))});
 context.installReferenceBrowser({extensionManager: {registerSidebarTab: tab => sidebar = tab}}, {
   nodes: () => nodes, payload: () => ({...payload}), presets: async () => ({'Portraits': {kind:'folder', folder:'C:/portraits'}}),
+  encodePaths: paths => paths.map(path => '"' + path.replaceAll('"', '""') + '"').join('\n'),
   preview: (node, options) => {
     requests.push([node.id, options]);
     if(options.paths_only) return Promise.resolve({paths:Array.from({length:27},(_,i)=>`C:/${node.id}/${i}.png`)});
@@ -63,10 +66,15 @@ context.installReferenceBrowser({extensionManager: {registerSidebarTab: tab => s
   selectImages: (node, paths) => { selected = {id:node.id, paths}; },
   library: async (path, body) => {
     libraryCalls.push([path,body]);
-    if(path.startsWith('/bootstrap')) return {collections:[{id:'existing',name:'Existing character',kind:'subject'}]};
+    if(path.startsWith('/bootstrap?collection_id=') && profileWait) return profileWait;
+    if(path.includes('/source?') && sourceWait) return sourceWait;
+    if(path.startsWith('/bootstrap')) return {collections:[{id:'existing',name:'Existing character',kind:'subject'}, {id:'environment',name:'Studio',kind:'environment'}],detail:{profiles:[{id:'default',name:'Default'}]}};
+    if(path.includes('/source?')) return {collection:{id:'environment',name:'Studio',kind:'environment'},profile:{id:'default',name:'Default'},paths:['C:/library/studio.png'],positive_prompt:'studio light',negative_prompt:'blur',loras:[],pool_count:1,total_count:2};
     if(path === '/collections') return {collection:{id:'created',name:body.name}};
     return {imports:body.paths.map(path=>({path}))};
   },
+  selectLibrary: (node, data, includePrompt) => { librarySelection = {node, data, includePrompt}; },
+  openLibrary: collection => { openedCollection = collection; },
   selectFolder: (node, path) => folderCalls.push([node.id, path]),
   promptState: node => drafts[node.id],
   setPromptName: (node, name) => { drafts[node.id].name = name; },
@@ -88,9 +96,13 @@ context.installReferenceBrowser({extensionManager: {registerSidebarTab: tab => s
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
   assert.equal(sidebar.title, 'Reference Favorites');
+  await context.enlarge({node:nodes[0]}, {name:'Doe, Jane.png',path:'C:/Doe, Jane.png',thumbnail_data_url:'fixture'});
+  assert.equal(requests.at(-1)[1].selected_images, '"C:/Doe, Jane.png"', 'enlarge quotes comma paths');
+  body.children[0].close();
   context.openReferenceBrowser(nodes[0]); await tick();
   let dialog = body.children[0], grid = byClass(dialog, 'rr-grid'), scroll = byClass(dialog, 'rr-scroll');
   assert.equal(grid.children.length, 24);
+  assert.ok(byAria(dialog, 'Checked images status').textContent.includes('0 checked'));
   assert.ok(byAria(dialog, 'Active run source and image connection').textContent.includes('Image output is disconnected'));
   nodes[0].outputs = [{type:'IMAGE',links:[101]}];
   context.refreshReferenceBrowser(nodes[0]); await tick();
@@ -98,6 +110,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(all(grid).filter(n=>n.tag==='small').length,0,'grid has no filename captions');
   byText(dialog,'Select all').fire('click'); await tick();
   assert.ok(byText(dialog,'Use 27 checked images'),'Select all includes unloaded pages');
+  assert.ok(byAria(dialog, 'Checked images status').textContent.includes('not applied'));
   byText(dialog,'Unselect all').fire('click');
   assert.ok(all(grid).filter(n=>n.type==='checkbox').every(n=>!n.checked));
   byText(dialog, 'Load folder…').fire('click'); await tick();
@@ -137,6 +150,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   byAria(dialog, 'Toggle selection of 1-0.png').fire('click');
   assert.equal(check.checked, false, 'photo click toggles selection instead of enlarging');
   byAria(dialog, 'Toggle selection of 1-0.png').fire('click');
+  assert.ok(byAria(dialog, 'Checked images status').textContent.includes('1 checked'));
   byText(dialog, 'Save to favorite group…').fire('click'); await tick();
   const groupDialog = body.children[1];
   byAria(groupDialog, 'Favorite group name').value = 'One photo';
@@ -146,19 +160,52 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   groupDialog.close();
   byText(dialog, 'Use 1 checked image').fire('click');
   assert.equal(selected.id, 1); assert.equal(selected.paths[0], 'C:/1/0.png');
-  byText(dialog,'Save to character…').fire('click'); await tick();
+  byText(dialog,'Save to library…').fire('click'); await tick();
   const characterDialog = body.children[1];
-  byAria(characterDialog,'New character name').value='Test character';
+  byAria(characterDialog,'New collection name').value='Test character';
   byText(characterDialog,'Save 1 image').fire('click'); await tick();
   assert.equal(libraryCalls.at(-2)[1].kind,'subject');
   assert.equal(libraryCalls.at(-1)[0],'/collections/created/import-paths');
   assert.equal(libraryCalls.at(-1)[1].paths[0],'C:/1/0.png');
-  const character = byAria(characterDialog,'Character reference');
+  const character = byAria(characterDialog,'Destination collection');
   character.value='existing'; character.fire('change');
-  assert.equal(byAria(characterDialog,'New character name').hidden,true);
+  assert.equal(byAria(characterDialog,'New collection name').hidden,true);
   byText(characterDialog,'Save 1 image').fire('click'); await tick();
   assert.equal(libraryCalls.at(-1)[0],'/collections/existing/import-paths');
   characterDialog.close();
+  byText(dialog,'Load from library…').fire('click'); await tick();
+  const libraryDialog=body.children[1];
+  const kind=byAria(libraryDialog,'Library collection kind'); kind.value='environment'; kind.fire('change'); await tick();
+  assert.ok(all(libraryDialog).some(n=>n.tag==='option' && n.textContent==='Studio'));
+  assert.ok(!all(libraryDialog).some(n=>n.tag==='option' && n.textContent==='Existing character'));
+  const collection=byAria(libraryDialog,'Library collection'); collection.value='environment'; collection.fire('change'); await tick();
+  const includePrompt=byAria(libraryDialog,'Use profile positive prompt'); includePrompt.checked=true;
+  byText(libraryDialog,'Use collection images').fire('click'); await tick();
+  assert.equal(librarySelection.node.id,1); assert.equal(librarySelection.data.paths[0],'C:/library/studio.png');
+  assert.equal(librarySelection.includePrompt,true);
+  assert.ok(libraryCalls.some(([path])=>path.includes('/collections/environment/source?') && path.includes('filtered=true')));
+  assert.equal(body.children.length,1,'successful library selection closes picker');
+  byText(dialog,'Load from library…').fire('click'); await tick();
+  const slowDialog=body.children[1];
+  const slowProfile=byAria(slowDialog,'Library prompt profile'); slowProfile.value='old-profile';
+  let finishProfiles; profileWait=new Promise(resolve=>finishProfiles=resolve);
+  const slowKind=byAria(slowDialog,'Library collection kind'); slowKind.value='environment'; slowKind.fire('change');
+  assert.equal(slowProfile.value,'','old collection profile is cleared immediately');
+  assert.equal(slowProfile.disabled,true);
+  const filters=byAria(slowDialog,'Use library tag filters');
+  assert.equal(filters.disabled,true,'filters cannot cancel an in-flight profile load');
+  filters.fire('change');
+  finishProfiles({detail:{profiles:[{id:'studio-profile',name:'Studio light'}]}}); profileWait=null; await tick();
+  assert.equal(slowProfile.disabled,false);
+  assert.ok(all(slowProfile).some(n=>n.value==='studio-profile'));
+  let finishSource; sourceWait=new Promise(resolve=>finishSource=resolve);
+  librarySelection=null;
+  byText(slowDialog,'Use collection images').fire('click');
+  payload.folder='C:/new-choice';
+  finishSource({paths:['C:/stale.png']}); sourceWait=null; await tick();
+  assert.equal(librarySelection,null,'late collection load cannot overwrite a newer node source');
+  assert.ok(byClass(slowDialog,'rr-status').textContent.includes('source changed'));
+  slowDialog.close(); payload.folder='C:/fixtures';
   drafts[1] = {text:'saved text',name:'',favorite:'Portraits',saved:true,modified:false,baseline:'saved text'};
   context.refreshReferencePrompt(nodes[0]);
   const promptEditor = byAria(dialog, 'Reference prompt text');
@@ -186,6 +233,10 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setTimeout(resolve, 240));
   assert.equal(byAria(dialog, 'Combined prompt 65').value, combinedText);
   dialog.close(); assert.equal(body.children.length, 0);
+  context.openReferenceBrowser(nodes[0]); await tick();
+  dialog=body.children[0];
+  assert.ok(byAria(dialog,'Checked images status').textContent.includes('1 checked'), 'closing and reopening preserves unapplied checks');
+  dialog.close();
 
   payload.source_mode='selection'; payload.selected_images='0.png';
   context.openReferenceBrowser(nodes[0]); await tick();

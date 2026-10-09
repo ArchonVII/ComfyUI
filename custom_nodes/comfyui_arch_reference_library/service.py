@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from .store import ReferenceLibraryStore
+from .store import DEFAULT_PROFILE_NAME, ReferenceLibraryStore
 
 
 DEFAULT_MAX_IMAGE_BYTES = 256 * 1024 * 1024
@@ -135,6 +135,40 @@ class ReferenceLibraryService:
             raise ValueError("managed reference is not a readable still image") from exc
         self._atomic_write(destination, buffer.getvalue())
         return destination
+
+    def source_snapshot(
+        self, collection_id: str, *, profile_id: str | None = None,
+        filtered: bool = True,
+    ) -> dict[str, Any]:
+        """Read an explicit source pool without changing sidebar or slot state."""
+        collection = self.store.get_collection(collection_id)
+        profile = (
+            self.store.get_profile(profile_id)
+            if profile_id is not None
+            else next(
+                item for item in self.store.list_profiles(collection["id"])
+                if item["name"].casefold() == DEFAULT_PROFILE_NAME.casefold()
+            )
+        )
+        if profile["collection_id"] != collection["id"]:
+            raise ValueError("profile does not belong to the collection")
+        filters = self.store.get_selection(collection["id"])["filters"]
+        image_ids = self.store.list_image_ids(
+            collection["id"], **(filters if filtered else {})
+        )
+        paths = [str(self.managed_path(image_id)) for image_id in image_ids]
+        return {
+            "collection": {key: collection[key] for key in ("id", "name", "kind")},
+            "profile": profile,
+            "paths": paths,
+            "positive_prompt": profile["positive_prompt"],
+            "negative_prompt": profile["negative_prompt"],
+            "loras": profile["loras"],
+            "filtered": filtered,
+            "filters": filters,
+            "total_count": self.store.count_images(collection["id"]),
+            "pool_count": len(paths),
+        }
 
     def reroll(self, collection_id: str) -> dict[str, Any]:
         selection = self.store.get_selection(collection_id)

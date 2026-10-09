@@ -537,14 +537,17 @@ class RandomReferenceImageSource:
             "selection_policy": selection_policy,
             "favorite_prompt_text": favorite_text,
         }
-        return (
-            image,
-            mask,
-            str(selected_path),
-            lane,
-            json.dumps(metadata, ensure_ascii=False),
-            combined_prompt,
-        )
+        return {
+            "ui": {"arch_reference_last_used": [metadata]},
+            "result": (
+                image,
+                mask,
+                str(selected_path),
+                lane,
+                json.dumps(metadata, ensure_ascii=False),
+                combined_prompt,
+            ),
+        }
 
 
 class ReferencePromptCompose:

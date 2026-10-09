@@ -24,7 +24,7 @@ const app = {{
 }};
 const context = {{
   app,
-  installReferenceBrowser() {{}},
+  installReferenceBrowser(app, actions) {{ context.actions = actions; }},
   openReferenceBrowser() {{}},
   refreshReferenceBrowser() {{}},
   refreshReferencePrompt() {{}},
@@ -735,4 +735,123 @@ def test_cancel_failed_or_late_single_image_load_preserves_current_source():
   finish(); await loading;
   assertWidget(node, "folder", "new folder");
   assertWidget(node, "source_mode", "folder");
+''')
+
+
+def test_replacing_checked_images_keeps_target_saved_prompt_and_syncs_other_nodes():
+    _run_extension_assertions('''
+  const editor = createNode({favorite:"Other",favorite_prompt:"unrelated draft"});
+  const following = createNode({favorite:"Target",folder:"old",favorite_prompt:"saved target"});
+  const drafting = createNode({favorite:"Target",folder:"old",favorite_prompt:"unsaved target"});
+  const presets = {Target:{kind:"folder",folder:"old",prompt_text:"saved target"}};
+  for (const node of [editor,following,drafting]) node._archReferencePresets = presets;
+  context.api.fetchApi = async (_, options) => {
+    const body = JSON.parse(options.body);
+    assertEqual(body.prompt_text, "saved target", "membership replacement preserves saved target prompt");
+    return {ok:true,json:async()=>({name:"Target",presets:{Target:{kind:"selection",images:["new.png"],prompt_text:body.prompt_text}}})};
+  };
+  await context.saveFavorite(editor, "Target", "update", ["new.png"]);
+  for (const node of [following,drafting]) {
+    assertWidget(node,"source_mode","selection");
+    assertWidget(node,"folder","");
+    assertWidget(node,"selected_images","new.png");
+  }
+  assertWidget(following,"favorite_prompt","saved target");
+  assertWidget(drafting,"favorite_prompt","unsaved target");
+  assertWidget(editor,"favorite_prompt","saved target");
+''')
+
+
+@pytest.mark.parametrize("during_save", [False, True])
+@pytest.mark.parametrize("same_favorite", [False, True])
+def test_membership_replace_preserves_target_draft_or_newly_typed_text(during_save, same_favorite):
+    _run_extension_assertions('''
+  const node = createNode({favorite:''' + json.dumps("Target" if same_favorite else "Other") + ''',favorite_prompt:"my target draft"});
+  node._archReferencePresets = {Target:{kind:"folder",folder:"old",prompt_text:"saved target"}};
+  let finish;
+  context.api.fetchApi = () => new Promise(resolve => {
+    finish = () => resolve({ok:true,json:async()=>({name:"Target",presets:{Target:{kind:"selection",images:["new.png"],prompt_text:"saved target"}}})});
+  });
+  const saving = context.saveFavorite(node,"Target","update",["new.png"]);
+''' + ('''
+  findWidget(node,"favorite_prompt").value = "typed during save";
+  findWidget(node,"favorite_prompt").callback();
+''' if during_save else '') + '''
+  finish(); await saving;
+  assertWidget(node,"favorite_prompt",''' + json.dumps("typed during save" if during_save else "my target draft" if same_favorite else "saved target") + ''');
+''')
+
+
+def test_renaming_favorite_follows_saved_prompt_but_preserves_other_node_draft():
+    _run_extension_assertions('''
+  const editor = createNode({favorite:"Old",favorite_prompt:"new saved"});
+  const following = createNode({favorite:"Old",favorite_prompt:"old saved"});
+  const drafting = createNode({favorite:"Old",favorite_prompt:"my draft"});
+  for (const node of [editor,following,drafting]) node._archReferencePresets = {Old:{kind:"folder",folder:"old",prompt_text:"old saved"}};
+  context.api.fetchApi = async () => ({ok:true,json:async()=>({name:"New",presets:{New:{kind:"folder",folder:"new",prompt_text:"new saved"}}})});
+  await context.saveFavorite(editor,"New","update",null,"Old");
+  for (const node of [following,drafting]) {
+    assertWidget(node,"favorite","New");
+    assertWidget(node,"folder","new");
+  }
+  assertWidget(following,"favorite_prompt","new saved");
+  assertWidget(drafting,"favorite_prompt","my draft");
+''')
+
+
+def test_last_used_execution_is_separate_and_reuse_selects_exact_quoted_path():
+    _run_extension_assertions('''
+  const node = createNode({source_mode:"folder",folder:"pool",favorite:"Saved"});
+  const reuse = findWidget(node,"Use this image again");
+  assertEqual(reuse?.disabled,true,"reuse disabled until execution");
+  node.onExecuted({arch_reference_last_used:[{selected_file:"C:/refs/last, first.png",selected_name:"last, first.png",thumbnail_data_url:"do not persist"}]});
+  assertEqual(node._archLastUsed.selected_name,"last, first.png","last executed metadata");
+  assertWidget(node,"folder","pool");
+  assertEqual(reuse.disabled,false,"reuse enabled");
+  reuse.callback();
+  assertWidget(node,"selected_images",'"C:/refs/last, first.png"');
+  assertWidget(node,"favorite","None");
+  assertEqual(node.properties.archReferenceLastUsed.thumbnail_data_url,undefined,"no image payload stored");
+  assertEqual(reuse.serialize,false,"reuse button transient");
+  const restored = createNode();
+  restored.properties = JSON.parse(JSON.stringify(node.properties));
+  restored.onConfigure({});
+  assertEqual(restored._archLastUsed.selected_name,"last, first.png","last used restored");
+''')
+
+
+def test_library_selection_uses_snapshot_and_only_changes_prompt_when_checked():
+    _run_extension_assertions('''
+  extension.setup();
+  const node = createNode({favorite_prompt:"current draft"});
+  const data = {paths:["C:/refs/one, two.png"],positive_prompt:"library prompt",collection:{id:"collection",name:"Collection",kind:"outfit"},profile:{id:"profile",name:"Profile"}};
+  context.actions.selectLibrary(node,data,false);
+  assertWidget(node,"selected_images",'"C:/refs/one, two.png"');
+  assertWidget(node,"favorite_prompt","current draft");
+  context.actions.selectLibrary(node,data,true);
+  assertWidget(node,"favorite_prompt","library prompt");
+  assertEqual(context.actions.encodePaths(data.paths),'"C:/refs/one, two.png"',"shared path encoder");
+''')
+
+
+def test_peer_pending_choice_survives_rename_and_removed_editor_is_not_updated():
+    _run_extension_assertions('''
+  const editor = createNode({favorite:"Old",favorite_prompt:"saved"});
+  const peer = createNode({favorite:"Old",favorite_prompt:"saved"});
+  const oldPresets = {Old:{kind:"folder",folder:"old",prompt_text:"saved"}};
+  editor._archReferencePresets = peer._archReferencePresets = oldPresets;
+  const presets = {New:{kind:"folder",folder:"new",prompt_text:"saved"},Other:{kind:"folder",folder:"other",prompt_text:"other prompt"}};
+  let finishSave, finishChoice;
+  context.api.fetchApi = (path, options) => new Promise(resolve => {
+    const finish = () => resolve({ok:true,json:async()=>({name:"New",presets})});
+    if (options?.method === "POST") finishSave=finish; else finishChoice=finish;
+  });
+  const saving = context.saveFavorite(editor,"New","update",null,"Old");
+  const choosing = context.chooseFavorite(peer,"Other");
+  editor.onRemoved();
+  finishSave(); await saving;
+  finishChoice(); await choosing;
+  assertWidget(peer,"favorite","Other");
+  assertWidget(peer,"folder","other");
+  assertWidget(editor,"favorite","Old");
 ''')
