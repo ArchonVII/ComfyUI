@@ -361,7 +361,8 @@ def test_sparse_resave_recovers_legacy_include_from_stolen_control_slot():
     )
 
 
-def test_selecting_sequential_mode_sets_incrementing_seed_control():
+@pytest.mark.parametrize('policy', ['sequential', 'shuffle_cycle'])
+def test_selecting_sequential_mode_sets_incrementing_seed_control(policy):
     _run_extension_assertions(
         """
   const node = createNode({
@@ -374,12 +375,13 @@ def test_selecting_sequential_mode_sets_incrementing_seed_control():
   policy.callback("sequential", app.canvas, node);
   assertWidget(node, "seed", 1);
   assertWidget(node, "control_after_generate", "increment");
-"""
+""".replace('"sequential"', json.dumps(policy))
     )
 
 
 @pytest.mark.parametrize("control_mode", ["fixed", "decrement", "randomize"])
-def test_sequential_restore_always_advances_the_index(control_mode):
+@pytest.mark.parametrize('policy', ['sequential', 'shuffle_cycle'])
+def test_sequential_restore_always_advances_the_index(control_mode, policy):
     _run_extension_assertions(
         f"""
   const restored = createNode();
@@ -389,7 +391,7 @@ def test_sequential_restore_always_advances_the_index(control_mode):
     "None",
     ".",
     "a.png\\nb.png",
-    "sequential",
+    {json.dumps(policy)},
     7,
     {json.dumps(control_mode)},
     false,

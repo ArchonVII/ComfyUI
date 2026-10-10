@@ -10,6 +10,7 @@ const SELECTION_POLICIES = new Set([
   "random_each_queue",
   "seeded",
   "sequential",
+  "shuffle_cycle",
 ]);
 const CONTROL_MODES = new Set([
   "fixed",
@@ -56,7 +57,7 @@ function syncSequentialSeedControl(node) {
   if (policy === "random_each_queue") return;
   ensurePositiveSeed(node);
   setWidgetValue(node, findWidget(node, "control_after_generate"),
-    policy === "sequential" ? "increment" : "fixed");
+    ["sequential", "shuffle_cycle"].includes(policy) ? "increment" : "fixed");
 }
 
 function promptContext(node) {
@@ -178,7 +179,7 @@ function compactWidgets(node) {
   const policy = findWidget(node, "selection_policy");
   if (policy) policy.label = "Image selection";
   const seed = findWidget(node, "seed");
-  if (seed) seed.label = findWidget(node, "selection_policy")?.value === "sequential" ? "Next image index" : "Repeatable seed";
+  if (seed) seed.label = ["sequential", "shuffle_cycle"].includes(findWidget(node, "selection_policy")?.value) ? "Next image index" : "Repeatable seed";
 }
 
 // Older workflows were saved either as the original compact eight backend

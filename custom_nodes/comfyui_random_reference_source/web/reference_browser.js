@@ -688,7 +688,7 @@ function browserView(dialog, node) {
   imagesRow.append(count);
   const options = element("div", "rr-row");
   const policy = element("select");
-  for (const [value, label] of [["random_each_queue", "Random each run"], ["seeded", "Repeatable seed"], ["sequential", "Next image in order"]]) {
+  for (const [value, label] of [["random_each_queue", "Random each run"], ["seeded", "Repeatable seed"], ["sequential", "Next image in order"], ["shuffle_cycle", "Shuffle without repeats (per cycle)"]]) {
     const option = element("option", "", label); option.value = value; policy.append(option);
   }
   policy.addEventListener("change", () => actions.setField(view.node, "selection_policy", policy.value));
@@ -780,7 +780,7 @@ function browserView(dialog, node) {
     policy.value = payload.selection_policy; seed.value = payload.seed;
     seedField.hidden = payload.selection_policy === "random_each_queue";
     afterRunField.hidden = seedField.hidden;
-    afterRunField.textContent = payload.selection_policy === "sequential"
+    afterRunField.textContent = ["sequential", "shuffle_cycle"].includes(payload.selection_policy)
       ? "Index advances automatically after each run."
       : "Seed stays fixed between runs.";
     recursive.checked = payload.include_subfolders;
