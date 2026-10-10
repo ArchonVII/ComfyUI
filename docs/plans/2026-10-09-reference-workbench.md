@@ -41,9 +41,16 @@ and video never enter Git. No new model download is needed for these features.
 ## State
 
 Implementation complete. Existing PR: https://github.com/ArchonVII/ComfyUI/pull/25
-Merge remains unauthorized.
+Owner authorized review and merge on October 9, 2026. Review found and fixed a
+dependency on an untracked live-install face helper: clean checkouts now reuse
+the tracked Arch Image Tools detector, with the bounded helper retained when
+installed. A real-detector synthetic regression covers this checkout difference.
+Review also fixed Cast choices remaining stale after favorite creation, rename or
+deletion; renamed lanes follow the new group name and invalidate their old locks.
 
-- Workbench: 24 focused tests passed. Source: 102 focused tests passed.
+- Initial validation: 24 workbench and 102 source tests passed.
+- Final review validation: 188 workbench/source/library tests passed, including
+  clean-checkout real face detection and Cast favorite-refresh regressions.
 - Isolated installed frontend 1.51.10 registered and executed all five nodes;
   successful synthetic prompt `a893f479-0a03-46fb-95ec-a20460110338`.
 - Browser verified full two-image review, persistent Keep status, library import
@@ -53,5 +60,8 @@ Merge remains unauthorized.
 - Real local YuNet detector executed on synthetic blank input (no face expected).
 - Triton GPU compile/run and dependency check passed; RMBG now registers 43 nodes,
   including SAM3Segment. Isolated startup has no missing-Triton or timm warnings.
-- Runtime files deployed and a new synthetic demo workflow added. Activation is
-  pending an idle queue at 8192; existing jobs are preserved.
+- Runtime files and review fixes deployed, with the new synthetic demo workflow.
+  Manager restarted port 8192 after confirming no running/pending jobs. All five
+  workbench nodes and SAM3Segment registered. Synthetic live prompt
+  `915c5c39-f8fb-47a4-976e-30348cffe1c3` succeeded, producing a two-image review
+  and Run Record sidecar. Hard-refresh already-open browser tabs for updated JS.

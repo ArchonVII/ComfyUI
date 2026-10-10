@@ -425,6 +425,9 @@ async function saveFavorite(node, name, mode = "update", paths = null, renamedFr
     }
     refreshReferenceBrowser(source);
   }
+  globalThis.dispatchEvent?.(new CustomEvent("arch-reference-presets-changed", {
+    detail: {presets: data.presets, renamedFrom, name: data.name},
+  }));
   notify(`Saved favorite “${data.name}”.`);
 }
 
@@ -434,6 +437,7 @@ async function deleteFavorite(node, name) {
     body: JSON.stringify({ name }),
   });
   for (const source of referenceNodes) refreshFavoriteOptions(source, data.presets);
+  globalThis.dispatchEvent?.(new CustomEvent("arch-reference-presets-changed", {detail: {presets: data.presets}}));
   refreshReferenceBrowser(node);
   notify(`Deleted favorite “${name}”.`);
 }

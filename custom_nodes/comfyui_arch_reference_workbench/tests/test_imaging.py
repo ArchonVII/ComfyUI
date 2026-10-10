@@ -57,6 +57,12 @@ class ImagingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'No face'):
                 imaging.ArchReferencePrepare().prepare(torch.ones(1, 10, 12, 3), mode='face')
 
+    def test_real_face_detector_is_available_in_a_clean_checkout(self):
+        # A blank synthetic input has no face, but must reach the bundled detector
+        # rather than depend on an untracked helper from the live installation.
+        with self.assertRaisesRegex(ValueError, 'No face detected'):
+            imaging.ArchReferencePrepare().prepare(torch.zeros(1, 64, 64, 3), mode='face')
+
     def test_contact_sheet_all_members_and_aspect(self):
         red = torch.zeros(3, 4, 8, 3)
         red[..., 0] = 1

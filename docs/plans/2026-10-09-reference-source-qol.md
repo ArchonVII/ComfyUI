@@ -59,4 +59,4 @@ successfully and reported `Doe, Jane.png` as the actual last-used synthetic imag
 No diffusion model or personal image was used in verification.
 
 Fork PR: https://github.com/ArchonVII/ComfyUI/pull/25
-Implementation complete; merge to master remains outside the current authorization.
+Implementation complete; owner authorized review and merge to master on October 9, 2026.

@@ -786,6 +786,9 @@ def test_membership_replace_preserves_target_draft_or_newly_typed_text(during_sa
 
 def test_renaming_favorite_follows_saved_prompt_but_preserves_other_node_draft():
     _run_extension_assertions('''
+  const events = [];
+  context.CustomEvent = class { constructor(type, options) { this.type=type; this.detail=options.detail; } };
+  context.dispatchEvent = event => events.push(event);
   const editor = createNode({favorite:"Old",favorite_prompt:"new saved"});
   const following = createNode({favorite:"Old",favorite_prompt:"old saved"});
   const drafting = createNode({favorite:"Old",favorite_prompt:"my draft"});
@@ -798,6 +801,13 @@ def test_renaming_favorite_follows_saved_prompt_but_preserves_other_node_draft()
   }
   assertWidget(following,"favorite_prompt","new saved");
   assertWidget(drafting,"favorite_prompt","my draft");
+  assertEqual(events[0]?.type,"arch-reference-presets-changed","Cast refresh event");
+  assertEqual(events[0]?.detail.renamedFrom,"Old","Cast rename source");
+  assertEqual(events[0]?.detail.name,"New","Cast rename destination");
+  context.api.fetchApi = async () => ({ok:true,json:async()=>({presets:{}})});
+  await context.deleteFavorite(editor,"New");
+  assertEqual(events[1]?.type,"arch-reference-presets-changed","Cast delete event");
+  assertEqual(Object.keys(events[1]?.detail.presets).length,0,"Cast empty choices");
 ''')
 
 

@@ -21,13 +21,15 @@ Cast defaults all lanes off. An inactive/unassigned lane returns `None`; leave i
 disconnected from consumers requiring IMAGE, or use a compatible lazy switch.
 Contact Sheet accepts inactive lanes. First locked selections use the fixed Cast
 seed, so queued runs agree before the first result reaches the browser. Changing
-a favorite or unlocking clears that lane's retained path. A missing locked file
+a favorite or unlocking clears that lane's retained path. Cast choices refresh when
+groups are saved, renamed or deleted; a rename clears the affected lock. A missing locked file
 raises an error rather than silently changing identity. Cast selects references;
 connect its images to conditioning nodes appropriate for your generation model.
 
 Prepare preserves aspect ratio with padding. Its output mask is foreground/coverage
 (white means included), not an automatically inverted inpainting mask. Subject mode
-does not segment automatically. Face mode reports missing local dependencies or no
+does not segment automatically. Face mode reuses the local Arch Image Tools YuNet
+detector, or the bounded Identity Score helper when installed. It reports missing local dependencies or no
 face; full and subject modes remain usable without the detector.
 
 Review copies and classifications live in the configured user directory under

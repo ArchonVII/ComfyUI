@@ -29,17 +29,23 @@ def _letterbox(image, width, height, value=0):
 
 
 def _detect_faces(image, threshold):
-    # Reuse the installed bounded-resolution YuNet helper without importing web routes.
+    # Reuse local YuNet detection without importing sibling web routes. The
+    # bounded helper is an optional live-install enhancement, not a repo dependency.
     sibling = Path(__file__).resolve().parents[1] / 'comfyui_identity_score'
     helper = sibling / 'face_detection.py'
     model = sibling / 'models' / 'face_detection_yunet_2023mar.onnx'
-    if not helper.is_file() or not model.is_file():
+    if not model.is_file():
         raise ValueError('Face preparation requires the existing local Identity Score YuNet detector and model. No models are downloaded.')
+    bounded = helper.is_file()
+    if not bounded:
+        helper = sibling.parent / 'comfyui_arch_image_tools' / 'face_identity.py'
+    if not helper.is_file():
+        raise ValueError('Face preparation requires the local Arch Image Tools detector. No models are downloaded.')
     spec = importlib.util.spec_from_file_location('arch_reference_shared_face_detection', helper)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     bgr = np.ascontiguousarray((image.numpy() * 255).astype(np.uint8)[..., ::-1])
-    return module.detect_face_rows(bgr, model, threshold)
+    return module.detect_face_rows(bgr, model, threshold) if bounded else module._detect_faces(bgr, threshold)
 
 
 class ArchReferencePrepare:

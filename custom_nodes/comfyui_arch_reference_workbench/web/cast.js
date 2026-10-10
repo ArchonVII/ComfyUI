@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { api } from "/scripts/api.js";
 
 const roles = ["subject", "clothing", "environment", "style"];
 const widget = (node, name) => node.widgets?.find(value => value.name === name);
@@ -15,6 +16,24 @@ function writeLocks(node, locks) {
   if (!state) return;
   state.value = JSON.stringify(locks);
   node.graph?.change?.();
+  node.setDirtyCanvas?.(true, true);
+}
+
+function refreshFavorites(node, {presets = {}, renamedFrom, name}) {
+  const values = ["None", ...Object.keys(presets).filter(value => value !== "None").sort()];
+  for (const role of roles) {
+    const control = widget(node, `${role}_favorite`);
+    if (!control) continue;
+    control.options ||= {};
+    control.options.values = values;
+    const next = control.value === renamedFrom && presets[name] ? name
+      : values.includes(control.value) ? control.value : "None";
+    if (next !== control.value) {
+      control.value = next;
+      control.callback?.();
+      if (node.properties?.archReferenceCastLastUsed) delete node.properties.archReferenceCastLastUsed[role];
+    }
+  }
   node.setDirtyCanvas?.(true, true);
 }
 
@@ -60,7 +79,29 @@ app.registerExtension({
           };
         }
       }
+      let revision = 0;
+      const changed = event => {
+        revision++;
+        refreshFavorites(this, event.detail);
+      };
+      this._archCastPresetsChanged = changed;
+      globalThis.addEventListener?.("arch-reference-presets-changed", changed);
+      const initialRevision = revision;
+      // Reopening a saved workflow must get groups created since page load.
+      if (typeof api !== "undefined" && api.fetchApi) {
+        api.fetchApi("/arch-random-reference/presets").then(async response => {
+          if (!response.ok) return;
+          const data = await response.json();
+          if (revision === initialRevision && this._archCastPresetsChanged === changed) refreshFavorites(this, data);
+        }).catch(() => {});
+      }
       return result;
+    };
+    const removed = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      globalThis.removeEventListener?.("arch-reference-presets-changed", this._archCastPresetsChanged);
+      delete this._archCastPresetsChanged;
+      return removed?.apply(this, arguments);
     };
     const executed = nodeType.prototype.onExecuted;
     nodeType.prototype.onExecuted = function (message) {
