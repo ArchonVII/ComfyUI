@@ -22,6 +22,82 @@ def png_bytes(color):
     return buffer.getvalue()
 
 
+@pytest.mark.parametrize("kind", ["subject", "environment"])
+def test_collection_source_snapshot_filters_profiles_and_no_mutation(tmp_path, monkeypatch, kind):
+    service = ReferenceLibraryService(tmp_path / "library")
+    store = service.store
+    collection = store.create_collection(kind, "Snapshot")
+    cid = collection["id"]
+    images = [service.import_image(cid, f"{color}.png", "image/png", png_bytes(color))["image"]
+              for color in ("red", "blue")]
+    tag = store.create_tag(name="chosen")
+    store.batch_update_tags(cid, [images[0]["id"]], add_tag_ids=[tag["id"]])
+    store.set_selection(cid, filters={"include_all": [tag["id"]], "include_any": [], "exclude": []})
+    profile = store.create_profile(cid, name="Custom", positive_prompt="positive", negative_prompt="negative",
+                                   loras=[{"name": "test.safetensors", "strength_model": 0.7, "strength_clip": 0.6, "enabled": True}])
+    store.set_active_profile(cid, profile["id"])
+    before = store.get_selection(cid)
+    active_before = store.get_active(kind)
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+
+    async def exercise():
+        app = web.Application()
+        routes.add_routes(app.router)
+        async with TestClient(TestServer(app)) as client:
+            url = f"/collections/{cid}/source"
+            response = await client.get(url)
+            assert response.status == 200, await response.text()
+            payload = await response.json()
+            assert payload["collection"] == {key: collection[key] for key in ("id", "name", "kind")}
+            assert payload["profile"]["name"] == "Default"
+            assert payload["paths"] == [str(service.managed_path(images[0]))]
+            assert payload["pool_count"] == 1
+            assert payload["total_count"] == 2
+            assert payload["filtered"] is True
+            assert payload["positive_prompt"] == ""
+            response = await client.get(url, params={"filtered": "false", "profile_id": profile["id"]})
+            assert response.status == 200
+            payload = await response.json()
+            assert payload["paths"] == [str(service.managed_path(image)) for image in images]
+            assert payload["pool_count"] == 2
+            assert payload["filtered"] is False
+            assert payload["profile"] == profile
+            assert payload["positive_prompt"] == "positive"
+            assert payload["negative_prompt"] == "negative"
+            assert payload["loras"] == profile["loras"]
+
+    asyncio.run(exercise())
+    assert store.get_selection(cid) == before
+    assert store.get_active(kind) == active_before
+    assert store.get_active_profile(cid) == profile
+
+
+def test_collection_source_empty_pool_and_invalid_ids(tmp_path, monkeypatch):
+    service = ReferenceLibraryService(tmp_path / "library")
+    collection = service.store.create_collection("subject", "Empty")
+    other = service.store.create_collection("environment", "Other")
+    foreign_profile = service.store.list_profiles(other["id"])[0]
+    monkeypatch.setattr(routes, "get_service", lambda: service)
+
+    async def exercise():
+        app = web.Application()
+        routes.add_routes(app.router)
+        async with TestClient(TestServer(app)) as client:
+            url = f"/collections/{collection['id']}/source"
+            response = await client.get(url)
+            assert response.status == 200
+            payload = await response.json()
+            assert payload["paths"] == []
+            assert payload["pool_count"] == payload["total_count"] == 0
+            for query in ({"profile_id": foreign_profile["id"]}, {"profile_id": "bad"},
+                          {"profile_id": ""}, {"filtered": "yes"}):
+                assert (await client.get(url, params=query)).status == 400
+            assert (await client.get("/collections/not-a-uuid/source")).status == 400
+            assert (await client.get(f"/collections/{uuid4()}/source")).status == 404
+
+    asyncio.run(exercise())
+
+
 def test_browser_import_paths_copies_to_character_and_deduplicates(tmp_path, monkeypatch):
     service = ReferenceLibraryService(tmp_path / "library")
     monkeypatch.setattr(routes, "get_service", lambda: service)

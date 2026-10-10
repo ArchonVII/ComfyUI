@@ -24,17 +24,8 @@ process.stdout.write(JSON.stringify(context.buildCombinedPromptPreview(JSON.pars
 
 
 @pytest.mark.parametrize("enabled", [(False, False, False, False), (True, True, True, True), (False, True, False, True)])
-def test_live_preview_matches_backend_composer_for_all_reference_lanes(enabled):
-    # A self-contained graph keeps package checks independent of owner workflows.
-    graph = {str(index): {"class_type": "RandomReferenceImageSource", "inputs": {}}
-             for index in range(1, 6)}
-    graph.update({str(index): {"class_type": "PrimitiveBoolean", "inputs": {}}
-                  for index in [6, 25, 32, 39]})
-    graph["65"] = {"class_type": "ReferencePromptCompose", "inputs": {
-        "text": "edit instruction", "main": ["1", 5], "identity": ["2", 5],
-        "aux1": ["3", 5], "aux2": ["4", 5], "aux3": ["5", 5],
-        "use_identity": ["6", 0], "use_aux1": ["25", 0],
-        "use_aux2": ["32", 0], "use_aux3": ["39", 0]}}
+def test_live_preview_matches_backend_composer_for_real_workflow(enabled):
+    graph = json.loads((ROOT / "user/default/api_workflows/agent/54 - Flux 9B Local Identity I2I API.json").read_text(encoding="utf-8"))
     texts = ["main identity", "face detail", "clothing", "setting", "style"]
     for index, text in enumerate(texts, 1):
         graph[str(index)]["inputs"]["favorite_prompt"] = text
@@ -79,3 +70,27 @@ def test_preview_uses_reference_card_titles_for_general_image_editing():
     parts = preview(graph)[0]["contributions"]
     assert parts[1]["label"] == "Image to edit"
     assert parts[2]["label"] == "Optional reference 1"
+
+
+@pytest.mark.parametrize("enabled", [(False, False, False, False), (True, True, True, True), (False, True, False, True)])
+def test_live_preview_matches_backend_composer_for_all_reference_lanes(enabled):
+    # A self-contained graph keeps package checks independent of owner workflows.
+    graph = {str(index): {"class_type": "RandomReferenceImageSource", "inputs": {}}
+             for index in range(1, 6)}
+    graph.update({str(index): {"class_type": "PrimitiveBoolean", "inputs": {}}
+                  for index in [6, 25, 32, 39]})
+    graph["65"] = {"class_type": "ReferencePromptCompose", "inputs": {
+        "text": "edit instruction", "main": ["1", 5], "identity": ["2", 5],
+        "aux1": ["3", 5], "aux2": ["4", 5], "aux3": ["5", 5],
+        "use_identity": ["6", 0], "use_aux1": ["25", 0],
+        "use_aux2": ["32", 0], "use_aux3": ["39", 0]}}
+    texts = ["main identity", "face detail", "clothing", "setting", "style"]
+    for index, text in enumerate(texts, 1):
+        graph[str(index)]["inputs"]["favorite_prompt"] = text
+    for index, active in zip([6, 25, 32, 39], enabled):
+        graph[str(index)]["inputs"]["value"] = active
+    result = preview(graph)[0]
+    expected = ReferencePromptCompose().compose(graph["65"]["inputs"]["text"], *enabled,
+        **dict(zip(["main", "identity", "aux1", "aux2", "aux3"], texts)))[0]
+    assert result["text"] == expected
+    assert [part["enabled"] for part in result["contributions"]] == [True, True, *enabled]

@@ -17,6 +17,22 @@ def test_identity_score_is_arch_prefixed_for_searchability():
     assert OpenCVIdentityScore.CATEGORY == "arch-image/identity"
 
 
+def test_disabled_dual_score_does_no_image_model_or_disk_work(monkeypatch):
+    def unexpected(*args, **kwargs):
+        pytest.fail("disabled scoring performed work")
+    for name in ("build_dual_report", "image_tensor_to_bgr", "write_identity_manifest", "get_experiment_service"):
+        monkeypatch.setattr(nodes, name, unexpected)
+    node = DualIdentityScore()
+    assert node.check_lazy_status(enabled=False) == []
+    assert node.check_lazy_status(enabled=True) == ["base_image", "reference_image", "generated_image"]
+    output = node.score_identity(None, None, None, "face_swap", .7, .363, "largest",
+                                 True, "unused", "unused", "report", enabled=False,
+                                 experiment_id="experiment", run_id="run")
+    assert output["ui"]["status"] == ["bypassed"]
+    assert output["result"][9] is False
+    assert json.loads(output["result"][10])["status"] == "bypassed"
+
+
 def test_dual_identity_score_exposes_experiment_contract_and_visible_node_metadata():
     dual = nodes.DualIdentityScore
     inputs = dual.INPUT_TYPES()

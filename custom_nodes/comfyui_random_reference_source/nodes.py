@@ -28,7 +28,7 @@ VALID_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".ti
 ARCH_CATEGORY = "arch-image/random reference"
 NONE_FAVORITE = "None"
 SOURCE_MODES = ["auto", "folder", "selection"]
-SELECTION_POLICIES = ["random_each_queue", "seeded", "sequential"]
+SELECTION_POLICIES = ["random_each_queue", "seeded", "sequential", "shuffle_cycle"]
 REFERENCE_LANES = [
     "primary_subject",
     "reference_subject",
@@ -307,7 +307,7 @@ def build_reference_preview_payload(
     filtered = [path for path in image_pool if str(search).casefold() in path.name.casefold()]
     if paths_only:
         return {"paths": [str(path) for path in filtered]}
-    exact = len(image_pool) == 1 or selection_policy in {"seeded", "sequential"}
+    exact = len(image_pool) == 1 or selection_policy in {"seeded", "sequential", "shuffle_cycle"}
     if browse:
         preview_paths = filtered[offset:offset + max_images]
     elif exact:
@@ -351,6 +351,11 @@ def choose_image(
     if normalized_policy == "sequential":
         normalized_seed = max(1, int(seed))
         return image_pool[(normalized_seed - 1) % len(image_pool)]
+    if normalized_policy == "shuffle_cycle":
+        cycle, index = divmod(max(1, int(seed)) - 1, len(image_pool))
+        shuffled = list(image_pool)
+        random.Random(cycle).shuffle(shuffled)
+        return shuffled[index]
     if normalized_policy == "random_each_queue":
         return random.SystemRandom().choice(list(image_pool))
     raise ValueError(f"Unsupported selection_policy: {selection_policy}")
@@ -403,7 +408,7 @@ class RandomReferenceImageSource:
                 "selection_policy": (
                     SELECTION_POLICIES,
                     {
-                        "tooltip": "random_each_queue ignores seed and rerolls every prompt; seeded is reproducible for the same seed; sequential uses seed as a stable pool index and advances it after each prompt.",
+                        "tooltip": "random_each_queue rerolls; seeded repeats a seed; sequential advances in order; shuffle_cycle visits every image once per cycle. Sequential and shuffle advance the index after each prompt; pool changes start a new ordering.",
                     },
                 ),
                 "seed": (
@@ -413,7 +418,7 @@ class RandomReferenceImageSource:
                         "min": 1,
                         "max": 0xFFFFFFFFFFFFFFFF,
                         "control_after_generate": True,
-                        "tooltip": "Used by seeded and sequential policies. Sequential selects (seed - 1) modulo pool size.",
+                        "tooltip": "Repeatable seed, or advancing 1-based index for sequential and shuffle_cycle. Keep the pool unchanged for a complete shuffle cycle.",
                     },
                 ),
                 "include_subfolders": (
@@ -537,14 +542,17 @@ class RandomReferenceImageSource:
             "selection_policy": selection_policy,
             "favorite_prompt_text": favorite_text,
         }
-        return (
-            image,
-            mask,
-            str(selected_path),
-            lane,
-            json.dumps(metadata, ensure_ascii=False),
-            combined_prompt,
-        )
+        return {
+            "ui": {"arch_reference_last_used": [metadata]},
+            "result": (
+                image,
+                mask,
+                str(selected_path),
+                lane,
+                json.dumps(metadata, ensure_ascii=False),
+                combined_prompt,
+            ),
+        }
 
 
 class ReferencePromptCompose:

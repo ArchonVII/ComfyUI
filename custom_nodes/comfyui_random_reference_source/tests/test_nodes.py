@@ -93,7 +93,14 @@ def test_absolute_selection_ignores_stale_folder_in_load_and_preview(tmp_path, m
     assert preview["images"][0]["path"] == str(image)
     result = RandomReferenceImageSource().load_random_reference(
         **source, lane="generic", selection_policy="seeded", seed=1)
-    assert result[2] == str(image)
+    outputs = result["result"]
+    assert len(outputs) == 6
+    assert outputs[2] == str(image)
+    assert isinstance(outputs[0], torch.Tensor)
+    assert isinstance(outputs[1], torch.Tensor)
+    assert outputs[3] == "generic"
+    assert result["ui"]["arch_reference_last_used"] == [json.loads(outputs[4])]
+    assert result["ui"]["arch_reference_last_used"][0]["selected_name"] == image.name
 
 
 def test_browser_pages_cover_pool_and_seeded_preview_is_exact(tmp_path, monkeypatch):
@@ -381,7 +388,7 @@ def test_random_reference_image_source_loads_image_mask_and_metadata(
             seed=1,
             include_subfolders=False,
             prompt="soft window light",
-        )
+        )["result"]
     )
 
     metadata = json.loads(metadata_json)
@@ -425,8 +432,8 @@ def test_random_reference_source_prefixes_saved_favorite_text(tmp_path, monkeypa
         prompt="soft window light",
     )
 
-    assert result[-1] == "same character, soft window light"
-    assert json.loads(result[-2])["favorite_prompt_text"] == "same character"
+    assert result["result"][-1] == "same character, soft window light"
+    assert json.loads(result["result"][-2])["favorite_prompt_text"] == "same character"
 
 
 def test_reference_lane_pack_passes_named_lanes_and_metadata():
@@ -462,4 +469,4 @@ def test_current_prompt_edits_override_saved_favorite(tmp_path, monkeypatch, edi
         lane="generic", source_mode="selection", favorite="Hero", folder="",
         selected_images="", selection_policy="seeded", seed=1, include_subfolders=False,
         favorite_prompt=edited, prompt="instruction")
-    assert result[-1] == (f"{edited}, instruction" if edited else "instruction")
+    assert result["result"][-1] == (f"{edited}, instruction" if edited else "instruction")

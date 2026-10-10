@@ -313,6 +313,22 @@ async def get_bootstrap(request: web.Request) -> web.Response:
     )
 
 
+async def get_collection_source(request: web.Request) -> web.Response:
+    collection_id = require_id(request.match_info["collection_id"])
+    profile_id = request.query.get("profile_id")
+    if profile_id is not None:
+        profile_id = require_id(profile_id)
+    filtered = request.query.get("filtered", "true")
+    if filtered not in {"true", "false"}:
+        raise ValueError("filtered must be true or false")
+    service = get_service()
+    payload = await asyncio.to_thread(
+        service.source_snapshot, collection_id,
+        profile_id=profile_id, filtered=filtered == "true",
+    )
+    return web.json_response(payload, headers={"Cache-Control": "private, no-store"})
+
+
 async def post_collection(request: web.Request) -> web.Response:
     payload = validate_collection_create(await _body(request))
     collection = get_service().store.create_collection(
@@ -509,6 +525,7 @@ async def delete_managed_image(request: web.Request) -> web.Response:
 
 
 def add_routes(router: web.UrlDispatcher, prefix: str = "") -> None:
+    router.add_get(f"{prefix}/collections/{{collection_id}}/source", _validated(get_collection_source))
     router.add_post(f"{prefix}/collections/{{collection_id}}/import-paths", _validated(post_import_paths))
     router.add_get(f"{prefix}/bootstrap", _validated(get_bootstrap))
     router.add_post(f"{prefix}/collections", _validated(post_collection))
@@ -550,6 +567,7 @@ def register_routes() -> None:
     if prompt_server is None:
         return
     routes = prompt_server.routes
+    routes.get(f"{ROOT}/collections/{{collection_id}}/source")(_validated(get_collection_source))
     routes.get(f"{ROOT}/bootstrap")(_validated(get_bootstrap))
     routes.post(f"{ROOT}/collections")(_validated(post_collection))
     routes.patch(f"{ROOT}/collections/{{collection_id}}")(_validated(patch_collection))

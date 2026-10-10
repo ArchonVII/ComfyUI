@@ -94,6 +94,7 @@ def detect_best_face(
     models: OpenCVFaceModels,
     score_threshold: float,
     face_selection: str,
+    face_index: int = 0,
 ) -> FaceEmbedding | None:
     ensure_model_files(models)
     height, width = bgr.shape[:2]
@@ -112,9 +113,12 @@ def detect_best_face(
 
     face_rows = [np.asarray(face, dtype=np.float32) for face in faces]
     if face_selection == "largest":
-        chosen = max(face_rows, key=lambda face: float(face[2] * face[3]))
+        face_rows.sort(key=lambda face: float(face[2] * face[3]), reverse=True)
     else:
-        chosen = max(face_rows, key=lambda face: float(face[-1]))
+        face_rows.sort(key=lambda face: float(face[-1]), reverse=True)
+    if not 0 <= int(face_index) < len(face_rows):
+        return None
+    chosen = face_rows[int(face_index)]
 
     recognizer = cv2.FaceRecognizerSF.create(str(models.recognizer_model), "")
     aligned = recognizer.alignCrop(bgr, chosen)
@@ -216,6 +220,8 @@ def build_dual_report(
     face_score_threshold: float,
     same_identity_threshold: float,
     face_selection: str,
+    reference_face_selection: dict | None = None,
+    target_face_selection: dict | None = None,
 ) -> dict[str, Any]:
     """Build the two-source identity report used by experiment workflows.
 
@@ -225,9 +231,14 @@ def build_dual_report(
     if experiment_mode not in {"face_swap", "identity_i2i"}:
         raise ValueError("experiment_mode must be 'face_swap' or 'identity_i2i'")
 
-    base = detect_best_face(base_bgr, models, face_score_threshold, face_selection)
-    reference = detect_best_face(reference_bgr, models, face_score_threshold, face_selection)
-    generated = detect_best_face(generated_bgr, models, face_score_threshold, face_selection)
+    default_selection = dict(threshold=face_score_threshold, selection=face_selection, index=0)
+    source = reference_face_selection or default_selection
+    target = target_face_selection or default_selection
+    def detect(image, config):
+        return detect_best_face(image, models, config["threshold"], config["selection"], config["index"])
+    base = detect(base_bgr, target)
+    reference = detect(reference_bgr, source)
+    generated = detect(generated_bgr, target)
 
     reference_to_output = _dual_score("reference", reference, generated, same_identity_threshold)
     base_to_output = _dual_score("base", base, generated, same_identity_threshold)
@@ -251,6 +262,8 @@ def build_dual_report(
             "face_score_threshold": face_score_threshold,
             "same_identity_threshold": same_identity_threshold,
             "face_selection": face_selection,
+            "reference_face_selection": source,
+            "target_face_selection": target,
         },
         "face_detection": detection,
         "reference_to_output": reference_to_output,

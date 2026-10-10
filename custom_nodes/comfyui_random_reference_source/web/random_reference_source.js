@@ -10,6 +10,7 @@ const SELECTION_POLICIES = new Set([
   "random_each_queue",
   "seeded",
   "sequential",
+  "shuffle_cycle",
 ]);
 const CONTROL_MODES = new Set([
   "fixed",
@@ -56,7 +57,7 @@ function syncSequentialSeedControl(node) {
   if (policy === "random_each_queue") return;
   ensurePositiveSeed(node);
   setWidgetValue(node, findWidget(node, "control_after_generate"),
-    policy === "sequential" ? "increment" : "fixed");
+    ["sequential", "shuffle_cycle"].includes(policy) ? "increment" : "fixed");
 }
 
 function promptContext(node) {
@@ -134,6 +135,30 @@ function selectImages(node, paths) {
     include_subfolders: false, favorite: "None"});
 }
 
+function selectLibrary(node, data, includePrompt = false) {
+  const values = {source_mode: "selection", folder: "", selected_images: encodeImagePaths(data.paths || []),
+    include_subfolders: false, favorite: "None"};
+  if (includePrompt) values.favorite_prompt = data.positive_prompt || "";
+  applySource(node, values, {restoreDraft: false});
+}
+
+function updateLastUsed(node, metadata) {
+  const valid = metadata && typeof metadata.selected_file === "string" && metadata.selected_file;
+  node._archLastUsed = valid ? {selected_file: metadata.selected_file,
+    selected_name: typeof metadata.selected_name === "string" ? metadata.selected_name
+      : metadata.selected_file.split(/[\\/]/).pop()} : null;
+  node.properties ||= {};
+  if (node._archLastUsed) node.properties.archReferenceLastUsed = {...node._archLastUsed};
+  else delete node.properties.archReferenceLastUsed;
+  const button = findWidget(node, "Use this image again");
+  if (button) { button.disabled = !valid; button.options ||= {}; button.options.disabled = !valid; }
+  if (node._archLastUsedContainer) {
+    node._archLastUsedContainer.textContent = `Last used: ${node._archLastUsed?.selected_name || "No execution yet"}`;
+    node._archLastUsedContainer.title = node._archLastUsed?.selected_file || "";
+  }
+  node.setDirtyCanvas(true, true);
+}
+
 function compactWidgets(node) {
   const visible = new Set(["selection_policy"]);
   if (findWidget(node, "selection_policy")?.value !== "random_each_queue") visible.add("seed");
@@ -154,7 +179,7 @@ function compactWidgets(node) {
   const policy = findWidget(node, "selection_policy");
   if (policy) policy.label = "Image selection";
   const seed = findWidget(node, "seed");
-  if (seed) seed.label = findWidget(node, "selection_policy")?.value === "sequential" ? "Next image index" : "Repeatable seed";
+  if (seed) seed.label = ["sequential", "shuffle_cycle"].includes(findWidget(node, "selection_policy")?.value) ? "Next image index" : "Repeatable seed";
 }
 
 // Older workflows were saved either as the original compact eight backend
@@ -242,7 +267,7 @@ async function callPresetApi(path = "", options = {}) {
   return data;
 }
 
-function refreshFavoriteOptions(node, presets) {
+function refreshFavoriteOptions(node, presets, preservePendingChoice = false) {
   node._archReferencePresets = presets || {};
   const widget = findWidget(node, "favorite");
   if (!widget) return;
@@ -254,7 +279,15 @@ function refreshFavoriteOptions(node, presets) {
   ];
   widget.options ||= {};
   widget.options.values = values;
-  if (!values.includes(widget.value)) applySource(node, {favorite: "None"}, {restoreDraft: false});
+  if (!values.includes(widget.value)) {
+    const intent = node._archSourceIntent;
+    const choice = node._archSourceChoice;
+    applySource(node, {favorite: "None"}, {restoreDraft: false});
+    if (preservePendingChoice) {
+      node._archSourceIntent = intent;
+      node._archSourceChoice = choice;
+    }
+  }
 }
 
 function applyFavorite(node) {
@@ -334,6 +367,16 @@ async function saveFavorite(node, name, mode = "update", paths = null, renamedFr
   const originalKey = promptContext(node);
   const originalChoice = node._archSourceChoice || 0;
   const snapshot = favoritePayload(node, name);
+  const originalText = snapshot.prompt_text;
+  const originalFavorite = snapshot.favorite;
+  const editedName = renamedFrom || name;
+  const existing = node._archReferencePresets?.[editedName];
+  // Changing membership is not a request to overwrite the target's text.
+  if (paths !== null && existing) snapshot.prompt_text = existing.prompt_text || "";
+  const peers = new Map([...referenceNodes].filter(source => source !== node).map(source => [source, {
+    choice: source._archSourceChoice || 0,
+    baseline: source._archReferencePresets?.[editedName]?.prompt_text || "",
+  }]));
   if (paths) Object.assign(snapshot, {source_mode: "selection", folder: "",
     selected_images: encodeImagePaths(paths), include_subfolders: false, favorite: "None"});
   if (renamedFrom) snapshot.original_name = renamedFrom;
@@ -344,23 +387,47 @@ async function saveFavorite(node, name, mode = "update", paths = null, renamedFr
   });
   // Renaming removes the old entry. Capture source intent before refreshing
   // options detaches that now-missing name, so the successful save still applies.
-  const sameSource = promptContext(node) === originalKey && (node._archSourceChoice || 0) === originalChoice;
+  const sameSource = referenceNodes.has(node) && promptContext(node) === originalKey && (node._archSourceChoice || 0) === originalChoice;
   const currentText = findWidget(node, "favorite_prompt")?.value || "";
   const currentName = rememberPromptDraft(node).name;
-  refreshFavoriteOptions(node, data.presets);
+  if (referenceNodes.has(node)) refreshFavoriteOptions(node, data.presets, !sameSource);
   if (sameSource) {
+    const membershipReplacement = paths !== null && existing;
+    const editedDuringSave = currentText !== originalText;
+    const modifiedTargetDraft = originalFavorite === editedName &&
+      originalText.trim() !== (existing?.prompt_text || "").trim();
+    const selectedText = membershipReplacement && !editedDuringSave && !modifiedTargetDraft
+      ? data.presets?.[data.name]?.prompt_text || "" : currentText;
     const newKey = JSON.stringify(["favorite", data.name]);
-    promptDrafts(node)[newKey] = {text: currentText,
+    promptDrafts(node)[newKey] = {text: selectedText,
       name: mode === "create" && currentName === originalName ? "" : currentName};
     applySource(node, {favorite: data.name});
     applyFavorite(node);
     // A slow save must not erase text typed while the request was in flight.
-    applySource(node, {favorite_prompt: currentText});
+    applySource(node, {favorite_prompt: selectedText});
   }
   for (const source of referenceNodes) {
-    if (source !== node) refreshFavoriteOptions(source, data.presets);
+    if (source !== node) {
+      const before = peers.get(source);
+      const follows = before && referencePayload(source).favorite === editedName &&
+        (source._archSourceChoice || 0) === before.choice;
+      const draft = follows ? {...rememberPromptDraft(source)} : null;
+      const preset = data.presets?.[data.name];
+      if (follows && preset) {
+        const text = draft.text.trim() === before.baseline.trim() ? preset.prompt_text || "" : draft.text;
+        promptDrafts(source)[JSON.stringify(["favorite", data.name])] = {...draft, text};
+        // Apply the rename before refreshing options can detach the old name.
+        applySource(source, {favorite: data.name, source_mode: preset.kind || "folder",
+          folder: preset.folder || "", selected_images: encodeImagePaths(preset.images || []),
+          include_subfolders: Boolean(preset.include_subfolders), favorite_prompt: text}, {restoreDraft: false});
+      }
+      refreshFavoriteOptions(source, data.presets, !follows);
+    }
     refreshReferenceBrowser(source);
   }
+  globalThis.dispatchEvent?.(new CustomEvent("arch-reference-presets-changed", {
+    detail: {presets: data.presets, renamedFrom, name: data.name},
+  }));
   notify(`Saved favorite “${data.name}”.`);
 }
 
@@ -370,6 +437,7 @@ async function deleteFavorite(node, name) {
     body: JSON.stringify({ name }),
   });
   for (const source of referenceNodes) refreshFavoriteOptions(source, data.presets);
+  globalThis.dispatchEvent?.(new CustomEvent("arch-reference-presets-changed", {detail: {presets: data.presets}}));
   refreshReferenceBrowser(node);
   notify(`Deleted favorite “${name}”.`);
 }
@@ -529,6 +597,12 @@ app.registerExtension({
     installReferenceBrowser(app, {
       nodes: () => [...referenceNodes].filter(node => node.graph),
       payload: referencePayload, preview: fetchPreview, selectFolder, selectImages,
+      encodePaths: encodeImagePaths, selectLibrary,
+      openLibrary(collection) {
+        const library = globalThis.__archReferenceLibrary;
+        if (!library?.openCollection) throw new Error("Reference Library is unavailable. Reload ComfyUI with the Reference Library extension enabled.");
+        return library.openCollection(collection);
+      },
       async library(path, body) {
         const response = await api.fetchApi(`/arch-reference-library${path}`, body === undefined ? {} : {
           method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
@@ -565,6 +639,13 @@ app.registerExtension({
       finally { this._archApplyingSource--; }
     };
     const onRemoved = nodeType.prototype.onRemoved;
+    const onExecuted = nodeType.prototype.onExecuted;
+    nodeType.prototype.onExecuted = function (message) {
+      const result = onExecuted?.apply(this, arguments);
+      const metadata = message?.arch_reference_last_used?.[0];
+      if (metadata) updateLastUsed(this, metadata);
+      return result;
+    };
     nodeType.prototype.onRemoved = function () {
       clearTimeout(this._archReferencePreviewTimer);
       this._archPreviewRevision = (this._archPreviewRevision || 0) + 1;
@@ -576,6 +657,7 @@ app.registerExtension({
       migrateWorkflowWidgetValues(this, info?.widgets_values);
       ensurePositiveSeed(this);
       syncSequentialSeedControl(this);
+      updateLastUsed(this, this.properties?.archReferenceLastUsed);
       schedulePreview(this);
       return result;
     };
@@ -605,6 +687,20 @@ app.registerExtension({
         }
       });
       addTransientButton("Open Reference Browser…", () => openReferenceBrowser(node));
+
+      addTransientButton("Use this image again", () => {
+        if (node._archLastUsed?.selected_file) selectImages(node, [node._archLastUsed.selected_file]);
+      });
+      if (node.addDOMWidget) {
+        const lastUsed = document.createElement("div");
+        lastUsed.style.cssText = "font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%";
+        node._archLastUsedContainer = lastUsed;
+        const widget = node.addDOMWidget("reference_last_used", "div", lastUsed,
+          {serialize: false, getMinHeight: () => 22, getMaxHeight: () => 22});
+        widget.serialize = false;
+        widget.serializeValue = () => undefined;
+      }
+      updateLastUsed(node, node.properties?.archReferenceLastUsed);
 
       installPreviewWidget(node);
       compactWidgets(node);

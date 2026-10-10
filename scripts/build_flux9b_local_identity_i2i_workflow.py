@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import shutil
 import uuid
@@ -28,7 +29,7 @@ SKIN_LORA = (
     r"TRIGGER$skin with textured detail$ with skin with textured detail.safetensors"
 )
 
-FRONTEND_ONLY_TYPES = {"MarkdownNote", "Note", "PreviewImage"}
+FRONTEND_ONLY_TYPES = {"MarkdownNote", "Note", "PreviewImage", "PreviewAny"}
 
 
 @dataclass
@@ -149,16 +150,26 @@ class Graph:
 
 
 def load_image(graph: Graph, title: str, pos: tuple[int, int]) -> dict[str, Any]:
+    lane = "primary_subject" if len(graph.nodes) == 0 else "reference_subject" if len(graph.nodes) == 1 else "generic"
     return graph.add(
-        "LoadImage",
+        "RandomReferenceImageSource",
         title=title,
         pos=pos,
         inputs=(
-            ("image", "COMBO", True, False),
-            ("upload", "IMAGEUPLOAD", True, False),
+            ("lane", "COMBO", True, False),
+            ("source_mode", "COMBO", True, False),
+            ("favorite", "COMBO", True, False),
+            ("folder", "STRING", True, False),
+            ("selected_images", "STRING", True, False),
+            ("selection_policy", "COMBO", True, False),
+            ("seed", "INT", True, False),
+            ("include_subfolders", "BOOLEAN", True, False),
+            ("favorite_prompt", "STRING", True, True),
+            ("prompt", "STRING", False, True),
         ),
-        outputs=(("IMAGE", "IMAGE"), ("MASK", "MASK")),
-        widgets=(PLACEHOLDER, "image"),
+        outputs=(("image", "IMAGE"), ("mask", "MASK"), ("selected_file", "STRING"),
+                 ("lane", "STRING"), ("metadata_json", "STRING"), ("prompt_with_favorite", "STRING")),
+        widgets=(lane, "selection", "None", "", PLACEHOLDER, "random_each_queue", 1, "fixed", False, ""),
         size=(330, 330),
     )
 
@@ -260,7 +271,7 @@ def save(graph: Graph, title: str, prefix: str, pos: tuple[int, int]) -> dict[st
     )
 
 
-def build_editor() -> dict[str, Any]:
+def build_flat_editor() -> dict[str, Any]:
     graph = Graph()
 
     main = load_image(graph, "1 - Main I2I image (scene and composition)", (-1900, -420))
@@ -309,6 +320,7 @@ def build_editor() -> dict[str, Any]:
             ("face_preview", "IMAGE"),
             ("status", "STRING"),
             ("mask_mode", "STRING"),
+            ("face_selection", "ARCH_FACE_SELECTION"),
         ),
         widgets=(True, "largest", 0, 0.7, "SAM local", "sam_vit_b_01ec64.pth"),
         size=(420, 340),
@@ -583,6 +595,7 @@ def build_editor() -> dict[str, Any]:
             ("image", "IMAGE"),
             ("face_mask", "MASK"),
             ("status", "STRING"),
+            ("face_selection", "ARCH_FACE_SELECTION"),
         ),
         widgets=(
             True,
@@ -623,6 +636,9 @@ def build_editor() -> dict[str, Any]:
             ("experiment_id", "STRING", False, True),
             ("run_id", "STRING", False, True),
             ("extra_metadata", "EXTRA_METADATA", False, True),
+            ("enabled", "BOOLEAN", False, True),
+            ("reference_face_selection", "ARCH_FACE_SELECTION", False, True),
+            ("target_face_selection", "ARCH_FACE_SELECTION", False, True),
             ("experiment_mode", "COMBO", True, False),
             ("face_score_threshold", "FLOAT", True, False),
             ("same_identity_threshold", "FLOAT", True, False),
@@ -661,6 +677,9 @@ def build_editor() -> dict[str, Any]:
     graph.connect(decode, 0, score, "base_image")
     graph.connect(identity_switch, 0, score, "reference_image")
     graph.connect(identity_transfer, 0, score, "generated_image")
+    graph.connect(identity_finish_enabled, 0, score, "enabled")
+    graph.connect(preflight, 5, score, "reference_face_selection")
+    graph.connect(identity_transfer, 3, score, "target_face_selection")
 
     gate = graph.add(
         "ArchIdentityGate",
@@ -734,12 +753,294 @@ def build_editor() -> dict[str, Any]:
     graph.group("Flux sampling", (470, -700, 1250, 1100))
     graph.group("Landmark + SAM identity transfer", (1980, -510, 960, 1100))
     graph.group("Local identity audit", (2880, -330, 900, 1100))
+    for source, slot, title in [(identity_transfer, 2, "Identity transfer status"), (gate, 1, "Final save status / scores")]:
+        display = graph.add(
+            "PreviewAny", title=title, pos=(0, 0),
+            inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),),
+            size=(440, 140),
+        )
+        graph.connect(source, slot, display, "source")
+    # Keep the established node IDs stable while wiring favorite text into Flux.
+    composer = graph.add(
+        "ReferencePromptCompose", title="Edit instruction + enabled reference prompts",
+        pos=(40, -1010), size=(470, 260),
+        inputs=(("text", "STRING", True, False),
+                *((f"use_{lane}", "BOOLEAN", False, False) for lane in ("identity", "aux1", "aux2", "aux3")),
+                *((lane, "STRING", False, True) for lane in ("main", "identity", "aux1", "aux2", "aux3"))),
+        outputs=(("combined_prompt", "STRING"),), widgets=tuple(positive["widgets_values"]),
+    )
+    graph.connect(composer, 0, positive, "text")
+    for loader, lane in zip([main, identity, *aux_loaders], ("main", "identity", "aux1", "aux2", "aux3")):
+        graph.connect(loader, 5, composer, lane)
+    by_id = {node["id"]: node for node in graph.nodes}
+    for node_id, lane in [(6, "identity"), (25, "aux1"), (32, "aux2"), (39, "aux3")]:
+        graph.connect(by_id[node_id], 0, composer, f"use_{lane}")
+    prompt_preview = graph.add("PreviewAny", title="Combined prompt sent to Flux", pos=(550, -1010),
+        inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),), size=(450, 260))
+    graph.connect(composer, 0, prompt_preview, "source")
+    preflight_status = graph.add("PreviewAny", title="Identity preflight status", pos=(510, 1060),
+        inputs=(("source", "*", False, False),), outputs=(("STRING", "STRING"),), size=(410, 160))
+    graph.connect(preflight, 3, preflight_status, "source")
     return graph.workflow()
+
+
+def pack_subgraph(workflow, node_ids, *, title, pos, size, proxies):
+    """Wrap existing nodes using ComfyUI's native subgraph/IO-node schema."""
+    node_ids = set(node_ids)
+    members = [node for node in workflow["nodes"] if node["id"] in node_ids]
+    by_id = {node["id"]: node for node in workflow["nodes"]}
+    host_id = workflow["last_node_id"] + 1
+    subgraph_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"flux9b-workspace:{title}"))
+    inputs, outputs, inner_links, outer_links = [], [], [], []
+    input_slots, output_slots = {}, {}
+    next_link = workflow["last_link_id"]
+
+    def boundary_slot(slots, ports, source, slot, kind):
+        key = (source, slot)
+        if key not in slots:
+            index = len(ports)
+            slots[key] = index
+            output = by_id[source]["outputs"][slot]
+            name = f"{by_id[source].get('title', by_id[source]['type'])}: {output['name']}"
+            ports.append({
+                "id": str(uuid.uuid5(uuid.UUID(subgraph_id), f"{kind}:{index}")),
+                "name": name, "type": output["type"], "linkIds": [],
+                "pos": [0, index * 20],
+            })
+        return slots[key]
+
+    for link in workflow["links"]:
+        lid, source, source_slot, target, target_slot, value_type = link
+        source_inside, target_inside = source in node_ids, target in node_ids
+        if source_inside and target_inside:
+            inner_links.append(link)
+        elif target_inside:
+            slot = boundary_slot(input_slots, inputs, source, source_slot, "input")
+            if not inputs[slot]["linkIds"]:
+                next_link += 1
+                outer_links.append([next_link, source, source_slot, host_id, slot, value_type])
+            inner_links.append([lid, -10, slot, target, target_slot, value_type])
+            inputs[slot]["linkIds"].append(lid)
+        elif source_inside:
+            slot = boundary_slot(output_slots, outputs, source, source_slot, "output")
+            if not outputs[slot]["linkIds"]:
+                next_link += 1
+                inner_links.append([next_link, source, source_slot, -20, slot, value_type])
+                outputs[slot]["linkIds"].append(next_link)
+            outer_links.append([lid, host_id, slot, target, target_slot, value_type])
+        else:
+            outer_links.append(link)
+
+    # Lay out internals in dependency columns; each column has enough vertical
+    # space for real node heights and titles, including the identity report.
+    levels = {}
+    remaining = list(members)
+    while remaining:
+        for node in remaining[:]:
+            parents = {link[1] for link in inner_links
+                       if link[3] == node["id"] and link[1] != -10}
+            if parents <= levels.keys():
+                level = max((levels[parent] + 1 for parent in parents), default=0)
+                levels[node["id"]] = level
+                remaining.remove(node)
+    heights = {}
+    for node in members:
+        level = levels[node["id"]]
+        node["pos"] = [level * 520, heights.get(level, 80)]
+        heights[level] = node["pos"][1] + node["size"][1] + 100
+    right = max(node["pos"][0] + node["size"][0] for node in members) + 100
+    for index, port in enumerate(inputs):
+        port["pos"] = [-100, 100 + index * 24]
+    for index, port in enumerate(outputs):
+        port["pos"] = [right + 20, 100 + index * 24]
+    subgraph = {
+        "id": subgraph_id, "version": 1, "revision": 0, "name": title,
+        "state": {"lastGroupId": 0, "lastNodeId": max(node_ids),
+                  "lastLinkId": next_link, "lastRerouteId": 0},
+        "config": {}, "inputNode": {"id": -10, "bounding": [-260, 80, 180, max(80, len(inputs) * 24)]},
+        "outputNode": {"id": -20, "bounding": [right, 80, 180, max(80, len(outputs) * 24)]},
+        "inputs": inputs, "outputs": outputs, "widgets": [], "nodes": members,
+        "groups": [], "links": [dict(zip(
+            ("id", "origin_id", "origin_slot", "target_id", "target_slot", "type"), link))
+            for link in inner_links], "extra": {},
+    }
+    host = {
+        "id": host_id, "type": subgraph_id, "title": title, "pos": list(pos),
+        "size": list(size), "flags": {}, "order": host_id, "mode": 0,
+        "inputs": [{"name": port["name"], "type": port["type"], "link": None} for port in inputs],
+        "outputs": [{"name": port["name"], "type": port["type"], "links": []} for port in outputs],
+        "properties": {"proxyWidgets": [[str(node), widget] for node, widget in proxies],
+                       "previewExposures": []},
+        "widgets_values": [],
+    }
+    workflow["nodes"] = [node for node in workflow["nodes"] if node["id"] not in node_ids] + [host]
+    workflow["links"] = outer_links
+    workflow["last_node_id"] = host_id
+    workflow["last_link_id"] = next_link
+    workflow.setdefault("definitions", {}).setdefault("subgraphs", []).append(subgraph)
+    for graph, links in [(workflow, outer_links), (subgraph, inner_links)]:
+        nodes_by_id = {node["id"]: node for node in graph["nodes"]}
+        for node in graph["nodes"]:
+            for item in node.get("inputs", []):
+                item["link"] = None
+            for item in node.get("outputs", []):
+                item["links"] = []
+        for lid, source, source_slot, target, target_slot, _ in links:
+            if source != -10:
+                nodes_by_id[source]["outputs"][source_slot]["links"].append(lid)
+            if target != -20:
+                nodes_by_id[target]["inputs"][target_slot]["link"] = lid
+
+
+def build_editor() -> dict[str, Any]:
+    workflow = build_flat_editor()
+    widget_labels = {
+        (65, "text"): "Edit instruction", (11, "mode"): "Output canvas",
+        (48, "steps"): "Steps", (49, "cfg"): "Guidance (CFG)",
+        (47, "sampler_name"): "Sampler", (10, "source_face_index"): "Source face index",
+        (10, "mask_mode"): "Identity mask", (55, "target_face_index"): "Target face index",
+        (55, "iterations"): "Identity passes", (55, "feather"): "Mask feather (px)",
+        (58, "same_identity_threshold"): "Minimum identity score", (55, "sam_device"): "SAM device",
+    }
+    for node in workflow["nodes"]:
+        for item in node.get("inputs", []):
+            label = widget_labels.get((node["id"], item["name"]))
+            if label:
+                item["label"] = label
+    pack_subgraph(workflow, [*range(15, 22), 65, 66], title="1 - Edit prompt / model setup",
+                  pos=(0, 580), size=(450, 300), proxies=[(65, "text")])
+    pack_subgraph(workflow, [7, *range(10, 15), *range(22, 25), *range(26, 32),
+                             *range(33, 39), *range(40, 46), *range(47, 53), 54],
+                  title="2 - Generate / canvas and seed", pos=(510, 480), size=(410, 530),
+                  proxies=[(11, "mode"), (48, "steps"), (49, "cfg"), (47, "sampler_name"),
+                           (10, "source_face_index"), (10, "mask_mode")])
+    pack_subgraph(workflow, [55, 56, 58, 59, 60], title="3 - Identity finish / score",
+                  pos=(960, 480), size=(440, 370),
+                  proxies=[(55, "target_face_index"), (55, "iterations"), (55, "feather"),
+                           (58, "same_identity_threshold"), (55, "sam_device")])
+    by_id = {node["id"]: node for node in workflow["nodes"]}
+    for index in range(5):
+        by_id[index + 1].update(pos=[index * 285, 60], size=[260, 350])
+    for index, node_id in enumerate([6, 25, 32, 39], start=1):
+        by_id[node_id].update(pos=[index * 285, 450], size=[260, 60])
+    by_id[8].update(pos=[0, 480], size=[220, 60])
+    by_id[9].update(pos=[250, 480], size=[220, 60])
+    by_id[61].update(pos=[1460, 60], size=[350, 400])
+    by_id[53].update(pos=[1460, 540], size=[350, 400])
+    by_id[46].update(pos=[0, 920], size=[450, 80])
+    by_id[57].update(pos=[0, 1060], size=[220, 160])
+    by_id[62].update(pos=[260, 1060], size=[210, 160], widgets_values=[
+        "Optional images need their switch ON.\n\n"
+        "Identity selector OFF uses the main face. Strict gate blocks only the final save.\n\n"
+        "Double-click subgraphs for advanced settings."
+    ])
+    by_id[63].update(pos=[960, 900])
+    by_id[64].update(pos=[960, 1090])
+    by_id[1]["title"] = "1 - Main I2I (required)"
+    by_id[2]["title"] = "2 - Identity image (optional)"
+    by_id[6]["title"] = "Identity source: use image 2"
+    by_id[8]["title"] = "Enable identity finish"
+    by_id[9]["title"] = "Strict identity gate"
+    for node in workflow["nodes"]:
+        if node["id"] not in {1, 2, 3, 4, 5, 6, 25, 32, 39, 53, 61}:
+            node["pos"][1] += 110
+    # Short socket labels follow the real source rather than assumed port order.
+    endpoint_labels = {1: "main image", 2: "identity image", 3: "aux 1", 4: "aux 2", 5: "aux 3",
+                       6: "use identity image", 8: "identity finish", 9: "strict gate",
+                       25: "use aux 1", 32: "use aux 2", 39: "use aux 3",
+                       17: "model", 19: "VAE", 20: "positive", 21: "negative", 7: "identity reference",
+                       46: "seed / noise", 52: "base image", 56: "mask", 59: "final image"}
+    for definition in workflow["definitions"]["subgraphs"]:
+        host = next(node for node in workflow["nodes"] if node["type"] == definition["id"])
+        for slot, port in enumerate(definition["outputs"]):
+            link = next(link for link in definition["links"] if link["id"] == port["linkIds"][0])
+            source, source_slot = link["origin_id"], link["origin_slot"]
+            if source == 10:
+                label = {0: "identity", 3: "preflight status", 4: "mask mode", 5: "source face selection"}[source_slot]
+            elif source == 55:
+                label = {2: "transfer status"}[source_slot]
+            elif source == 59:
+                label = {0: "final image", 1: "final save status"}[source_slot]
+            elif source == 58:
+                label = {0: "reference score", 3: "base score"}[source_slot]
+            else:
+                label = endpoint_labels[source]
+            port["label"] = host["outputs"][slot]["label"] = label
+    for definition in workflow["definitions"]["subgraphs"]:
+        host = next(node for node in workflow["nodes"] if node["type"] == definition["id"])
+        for slot, port in enumerate(definition["inputs"]):
+            link = next(link for link in workflow["links"] if link[3:5] == [host["id"], slot])
+            source = by_id[link[1]]
+            label = (f"reference {source['id']} prompt" if source["type"] == "RandomReferenceImageSource" and link[2] == 5
+                     else endpoint_labels.get(source["id"]) or source["outputs"][link[2]]["label"])
+            port["label"] = host["inputs"][slot]["label"] = label
+    workflow["groups"] = [
+        {"id": i, "title": title, "bounding": rect, "color": color, "font_size": 24, "flags": {}}
+        for i, title, rect, color in [
+            (1, "REFERENCE SOURCES - open browser to choose images or favorites", [-25, -10, 1450, 535], "#3f789e"),
+            (2, "CONTROLS - prompt, generation, identity", [-25, 525, 1450, 850], "#5a477b"),
+            (3, "RESULTS - final above / base below", [1435, -10, 400, 990], "#39775d"),
+        ]
+    ]
+    workflow["extra"]["ds"] = {"scale": 0.72, "offset": [45, 55]}
+    workflow["extra"]["flux9b_local_identity_i2i"]["version"] = 7
+    workflow["revision"] = 4
+    return workflow
+
+
+def flatten_editor(workflow):
+    """Resolve serialized subgraph ports back to original executable node IDs."""
+    workflow = copy.deepcopy(workflow)
+    definitions = {item["id"]: item for item in workflow.get("definitions", {}).get("subgraphs", [])}
+    hosts = {node["id"]: definitions[node["type"]] for node in workflow["nodes"] if node["type"] in definitions}
+    outer_links = {link[0]: link for link in workflow["links"]}
+    outer_nodes = {node["id"]: node for node in workflow["nodes"]}
+    inner_links = {host: {link["id"]: link for link in graph["links"]} for host, graph in hosts.items()}
+
+    def source_of(source, slot):
+        if source not in hosts:
+            return source, slot
+        graph = hosts[source]
+        link = inner_links[source][graph["outputs"][slot]["linkIds"][0]]
+        return link["origin_id"], link["origin_slot"]
+
+    nodes = [node for node in workflow["nodes"] if node["id"] not in hosts]
+    links = []
+    for node in nodes:
+        for slot, item in enumerate(node.get("inputs", [])):
+            if item.get("link") is not None:
+                link = outer_links[item["link"]]
+                source, source_slot = source_of(link[1], link[2])
+                links.append([0, source, source_slot, node["id"], slot, link[5]])
+    for host, graph in hosts.items():
+        nodes.extend(graph["nodes"])
+        for link in graph["links"]:
+            if link["target_id"] == -20:
+                continue
+            source, source_slot = link["origin_id"], link["origin_slot"]
+            if source == -10:
+                incoming = outer_links[outer_nodes[host]["inputs"][source_slot]["link"]]
+                source, source_slot = source_of(incoming[1], incoming[2])
+            links.append([0, source, source_slot, link["target_id"], link["target_slot"], link["type"]])
+    by_id = {node["id"]: node for node in nodes}
+    for node in nodes:
+        for item in node.get("inputs", []):
+            item["link"] = None
+        for item in node.get("outputs", []):
+            item["links"] = []
+    for lid, link in enumerate(links, start=1):
+        link[0] = lid
+        by_id[link[1]]["outputs"][link[2]]["links"].append(lid)
+        by_id[link[3]]["inputs"][link[4]]["link"] = lid
+    workflow.update(nodes=sorted(nodes, key=lambda node: node["id"]), links=links)
+    workflow.pop("definitions", None)
+    return workflow
 
 
 def api_from_editor(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Convert the executable editor graph to a queueable API prompt."""
 
+    workflow = flatten_editor(workflow)
     links = {link[0]: link for link in workflow["links"]}
     prompt: dict[str, dict[str, Any]] = {}
     for node in workflow["nodes"]:
@@ -753,6 +1054,8 @@ def api_from_editor(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
         # noise_seed value even though it is not an executable node input.
         if node["type"] == "RandomNoise" and len(serialized_widgets) == 2:
             serialized_widgets = serialized_widgets[:1]
+        if node["type"] == "RandomReferenceImageSource":
+            serialized_widgets = serialized_widgets[:7] + serialized_widgets[8:]
         widget_values = dict(zip(widget_names, serialized_widgets, strict=True))
         inputs: dict[str, Any] = {}
         for item in node.get("inputs", []):
@@ -832,6 +1135,13 @@ def _runtime_files(
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "__init__.py", package_source / "__init__.py"),
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "canvas.py", package_source / "canvas.py"),
         (install_root / "custom_nodes" / "comfyui_arch_image_tools" / "face_identity.py", package_source / "face_identity.py"),
+        *((install_root / "custom_nodes" / package / filename,
+           source_root / "custom_nodes" / package / filename)
+          for package, filename in [
+              ("comfyui_identity_score", "nodes.py"),
+              ("comfyui_identity_score", "identity_core.py"),
+              ("comfyui_random_reference_source", "nodes.py"),
+          ]),
     )
 
 

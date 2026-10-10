@@ -1,5 +1,5 @@
 // The browser edits the selected node's existing widgets; it owns no separate
-// source state. Explicit character saves copy images into the local library.
+// source state. Explicit library saves copy images into the local library.
 let actions;
 let activeNode;
 let browser;
@@ -170,7 +170,7 @@ function installStyle() {
     .rr-controls summary{cursor:pointer}.rr-controls details>.rr-row{margin-top:10px}
     .rr-status{padding:3px 10px;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0;color:#bfcce0;background:#202835;font-size:12px}
     .rr-source-summary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .rr-error{color:#ffb1a5}.rr-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 18px}
+    .rr-error{color:#ffb1a5}.rr-pending{color:#ffdc94;font-weight:600}.rr-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 18px}
     .rr-scroll{padding:3px}
     .rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px}
     .rr-card{min-width:0;padding:0!important;position:relative;line-height:0}
@@ -210,11 +210,21 @@ async function enlarge(view, image) {
   document.body.append(dialog);
   dialog.showModal();
   const data = await actions.preview(view.node, {source_mode: "selection", favorite: "None", folder: "",
-    selected_images: image.path, browse: false, max_images: 1, thumbnail_size: 1600});
+    selected_images: actions.encodePaths([image.path]), browse: false, max_images: 1, thumbnail_size: 1600});
   if (dialog.open && data.images[0]) img.src = data.images[0].thumbnail_data_url;
 }
 
 function selectionCount(view) {
+  const applied = view.activeSelection && view.selected.size === view.activeSelection.size &&
+    [...view.selected].every(path => view.activeSelection.has(path));
+  if (view.selectionStatus) {
+    view.selectionStatus.textContent = `${view.selected.size} checked · ` +
+      (applied ? "matches active run source" : view.selected.size ? "not applied to runs" : "active run source unchanged");
+    view.selectionStatus.classList.toggle("rr-pending", Boolean(view.selected.size && !applied));
+  }
+  if (view.sourceKey && !view.initializeSelection) {
+    view.node._archBrowserChecks = {sourceKey: view.sourceKey, paths: [...view.selected]};
+  }
   view.useSelection.textContent = `Use ${view.selected.size} checked image${view.selected.size === 1 ? "" : "s"}`;
   view.useSelection.disabled = !view.selected.size;
   if (view.saveCharacter) view.saveCharacter.disabled = !view.selected.size;
@@ -248,7 +258,7 @@ async function saveGroup(view) {
     save.textContent = target.value ? "Replace group with checked images" : "Create favorite group";
   });
   dialog.append(element("h3", "", "Save to favorite group"),
-    element("p", "", `${paths.length} checked image(s). Groups store local paths and reference prompt text for reuse as a run source. Character saves copy images into the character library.`),
+    element("p", "", `${paths.length} checked image(s). Groups store local paths and reference prompt text for reuse as a run source. Library saves copy images into subject or environment collections.`),
     target, name, status, save, button("Cancel", () => dialog.close()));
   dialog.addEventListener("close", () => dialog.remove(), {once: true});
   document.body.append(dialog); dialog.showModal();
@@ -286,45 +296,156 @@ async function saveCharacter(view) {
   const dialog = element("dialog", "rr-dialog");
   dialog.style.width = "460px"; dialog.style.height = "auto"; dialog.style.padding = "18px";
   dialog.classList.add("rr-browser");
-  const status = element("p", "rr-status", "Loading characters…");
-  const select = element("select"); select.setAttribute("aria-label", "Character reference");
-  const name = textInput("", "New character name"); name.setAttribute("aria-label", "New character name");
+  const status = element("p", "rr-status", "Loading library…");
+  const kind = element("select"); kind.setAttribute("aria-label", "Save collection kind");
+  for (const [value, label] of [["subject", "Subject / Character"], ["environment", "Environment / Location"]]) {
+    const option = element("option", "", label); option.value = value; kind.append(option);
+  }
+  kind.value = "subject";
+  const select = element("select"); select.setAttribute("aria-label", "Destination collection");
+  const name = textInput("", "New collection name"); name.setAttribute("aria-label", "New collection name");
+  let collections = [], savedCollection;
+  const open = button("Open saved collection", () => run(view, async () => {
+    await actions.openLibrary(savedCollection); dialog.close(); browser?.close();
+  }));
+  open.disabled = true;
+  const drawCollections = () => {
+    select.replaceChildren();
+    const fresh = element("option", "", "New collection…"); fresh.value = ""; select.append(fresh);
+    for (const item of collections.filter(item => item.kind === kind.value)) {
+      const option = element("option", "", item.name); option.value = item.id; select.append(option);
+    }
+    select.value = ""; name.hidden = false; save.disabled = false;
+  };
   const save = button(`Save ${paths.length} image${paths.length === 1 ? "" : "s"}`, async () => {
-    save.disabled = true; select.disabled = name.disabled = true;
+    save.disabled = true; select.disabled = name.disabled = kind.disabled = true;
     try {
       let id = select.value;
       if (!id) {
-        if (!name.value.trim()) throw new Error("Enter a character name.");
-        const created = await actions.library("/collections", {kind: "subject", name: name.value.trim()});
+        if (!name.value.trim()) throw new Error("Enter a collection name.");
+        const created = await actions.library("/collections", {kind: kind.value, name: name.value.trim()});
         id = created.collection.id;
+        collections.push(created.collection);
         const option = element("option", "", created.collection.name); option.value = id; select.append(option); select.value = id;
       }
       const result = await actions.library(`/collections/${encodeURIComponent(id)}/import-paths`, {paths});
-      status.textContent = `Saved ${result.imports.length} image(s) to the local character library. Originals are unchanged.`;
+      savedCollection = collections.find(item => item.id === id) || {id, kind: kind.value};
+      open.disabled = false;
+      status.textContent = `Saved ${result.imports.length} image(s) to the local reference library. Originals are unchanged.`;
       if (result.failures?.length) {
         status.textContent += `\n${result.failures.length} could not be saved:\n` + result.failures.map(item => `${item.path}: ${item.error}`).join("\n");
         save.disabled = false;
       }
       view.status.textContent = status.textContent;
     } catch (error) { status.textContent = String(error.message || error); save.disabled = false; }
-    finally { select.disabled = name.disabled = false; }
+    finally { select.disabled = name.disabled = kind.disabled = false; }
   }, "rr-primary");
   save.disabled = true;
+  kind.addEventListener("change", drawCollections);
   select.addEventListener("change", () => { name.hidden = Boolean(select.value); save.disabled = false; });
-  dialog.append(element("h3", "", "Save to character reference"), select, name, status, save,
+  dialog.append(element("h3", "", "Save checked images to library"), kind, select, name, status, save, open,
     button("Close", () => dialog.close()));
   dialog.addEventListener("close", () => dialog.remove(), {once: true});
   document.body.append(dialog); dialog.showModal();
   try {
     const data = await actions.library("/bootstrap?kind=subject&page_size=1&orphan_page_size=1");
     if (!dialog.open) return;
-    const fresh = element("option", "", "New character…"); fresh.value = ""; select.append(fresh);
-    for (const item of data.collections.filter(item => item.kind === "subject")) {
-      const option = element("option", "", item.name); option.value = item.id; select.append(option);
-    }
-    select.value = ""; save.disabled = false;
-    status.textContent = "Choose a character or create one. Checked images will be copied into the local library.";
+    collections = data.collections;
+    drawCollections();
+    status.textContent = "Choose a collection or create one. Checked images will be copied into the local library.";
   } catch (error) { status.textContent = String(error.message || error); }
+}
+
+async function loadLibrary(view) {
+  const node = view.node;
+  const dialog = element("dialog", "rr-dialog rr-browser");
+  dialog.style.cssText = "width:min(560px,94vw);height:auto;padding:18px;gap:12px";
+  const status = element("p", "rr-status", "Loading collections…");
+  const kind = element("select"); kind.setAttribute("aria-label", "Library collection kind");
+  for (const [value, label] of [["subject", "Subjects / Characters"], ["environment", "Environments / Locations"]]) {
+    const option = element("option", "", label); option.value = value; kind.append(option);
+  }
+  kind.value = "subject";
+  const collection = element("select"); collection.setAttribute("aria-label", "Library collection");
+  const profile = element("select"); profile.setAttribute("aria-label", "Library prompt profile");
+  const filtered = element("input"); filtered.type = "checkbox"; filtered.checked = true;
+  filtered.setAttribute("aria-label", "Use library tag filters");
+  const includePrompt = element("input"); includePrompt.type = "checkbox";
+  includePrompt.setAttribute("aria-label", "Use profile positive prompt");
+  let collections = [], revision = 0, profilesLoading = false;
+  const sourcePath = () => `/collections/${encodeURIComponent(collection.value)}/source?` +
+    new URLSearchParams({filtered: String(filtered.checked), ...(profile.value ? {profile_id: profile.value} : {})});
+  const inspect = async (refreshProfiles = false) => {
+    if (profilesLoading && !refreshProfiles) return;
+    const current = ++revision;
+    use.disabled = true;
+    if (refreshProfiles) {
+      profile.replaceChildren(); profile.value = "";
+      profilesLoading = true; profile.disabled = filtered.disabled = true;
+    }
+    if (!collection.value) { profilesLoading = false; status.textContent = "No collections of this kind yet. Save checked images to the library first."; return; }
+    status.textContent = "Loading collection…";
+    try {
+      if (refreshProfiles) {
+        const data = await actions.library(`/bootstrap?collection_id=${encodeURIComponent(collection.value)}&kind=${kind.value}&page_size=1&orphan_page_size=1`);
+        if (!dialog.open || current !== revision) return;
+        profile.replaceChildren();
+        const defaultOption = element("option", "", "Default profile"); defaultOption.value = ""; profile.append(defaultOption);
+        for (const item of data.detail?.profiles || []) {
+          const option = element("option", "", item.name); option.value = item.id; profile.append(option);
+        }
+        profile.value = "";
+      }
+      const data = await actions.library(sourcePath());
+      if (!dialog.open || current !== revision) return;
+      status.textContent = `${data.pool_count} available of ${data.total_count} images. ` +
+        (data.paths.length ? "Load creates a snapshot for this node; future library changes are not applied automatically." : "No images match. Try disabling tag filters or choose another collection.");
+      use.disabled = !data.paths.length;
+    } catch (error) { if (dialog.open && current === revision) status.textContent = String(error.message || error); }
+    finally { if (current === revision) { profilesLoading = false; profile.disabled = filtered.disabled = false; } }
+  };
+  const drawCollections = () => {
+    collection.replaceChildren();
+    const items = collections.filter(item => item.kind === kind.value);
+    for (const item of items) { const option = element("option", "", item.name); option.value = item.id; collection.append(option); }
+    collection.value = items[0]?.id || "";
+    inspect(true);
+  };
+  const use = button("Use collection images", async () => {
+    const before = JSON.stringify(actions.payload(node)), current = ++revision;
+    use.disabled = kind.disabled = collection.disabled = profile.disabled = filtered.disabled = includePrompt.disabled = true;
+    try {
+      const data = await actions.library(sourcePath());
+      if (!dialog.open || view.disposed || node !== view.node || !validNode(node)) return;
+      if (before !== JSON.stringify(actions.payload(node))) throw new Error("The source changed while loading. Choose the collection again.");
+      if (!data.paths.length) throw new Error("This collection has no matching images.");
+      actions.selectLibrary(node, data, includePrompt.checked);
+      dialog.close();
+    } catch (error) { if (dialog.open && current === revision) status.textContent = String(error.message || error); }
+    finally { use.disabled = kind.disabled = collection.disabled = profile.disabled = filtered.disabled = includePrompt.disabled = false; }
+  }, "rr-primary");
+  use.disabled = true;
+  const open = button("Open in Reference Library", () => run(view, async () => {
+    const selected = collections.find(item => item.id === collection.value);
+    if (!selected) return;
+    await actions.openLibrary(selected); dialog.close(); browser?.close();
+  }));
+  kind.addEventListener("change", drawCollections);
+  collection.addEventListener("change", () => inspect(true));
+  profile.addEventListener("change", () => inspect());
+  filtered.addEventListener("change", () => inspect());
+  dialog.append(element("h3", "", "Load from Reference Library"), kind, collection,
+    field("Use library tag filters", filtered), field("Prompt profile", profile),
+    field("Replace this node's reference prompt with the profile's positive prompt", includePrompt),
+    element("p", "rr-prompt-help", "Negative prompts and LoRAs are not applied here. Use the Reference Library selector and profile LoRA nodes for those outputs."),
+    status, use, open, button("Cancel", () => dialog.close()));
+  dialog.addEventListener("close", () => { revision++; dialog.remove(); }, {once: true});
+  document.body.append(dialog); dialog.showModal();
+  try {
+    const data = await actions.library("/bootstrap?page_size=1&orphan_page_size=1");
+    if (!dialog.open) return;
+    collections = data.collections; drawCollections();
+  } catch (error) { if (dialog.open) status.textContent = String(error.message || error); }
 }
 
 function promptPanel(view) {
@@ -464,7 +585,9 @@ async function loadPage(view, reset = false) {
       max_images: 24, search: view.search.value, thumbnail_size: 256});
     if (view.disposed || request !== view.request || node !== view.node) return;
     if (view.initializeSelection) {
-      view.selected = new Set(data.selection_paths || []);
+      view.activeSelection = data.mode === "folder" || !data.selection_paths?.length ? null : new Set(data.selection_paths);
+      const savedChecks = node._archBrowserChecks;
+      view.selected = new Set(savedChecks?.sourceKey === view.sourceKey ? savedChecks.paths : data.selection_paths || []);
       view.initializeSelection = false;
       selectionCount(view);
     }
@@ -555,7 +678,7 @@ function browserView(dialog, node) {
   const folderMode = button("Load folder…", pickFolder);
   const pickImages = () => pick("pick-images");
   const imagesMode = button("Load images…", pickImages);
-  sourceRow.append(folderMode, imagesMode);
+  sourceRow.append(folderMode, imagesMode, button("Load from library…", () => run(view, () => loadLibrary(view))));
   const folderRow = element("div", "rr-row");
   view.folder = textInput("", "Folder path…");
   view.folder.setAttribute("aria-label", "Reference folder");
@@ -565,7 +688,7 @@ function browserView(dialog, node) {
   imagesRow.append(count);
   const options = element("div", "rr-row");
   const policy = element("select");
-  for (const [value, label] of [["random_each_queue", "Random each run"], ["seeded", "Repeatable seed"], ["sequential", "Next image in order"]]) {
+  for (const [value, label] of [["random_each_queue", "Random each run"], ["seeded", "Repeatable seed"], ["sequential", "Next image in order"], ["shuffle_cycle", "Shuffle without repeats (per cycle)"]]) {
     const option = element("option", "", label); option.value = value; policy.append(option);
   }
   policy.addEventListener("change", () => actions.setField(view.node, "selection_policy", policy.value));
@@ -609,13 +732,15 @@ function browserView(dialog, node) {
   view.useSelection = button("Use checked images", () => actions.selectImages(view.node, [...view.selected]), "rr-primary");
   view.selectAll = button("Select all", () => run(view, () => selectAll(view)));
   view.selectAll.title = "Select every matching image, including unloaded pages";
-  view.saveCharacter = button("Save to character…", () => run(view, () => saveCharacter(view)));
+  view.saveCharacter = button("Save to library…", () => run(view, () => saveCharacter(view)));
   view.saveGroup = button("Save to favorite group…", () => run(view, () => saveGroup(view)));
   footer.append(view.selectAll, button("Unselect all", () => {
     view.selectionRevision++; view.initializeSelection = false;
     view.selected.clear(); syncChecks(view);
   }), view.useSelection, view.saveGroup, view.saveCharacter);
-  main.append(controls, view.sourceSummary, view.status, view.scroll, footer);
+  view.selectionStatus = element("div", "rr-status"); view.selectionStatus.setAttribute("aria-label", "Checked images status");
+  view.selectionStatus.setAttribute("role", "status");
+  main.append(controls, view.sourceSummary, view.status, view.scroll, view.selectionStatus, footer);
   const prompt = promptPanel(view); prompt.hidden = true;
   body.append(aside, main, prompt); root.append(head, body); dialog.append(root);
   root.addEventListener("wheel", event => event.stopPropagation());
@@ -634,6 +759,7 @@ function browserView(dialog, node) {
     if (sourceChanged) {
       view.search.value = "";
       view.selected = new Set();
+      view.activeSelection = null;
       view.initializeSelection = true;
       view.selectionRevision++;
       view.sourceKey = sourceKey;
@@ -654,7 +780,7 @@ function browserView(dialog, node) {
     policy.value = payload.selection_policy; seed.value = payload.seed;
     seedField.hidden = payload.selection_policy === "random_each_queue";
     afterRunField.hidden = seedField.hidden;
-    afterRunField.textContent = payload.selection_policy === "sequential"
+    afterRunField.textContent = ["sequential", "shuffle_cycle"].includes(payload.selection_policy)
       ? "Index advances automatically after each run."
       : "Seed stays fixed between runs.";
     recursive.checked = payload.include_subfolders;

@@ -4,6 +4,35 @@
 **Status:** Implemented and live-validated on port 8192
 **Runtime target:** Local ComfyUI install at `http://127.0.0.1:8192`
 
+## Workspace revision (2026-09-29)
+
+Owner approved reorganizing workflow 54 and its live copy in place. The main
+canvas now keeps the five image inputs and adjacent enable switches together,
+with prompt, seed, generation and identity controls below, and final/base saves
+at the right. The mask and separate reference/base score previews stay visible.
+Three native subgraphs contain model/prompt setup, reference preparation and
+generation, and identity finishing/scoring. Double-click them for advanced
+settings. Common settings are promoted with descriptive labels; seed and its
+after-generation control stay together in the native seed node.
+
+The executable API remains identical to the prior workflow. The builder checks
+subgraph wiring by resolving it back to the original node IDs; focused tests
+cover port reciprocity, exposed controls, input/switch adjacency, and overlap.
+No model, sampling, identity-gate, or save-prefix defaults change. This is an
+owner-authorized exception to the original new-workflows-only scope for #54.
+
+### Reference browser integration (workspace version 5)
+
+The owner subsequently approved replacing all five `LoadImage` inputs with
+`RandomReferenceImageSource`. Each compact source opens the separate scrollable
+Reference Browser and can use a folder, explicit image set, or saved favorite.
+The image and mask output slots keep their positions. Main, identity, and
+auxiliary sources remain independently selectable; optional sources still use
+the same lazy enable switches. Favorite prompt outputs remain available on the
+nodes but are not automatically inserted into the workflow's edit instruction.
+All executable nodes after the five source nodes retain their prior settings
+and connections. Source cards have extra height for their compact controls.
+
 ## Understanding summary
 
 - Create a new standard Flux 9B image-to-image workflow based on the API graph
@@ -227,3 +256,42 @@ live testing showed that reusing the first SAM mask reduced identity fidelity.
 The SAM model is loaded once per node execution and reused only as a model while
 each updated image receives a fresh embedding and mask; ArcFace and INSwapper
 remain CPU-only.
+
+## Favorite prompt integration — 2026-09-29
+
+Workflow v6 adds ReferencePromptCompose inside the prompt/model subgraph. Its exposed Edit instruction is combined with current prompt text from main and enabled identity/auxiliary sources, then connected to CLIPTextEncode.text. The same booleans govern optional images and optional text. Lazy prompt inputs avoid executing disabled sources. Combined prompt sent to Flux displays the executed text inside the subgraph.
+
+Favorite prompt edits now apply immediately to the node, including clearing text. Save/Update persists the edited text for reuse. Existing saved #54 files matched the prior builder before backup and regeneration. No preset or personal image data was modified.
+
+Verification: 75 focused tests passed; after the optional-unconnected-lane correction all 27 backend node tests passed again. An isolated CPU-only ComfyUI server executed real source → composer → PreviewAny prompts with optional lanes both disabled and enabled and returned the exact expected text. The temporary server was stopped. Live workflow/package files are synchronized, but an immediate pre-restart queue check found new work, so live port 8192 was not restarted. Activation requires a restart when the owner queue is clear, then browser refresh and reopening #54.
+
+Activation completed on the following turn: live queue was empty, the manager restart was issued after a second queue check, and /object_info/ReferencePromptCompose confirmed the new node loaded on port 8192. Browser refresh and reopening the updated #54 are still required for an already-open canvas.
+
+## Workflow usability follow-up — 2026-09-29
+
+Owner authorized the four review fixes. Workflow v7 defers reference filesystem
+validation until a source executes, allowing empty disabled slots. Preflight and
+transfer publish their face selection order, index, and detection threshold to
+the dual scorer; unavailable indices remain undetected instead of silently
+scoring another face. Existing output slots keep their indices.
+
+Identity finish OFF bypasses preflight detection, transfer, scoring, and manifest
+writes. Scorer image inputs and preflight identity input are lazy. The separate
+identity-reference switch still controls that image's Flux conditioning and
+prompt contribution independently of the post-generation identity finish.
+
+Three root status cards show preflight, transfer, and final-save status. The last
+includes identity scores when the gate passes. Gate failures return an execution
+blocker only on the image output, preserving the reason on the status output and
+allowing the independent base branch to complete. No failing final image passes
+to PreviewImage or SaveImage.
+
+Verification: 77 focused tests passed, plus the 16 workflow tests after extending
+runtime installation checks. A separate CPU-only process using the actual Comfy
+executor validated and executed an empty optional source with identity finish
+disabled, and verified that a weak identity blocks its image consumer while
+status and base consumers complete. Runtime workflow and changed backend files
+match the canonical build. Existing live #54 matched the previous commit before
+backup and installation; no owner images were used for these checks.
+
+Live activation also passed: the idle queue was rechecked immediately before restarting port 8192. Both smoke cases then passed through the live /prompt API. Refresh the frontend and reopen saved #54 to replace an already-open canvas.

@@ -114,3 +114,32 @@ def test_frontend_contains_complete_local_management_actions():
         "Next unassigned page",
     ):
         assert control_text in source
+
+
+def test_open_collection_navigates_sidebar_without_changing_active_selection():
+    script = r'''
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(SCRIPT,'utf8').replace(/^import[^\n]*\n/gm,'')
+ .replaceAll('import.meta.url',JSON.stringify('http://local/reference_library.js')).replace(/export \{[^}]+\};?\s*$/m,'');
+class Element {
+ constructor(){this.dataset={};this.style={};this.isConnected=true;this.classList={add(){}};}
+ append(){} addEventListener(){} setAttribute(){} replaceChildren(){}
+}
+const requests=[];
+const app={registerExtension(){},extensionManager:{sidebarTab:{},registerSidebarTab(){}}};
+const context={app,api:{fetchApi:(path,options)=>{requests.push([path,options]);return new Promise(()=>{});}},
+ document:{querySelector(){},head:new Element(),createElement:()=>new Element()},URL,URLSearchParams,console,setTimeout,clearTimeout,FormData};
+vm.runInNewContext(source,context);
+const library=context.__archReferenceLibrary;
+assert.equal(typeof library.openCollection,'function');
+library.openCollection({id:'studio',kind:'environment'});
+assert.equal(app.extensionManager.sidebarTab.activeSidebarTabId,'arch.reference-library');
+library.renderPanel(new Element());
+assert.ok(requests.at(-1)[0].includes('collection_id=studio'));
+assert.ok(requests.at(-1)[0].includes('kind=environment'));
+library.openCollection({id:'person',kind:'subject'});
+assert.ok(requests.at(-1)[0].includes('collection_id=person'));
+assert.ok(requests.every(([path,options])=>path.startsWith('/arch-reference-library/bootstrap?') && (!options?.method || options.method==='GET')));
+'''.replace("SCRIPT", json.dumps(str(SCRIPT_PATH)))
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr

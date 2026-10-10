@@ -44,6 +44,13 @@ Selections stay locked in the local catalog until they are explicitly changed
 or rerolled. Switching the active Subject or Environment updates every selector
 node that is in `follow_sidebar` mode.
 
+The **arch-Random Reference Image Source** browser can now save checked photos
+into either collection kind and open the destination here. Its **Load from
+library…** action reads a collection's full or tag-filtered pool and optionally
+a profile's positive prompt. This creates a node-local snapshot; it does not
+change the sidebar's active collection, reroll its locked slots, or apply LoRAs.
+Use the selector and profile nodes below for negative prompts and LoRA outputs.
+
 ## Workflow nodes
 
 ### arch-Subject Reference Selector

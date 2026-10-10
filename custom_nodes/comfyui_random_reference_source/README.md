@@ -36,10 +36,25 @@ checks every search match across the whole source; **Unselect all** clears all
 checks without changing the source. The dense grid uses image-only cards with
 overlay checkboxes; hover for a filename or use **⤢** to enlarge.
 
-**Save to character…** copies checked images into an existing or newly named
-subject/character in the local **Reference Library** sidebar. Originals stay in
+**Save to library…** copies checked images into an existing or newly named
+subject/character or environment/location in the local **Reference Library** sidebar. Originals stay in
 place, identical content is deduplicated, and library images remain local and
 outside git. This action saves images; favorite prompt editing remains separate.
+**Open saved collection** navigates directly to that collection without changing
+the library's globally active selection.
+
+**Load from library…** selects a subject or environment collection, optionally
+using its existing tag filters. Loading creates an explicit snapshot of its
+image paths for this node; later library edits do not silently change that pool.
+Choose a profile and check **Use profile positive prompt** to replace this node's
+reference text. Negative prompts and LoRAs still use the library's selector and
+profile LoRA nodes. Empty filtered pools explain how to recover before loading.
+
+The footer distinguishes **checked photos** from the **active run source**.
+Checks marked **not applied to runs** do not change generation until you choose
+**Use checked images** or save a favorite group. Pending checks survive closing
+and reopening the browser for the same source in this session; changing sources
+resets them. They are not saved to disk with the workflow.
 
 **Random each run**, **Repeatable seed**, and **Next image in order** describe
 the selection policies. Changing to repeatable mode fixes the seed; changing to
@@ -49,12 +64,20 @@ Reopening a workflow enforces those same policy rules. Random choices can repeat
 Changing seed or policy preserves the gallery scroll position; changing source
 clears the previous filename search.
 
+The compact node also shows **Last used**, populated by actual image loading.
+**Use this image again** changes the source to that exact image without queueing
+a run. The last-used filename/path travels with a saved workflow; it is distinct
+from the next-image or random-pool preview.
+
 ## Favorites
 
 **Save to favorite group…** below the gallery saves exactly the checked photos,
 with a name and the current reference prompt. Create a new group, or select an
 existing group to replace its membership and optionally edit its name. Name
 collisions are rejected. Saving also selects the group as this node's run source.
+Replacing a group's checked photos retains that group's saved prompt. To change
+its prompt, use the Prompt panel. Other nodes following an edited group update
+their source and previews while keeping genuinely modified prompt drafts.
 Click a saved group in the **Favorite groups** column to reuse it. To edit its
 membership, load it, check/uncheck photos (or load another folder to add photos),
 then choose the group in the save dialog. Groups store local paths; character
@@ -83,7 +106,7 @@ Failed saves leave the draft intact. If you keep typing during a save, the newer
 text stays modified instead of being overwritten by the completed request.
 Raw image paths remain in a separate **Image paths** section.
 
-Favorites store paths only. Character saves explicitly copy images into the local
+Favorites store paths only. Library saves explicitly copy images into the local
 library; the single-image picker uploads only to this PC's ComfyUI input folder.
 Source images are never moved or edited. Data is written inside this custom node at:
 

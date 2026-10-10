@@ -116,7 +116,7 @@ def test_sam_box_is_clipped_to_image_bounds():
 def test_disabled_preflight_bypasses_detection_and_preserves_main_image():
     image = torch.ones((1, 32, 24, 3), dtype=torch.float32)
     with patch("custom_nodes.comfyui_arch_image_tools.face_identity._detect_faces") as detect:
-        bundle, main, preview, status, mask_mode = face_identity.ArchFaceIdentityPreflight().preflight(
+        bundle, main, preview, status, mask_mode, selection = face_identity.ArchFaceIdentityPreflight().preflight(
             identity_image=image,
             main_image=image,
             enabled=False,
@@ -131,16 +131,21 @@ def test_disabled_preflight_bypasses_detection_and_preserves_main_image():
     assert preview is image
     assert "disabled" in status.lower()
     assert mask_mode == "SAM local"
+    assert selection == dict(selection="largest", index=0, threshold=.7)
+    assert face_identity.ArchFaceIdentityPreflight().check_lazy_status(enabled=False) == []
 
 
 def test_strict_identity_gate_blocks_weak_results_but_disabled_transfer_bypasses():
     image = torch.ones((1, 32, 24, 3), dtype=torch.float32)
     mask = torch.ones((1, 32, 24), dtype=torch.float32)
     gate = face_identity.ArchIdentityGate()
-    with pytest.raises(ValueError, match="0.200000"):
-        gate.validate(image, mask, True, True, False, True, False, 0.2, 0.8)
-    with pytest.raises(ValueError, match="closer to the base"):
-        gate.validate(image, mask, True, True, True, True, True, 0.5, 0.8)
+    from comfy_execution.graph_utils import ExecutionBlocker
+    blocked, status = gate.validate(image, mask, True, True, False, True, False, 0.2, 0.8)
+    assert isinstance(blocked, ExecutionBlocker) and "0.200000" in status
+    blocked, status = gate.validate(image, mask, True, True, True, True, True, 0.5, 0.8)
+    assert isinstance(blocked, ExecutionBlocker) and "closer to the base" in status
+    blocked, status = gate.validate(image, torch.zeros_like(mask), True, False, False, True, True, .9, .1)
+    assert isinstance(blocked, ExecutionBlocker) and "no usable" in status
     result, status = gate.validate(image, torch.zeros_like(mask), False, True, True, False, False, 0.0, 0.0)
     assert result is image
     assert "disabled" in status.lower()
@@ -148,11 +153,12 @@ def test_strict_identity_gate_blocks_weak_results_but_disabled_transfer_bypasses
 
 def test_disabled_transfer_is_zero_cost_passthrough():
     image = torch.ones((1, 32, 24, 3), dtype=torch.float32)
-    result, mask, status = ArchLocalFaceIdentityTransfer().transfer(None, image, enabled=False)
+    result, mask, status, selection = ArchLocalFaceIdentityTransfer().transfer(None, image, enabled=False, target_face_index=2)
     assert result is image
     assert mask.shape == (1, 32, 24)
     assert not torch.any(mask)
-    assert "disabled" in status.lower()
+    assert "bypassed" in status.lower()
+    assert selection == dict(selection="largest", index=2, threshold=.7)
 
 
 def test_detect_failure_is_clear():

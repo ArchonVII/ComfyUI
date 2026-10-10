@@ -1,32 +1,72 @@
 {
   "1": {
-    "class_type": "LoadImage",
+    "class_type": "RandomReferenceImageSource",
     "inputs": {
-      "image": "arch_flux9b_placeholder.ppm"
+      "lane": "primary_subject",
+      "source_mode": "selection",
+      "favorite": "None",
+      "folder": "",
+      "selected_images": "arch_flux9b_placeholder.ppm",
+      "selection_policy": "random_each_queue",
+      "seed": 1,
+      "include_subfolders": false,
+      "favorite_prompt": ""
     }
   },
   "2": {
-    "class_type": "LoadImage",
+    "class_type": "RandomReferenceImageSource",
     "inputs": {
-      "image": "arch_flux9b_placeholder.ppm"
+      "lane": "reference_subject",
+      "source_mode": "selection",
+      "favorite": "None",
+      "folder": "",
+      "selected_images": "arch_flux9b_placeholder.ppm",
+      "selection_policy": "random_each_queue",
+      "seed": 1,
+      "include_subfolders": false,
+      "favorite_prompt": ""
     }
   },
   "3": {
-    "class_type": "LoadImage",
+    "class_type": "RandomReferenceImageSource",
     "inputs": {
-      "image": "arch_flux9b_placeholder.ppm"
+      "lane": "generic",
+      "source_mode": "selection",
+      "favorite": "None",
+      "folder": "",
+      "selected_images": "arch_flux9b_placeholder.ppm",
+      "selection_policy": "random_each_queue",
+      "seed": 1,
+      "include_subfolders": false,
+      "favorite_prompt": ""
     }
   },
   "4": {
-    "class_type": "LoadImage",
+    "class_type": "RandomReferenceImageSource",
     "inputs": {
-      "image": "arch_flux9b_placeholder.ppm"
+      "lane": "generic",
+      "source_mode": "selection",
+      "favorite": "None",
+      "folder": "",
+      "selected_images": "arch_flux9b_placeholder.ppm",
+      "selection_policy": "random_each_queue",
+      "seed": 1,
+      "include_subfolders": false,
+      "favorite_prompt": ""
     }
   },
   "5": {
-    "class_type": "LoadImage",
+    "class_type": "RandomReferenceImageSource",
     "inputs": {
-      "image": "arch_flux9b_placeholder.ppm"
+      "lane": "generic",
+      "source_mode": "selection",
+      "favorite": "None",
+      "folder": "",
+      "selected_images": "arch_flux9b_placeholder.ppm",
+      "selection_policy": "random_each_queue",
+      "seed": 1,
+      "include_subfolders": false,
+      "favorite_prompt": ""
     }
   },
   "6": {
@@ -158,7 +198,10 @@
         "18",
         0
       ],
-      "text": "Use image 1 as the main scene and composition. Apply the requested edit while preserving the same primary person's recognizable identity, facial structure, age, and natural proportions. Use only enabled additional images as visual references for clothing, pose, environment, style, or props."
+      "text": [
+        "65",
+        0
+      ]
     }
   },
   "21": {
@@ -640,6 +683,18 @@
         "55",
         0
       ],
+      "enabled": [
+        "8",
+        0
+      ],
+      "reference_face_selection": [
+        "10",
+        5
+      ],
+      "target_face_selection": [
+        "55",
+        3
+      ],
       "experiment_mode": "face_swap",
       "face_score_threshold": 0.7,
       "same_identity_threshold": 0.363,
@@ -699,6 +754,48 @@
         0
       ],
       "filename_prefix": "Flux9B-Local-I2I/identity-finished"
+    }
+  },
+  "65": {
+    "class_type": "ReferencePromptCompose",
+    "inputs": {
+      "text": "Use image 1 as the main scene and composition. Apply the requested edit while preserving the same primary person's recognizable identity, facial structure, age, and natural proportions. Use only enabled additional images as visual references for clothing, pose, environment, style, or props.",
+      "use_identity": [
+        "6",
+        0
+      ],
+      "use_aux1": [
+        "25",
+        0
+      ],
+      "use_aux2": [
+        "32",
+        0
+      ],
+      "use_aux3": [
+        "39",
+        0
+      ],
+      "main": [
+        "1",
+        5
+      ],
+      "identity": [
+        "2",
+        5
+      ],
+      "aux1": [
+        "3",
+        5
+      ],
+      "aux2": [
+        "4",
+        5
+      ],
+      "aux3": [
+        "5",
+        5
+      ]
     }
   }
 }

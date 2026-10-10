@@ -3,6 +3,17 @@ import { api } from "../../scripts/api.js";
 
 const ROOT = "/arch-reference-library";
 const SIDEBAR_ID = "arch.reference-library";
+let requestedCollection = null;
+let currentPanel = null;
+
+function openCollection(collection) {
+  if (!collection?.id || !["subject", "environment"].includes(collection.kind))
+    throw new Error("Choose a subject or environment collection first.");
+  requestedCollection = {id: collection.id, kind: collection.kind};
+  if (app.extensionManager?.sidebarTab) app.extensionManager.sidebarTab.activeSidebarTabId = SIDEBAR_ID;
+  app.extensionManager?.setSidebarTab?.(SIDEBAR_ID);
+  if (currentPanel?.container.isConnected) currentPanel.open(requestedCollection);
+}
 const SELECTOR_KINDS = {
   ArchSubjectReferenceSelector: "subject",
   ArchEnvironmentReferenceSelector: "environment",
@@ -552,11 +563,13 @@ function renderOrphans(parent, state, status, refresh) {
 function renderPanel(container) {
   container.classList.add("arch-ref-library-host");
   installCss();
-  const state = { kind: "subject", collectionId: "", page: 1, pageSize: 100, orphanPage: 1, orphanPageSize: 50, data: null, selectedImages: new Set() };
+  const state = { kind: requestedCollection?.kind || "subject", collectionId: requestedCollection?.id || "", page: 1, pageSize: 100, orphanPage: 1, orphanPageSize: 50, data: null, selectedImages: new Set() };
   const status = element("p", "Loading…", "arch-ref-status");
   status.setAttribute("aria-live", "polite");
 
+  let revision = 0;
   const refresh = async () => {
+    const requestRevision = ++revision;
     const query = new URLSearchParams({
       kind: state.kind,
       page: String(state.page),
@@ -565,7 +578,9 @@ function renderPanel(container) {
       orphan_page_size: String(state.orphanPageSize),
     });
     if (state.collectionId) query.set("collection_id", state.collectionId);
-    state.data = await request(`/bootstrap?${query}`);
+    const data = await request(`/bootstrap?${query}`);
+    if (requestRevision !== revision) return;
+    state.data = data;
     state.page = state.data.detail?.pagination?.page ?? 1;
     state.orphanPage = state.data.orphan_pagination?.page ?? 1;
     draw();
@@ -595,6 +610,11 @@ function renderPanel(container) {
     container.replaceChildren(root);
   };
 
+  currentPanel = {container, open(collection) {
+    state.kind = collection.kind; state.collectionId = collection.id;
+    state.page = state.orphanPage = 1; state.selectedImages.clear();
+    safe(status, refresh)();
+  }};
   safe(status, refresh)();
 }
 
@@ -710,6 +730,6 @@ app.extensionManager.registerSidebarTab({
   render: renderPanel,
 });
 
-const seam = { normalizeFilters, batchTagPayload, pinSlot, responseJson, renderPanel };
+const seam = { normalizeFilters, batchTagPayload, pinSlot, responseJson, renderPanel, openCollection };
 globalThis.__archReferenceLibrary = seam;
 export { normalizeFilters, batchTagPayload, pinSlot, responseJson, renderPanel };
